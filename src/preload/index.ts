@@ -9,6 +9,7 @@ import type {
   TaskNotesSetRequest,
   TaskNotesGetResponse,
   PtyOutputEvent,
+  BranchOption,
 } from '../shared/ipc-channels';
 
 export interface ClaudeOrchestratorApi {
@@ -16,6 +17,7 @@ export interface ClaudeOrchestratorApi {
   addRepo(path: string): Promise<RepoRecord>;
   cloneRepo(url: string, name: string): Promise<RepoRecord>;
   listRepos(): Promise<RepoRecord[]>;
+  listBranches(repoId: string): Promise<BranchOption[]>;
   createTask(request: TaskCreateRequest): Promise<TaskRecord>;
   listTasks(): Promise<TaskRecord[]>;
   openTask(taskId: string): Promise<void>;
@@ -32,6 +34,7 @@ const api: ClaudeOrchestratorApi = {
   addRepo: (path) => ipcRenderer.invoke(IpcChannels.RepoAdd, { path }),
   cloneRepo: (url, name) => ipcRenderer.invoke(IpcChannels.RepoClone, { url, name }),
   listRepos: () => ipcRenderer.invoke(IpcChannels.RepoList),
+  listBranches: (repoId) => ipcRenderer.invoke(IpcChannels.RepoBranches, repoId),
   createTask: (request) => ipcRenderer.invoke(IpcChannels.TaskCreate, request),
   listTasks: () => ipcRenderer.invoke(IpcChannels.TaskList),
   openTask: (taskId) => ipcRenderer.invoke(IpcChannels.TaskOpen, taskId),

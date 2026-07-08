@@ -69,4 +69,14 @@ describe('preload', () => {
     await (api.selectFolder as any)();
     expect(ipcRendererInvoke).toHaveBeenCalledWith('dialog:select-folder');
   });
+
+  it('listBranches invokes the RepoBranches channel with the repoId', async () => {
+    await import('./index');
+    const call = exposeInMainWorld.mock.calls[0];
+    if (!call) throw new Error('exposeInMainWorld not called');
+    const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (api.listBranches as any)('repo-1');
+    expect(ipcRendererInvoke).toHaveBeenCalledWith('repo:branches', 'repo-1');
+  });
 });
