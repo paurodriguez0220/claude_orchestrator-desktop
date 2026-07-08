@@ -41,7 +41,7 @@ export function App(): JSX.Element {
     }
   }
 
-  async function handleCreateTask(fields: { title: string; adoId: string | undefined; branch: string | undefined }): Promise<void> {
+  async function handleCreateTask(fields: { title: string; adoId: string | undefined; branch: string | undefined; existingBranch: string | undefined }): Promise<void> {
     if (!newTaskRepoId) {
       return;
     }
@@ -119,6 +119,7 @@ export function App(): JSX.Element {
       />
       <NewTaskModal
         isOpen={newTaskRepoId !== undefined}
+        branches={[]}
         onClose={() => setNewTaskRepoId(undefined)}
         onSubmit={(fields) => void handleCreateTask(fields)}
       />

@@ -11,5 +11,14 @@ const meta: Meta<typeof NewTaskModal> = {
 export default meta;
 type Story = StoryObj<typeof NewTaskModal>;
 
-export const Open: Story = { args: { isOpen: true } };
-export const Closed: Story = { args: { isOpen: false } };
+export const Open: Story = { args: { isOpen: true, branches: [] } };
+export const Closed: Story = { args: { isOpen: false, branches: [] } };
+export const WithExistingBranches: Story = {
+  args: {
+    isOpen: true,
+    branches: [
+      { value: 'feature-x', label: 'feature-x', isRemote: false },
+      { value: 'feature-y', label: 'origin/feature-y', isRemote: true },
+    ],
+  },
+};
