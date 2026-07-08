@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { BranchOption } from '../../../shared/ipc-channels';
 import { ModalOverlay } from '../modal-overlay/modal-overlay';
+import { Spinner } from '../spinner/spinner';
 
 export interface NewTaskFields {
   title: string;
@@ -12,6 +13,7 @@ export interface NewTaskFields {
 export interface NewTaskModalProps {
   isOpen: boolean;
   branches: BranchOption[];
+  isSubmitting: boolean;
   onClose: () => void;
   onSubmit: (fields: NewTaskFields) => void;
 }
@@ -20,7 +22,13 @@ const fieldInputClasses =
   'rounded-md border border-graphite-600 bg-graphite-900 px-3 py-2 text-graphite-100 focus:border-clay-500 focus:outline-none';
 const fieldLabelClasses = 'text-sm font-medium text-graphite-400';
 
-export function NewTaskModal({ isOpen, branches, onClose, onSubmit }: NewTaskModalProps): JSX.Element | null {
+export function NewTaskModal({
+  isOpen,
+  branches,
+  isSubmitting,
+  onClose,
+  onSubmit,
+}: NewTaskModalProps): JSX.Element | null {
   const [title, setTitle] = useState('');
   const [adoId, setAdoId] = useState('');
   const [branch, setBranch] = useState('');
@@ -130,16 +138,19 @@ export function NewTaskModal({ isOpen, branches, onClose, onSubmit }: NewTaskMod
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md px-4 py-2 text-sm font-medium text-graphite-400 hover:text-graphite-100"
+            disabled={isSubmitting}
+            className="rounded-md px-4 py-2 text-sm font-medium text-graphite-400 hover:text-graphite-100 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleSubmit}
-            className="rounded-md bg-clay-600 px-4 py-2 text-sm font-medium text-graphite-100 hover:bg-clay-500"
+            disabled={isSubmitting}
+            className="flex items-center gap-2 rounded-md bg-clay-600 px-4 py-2 text-sm font-medium text-graphite-100 hover:bg-clay-500 disabled:opacity-50"
           >
-            Create Task
+            {isSubmitting && <Spinner />}
+            {isSubmitting ? 'Creating…' : 'Create Task'}
           </button>
         </div>
       </div>

@@ -5,13 +5,13 @@ import { NewTaskModal } from './new-task-modal';
 
 describe('NewTaskModal', () => {
   it('does not render when isOpen is false', () => {
-    render(<NewTaskModal isOpen={false} branches={[]} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    render(<NewTaskModal isOpen={false} branches={[]} isSubmitting={false} onClose={vi.fn()} onSubmit={vi.fn()} />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('submits title, optional adoId, and optional branch', async () => {
     const onSubmit = vi.fn();
-    render(<NewTaskModal isOpen branches={[]} onClose={vi.fn()} onSubmit={onSubmit} />);
+    render(<NewTaskModal isOpen branches={[]} isSubmitting={false} onClose={vi.fn()} onSubmit={onSubmit} />);
     await userEvent.type(screen.getByLabelText('Title'), 'Fix login bug');
     await userEvent.type(screen.getByLabelText('ADO Task ID (optional)'), 'ADO-1234');
     await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
@@ -25,7 +25,7 @@ describe('NewTaskModal', () => {
 
   it('calls onClose when Cancel is clicked', async () => {
     const onClose = vi.fn();
-    render(<NewTaskModal isOpen branches={[]} onClose={onClose} onSubmit={vi.fn()} />);
+    render(<NewTaskModal isOpen branches={[]} isSubmitting={false} onClose={onClose} onSubmit={vi.fn()} />);
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onClose).toHaveBeenCalledOnce();
   });
@@ -38,6 +38,7 @@ describe('NewTaskModal', () => {
           { value: 'feature-x', label: 'feature-x', isRemote: false },
           { value: 'feature-y', label: 'origin/feature-y', isRemote: true },
         ]}
+        isSubmitting={false}
         onClose={vi.fn()}
         onSubmit={vi.fn()}
       />,
@@ -55,6 +56,7 @@ describe('NewTaskModal', () => {
       <NewTaskModal
         isOpen
         branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
+        isSubmitting={false}
         onClose={vi.fn()}
         onSubmit={onSubmit}
       />,
@@ -69,5 +71,12 @@ describe('NewTaskModal', () => {
       branch: undefined,
       existingBranch: 'feature-x',
     });
+  });
+
+  it('disables Cancel and Create Task and shows a spinner while isSubmitting', () => {
+    render(<NewTaskModal isOpen branches={[]} isSubmitting onClose={vi.fn()} onSubmit={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Creating/ })).toBeDisabled();
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
   });
 });
