@@ -89,4 +89,14 @@ describe('preload', () => {
     (api.resizePty as any)('task-1', 120, 40);
     expect(ipcRendererSend).toHaveBeenCalledWith('pty:resize', { taskId: 'task-1', cols: 120, rows: 40 });
   });
+
+  it('fetchRepo invokes the RepoFetch channel with the repoId', async () => {
+    await import('./index');
+    const call = exposeInMainWorld.mock.calls[0];
+    if (!call) throw new Error('exposeInMainWorld not called');
+    const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (api.fetchRepo as any)('repo-1');
+    expect(ipcRendererInvoke).toHaveBeenCalledWith('repo:fetch', 'repo-1');
+  });
 });

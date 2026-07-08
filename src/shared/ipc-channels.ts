@@ -1,10 +1,11 @@
-import type { TaskStatus } from './types';
+import type { TaskKind, TaskStatus } from './types';
 
 export const IpcChannels = {
   RepoAdd: 'repo:add',
   RepoClone: 'repo:clone',
   RepoList: 'repo:list',
   RepoBranches: 'repo:branches',
+  RepoFetch: 'repo:fetch',
   TaskCreate: 'task:create',
   TaskList: 'task:list',
   TaskOpen: 'task:open',
@@ -39,6 +40,7 @@ export interface TaskCreateRequest {
   adoId?: string;
   branch?: string;
   existingBranch?: string;
+  kind?: TaskKind;
 }
 
 export interface TaskNotesSetRequest {

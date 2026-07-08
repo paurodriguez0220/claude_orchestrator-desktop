@@ -9,6 +9,7 @@ export interface RepoSidebarProps {
   onCloneRepoClick: () => void;
   onNewTaskClick: (repoId: string) => void;
   onRemoveTaskClick: (taskId: string) => void;
+  onReviewCodeClick: (repoId: string) => void;
 }
 
 export function RepoSidebar({
@@ -20,6 +21,7 @@ export function RepoSidebar({
   onCloneRepoClick,
   onNewTaskClick,
   onRemoveTaskClick,
+  onReviewCodeClick,
 }: RepoSidebarProps): JSX.Element {
   return (
     <nav
@@ -47,13 +49,22 @@ export function RepoSidebar({
           <li key={repo.id} className="flex flex-col gap-1">
             <div className="flex items-center justify-between gap-2">
               <span className="truncate text-sm font-semibold text-graphite-100">{repo.name}</span>
-              <button
-                type="button"
-                onClick={() => onNewTaskClick(repo.id)}
-                className="shrink-0 rounded-md bg-clay-600 px-2 py-1 text-xs font-medium text-graphite-100 hover:bg-clay-500"
-              >
-                New Task
-              </button>
+              <div className="flex shrink-0 gap-1">
+                <button
+                  type="button"
+                  onClick={() => onReviewCodeClick(repo.id)}
+                  className="rounded-md border border-graphite-600 px-2 py-1 text-xs font-medium text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+                >
+                  Review Code
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNewTaskClick(repo.id)}
+                  className="rounded-md bg-clay-600 px-2 py-1 text-xs font-medium text-graphite-100 hover:bg-clay-500"
+                >
+                  New Task
+                </button>
+              </div>
             </div>
             <ul className="flex flex-col gap-1 pl-2">
               {(tasksByRepoId[repo.id] ?? []).map((task) => (
@@ -70,6 +81,11 @@ export function RepoSidebar({
                   >
                     {task.title}
                   </button>
+                  {task.kind === 'review' && (
+                    <span className="shrink-0 rounded-full bg-clay-600/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-clay-400">
+                      Review
+                    </span>
+                  )}
                   <button
                     type="button"
                     onClick={() => onRemoveTaskClick(task.id)}

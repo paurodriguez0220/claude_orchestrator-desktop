@@ -5,13 +5,13 @@ import { NewTaskModal } from './new-task-modal';
 
 describe('NewTaskModal', () => {
   it('does not render when isOpen is false', () => {
-    render(<NewTaskModal isOpen={false} branches={[]} isSubmitting={false} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    render(<NewTaskModal isOpen={false} mode="task" branches={[]} isSubmitting={false} onClose={vi.fn()} onSubmit={vi.fn()} />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('submits title, optional adoId, and optional branch', async () => {
     const onSubmit = vi.fn();
-    render(<NewTaskModal isOpen branches={[]} isSubmitting={false} onClose={vi.fn()} onSubmit={onSubmit} />);
+    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} onClose={vi.fn()} onSubmit={onSubmit} />);
     await userEvent.type(screen.getByLabelText('Title'), 'Fix login bug');
     await userEvent.type(screen.getByLabelText('ADO Task ID (optional)'), 'ADO-1234');
     await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
@@ -25,7 +25,7 @@ describe('NewTaskModal', () => {
 
   it('calls onClose when Cancel is clicked', async () => {
     const onClose = vi.fn();
-    render(<NewTaskModal isOpen branches={[]} isSubmitting={false} onClose={onClose} onSubmit={vi.fn()} />);
+    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} onClose={onClose} onSubmit={vi.fn()} />);
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onClose).toHaveBeenCalledOnce();
   });
@@ -34,6 +34,7 @@ describe('NewTaskModal', () => {
     render(
       <NewTaskModal
         isOpen
+        mode="task"
         branches={[
           { value: 'feature-x', label: 'feature-x', isRemote: false },
           { value: 'feature-y', label: 'origin/feature-y', isRemote: true },
@@ -55,6 +56,7 @@ describe('NewTaskModal', () => {
     render(
       <NewTaskModal
         isOpen
+        mode="task"
         branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
         isSubmitting={false}
         onClose={vi.fn()}
@@ -74,9 +76,104 @@ describe('NewTaskModal', () => {
   });
 
   it('disables Cancel and Create Task and shows a spinner while isSubmitting', () => {
-    render(<NewTaskModal isOpen branches={[]} isSubmitting onClose={vi.fn()} onSubmit={vi.fn()} />);
+    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting onClose={vi.fn()} onSubmit={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
     expect(screen.getByRole('button', { name: /Creating/ })).toBeDisabled();
     expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+  });
+
+  it('review mode hides the branch-mode toggle and always shows the existing-branch select', () => {
+    render(
+      <NewTaskModal
+        isOpen
+        mode="review"
+        branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
+        isSubmitting={false}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('radio', { name: 'New branch' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'Use existing branch' })).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'feature-x' })).toBeInTheDocument();
+  });
+
+  it('review mode submits the selected existing branch', async () => {
+    const onSubmit = vi.fn();
+    render(
+      <NewTaskModal
+        isOpen
+        mode="review"
+        branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
+        isSubmitting={false}
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText('Title'), 'Review PR #42');
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'feature-x');
+    await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
+    expect(onSubmit).toHaveBeenCalledWith({
+      title: 'Review PR #42',
+      adoId: undefined,
+      branch: undefined,
+      existingBranch: 'feature-x',
+    });
+  });
+
+  it('review mode disables Create Task until a branch is selected', async () => {
+    render(
+      <NewTaskModal
+        isOpen
+        mode="review"
+        branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
+        isSubmitting={false}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText('Title'), 'Review PR #42');
+    expect(screen.getByRole('button', { name: 'Create Task' })).toBeDisabled();
+  });
+
+  it('review mode enables Create Task once a branch is selected and submits it', async () => {
+    const onSubmit = vi.fn();
+    render(
+      <NewTaskModal
+        isOpen
+        mode="review"
+        branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
+        isSubmitting={false}
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText('Title'), 'Review PR #42');
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'feature-x');
+    expect(screen.getByRole('button', { name: 'Create Task' })).not.toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
+    expect(onSubmit).toHaveBeenCalledWith({
+      title: 'Review PR #42',
+      adoId: undefined,
+      branch: undefined,
+      existingBranch: 'feature-x',
+    });
+  });
+
+  it('task mode with "Use existing branch" disables Create Task until a branch is selected', async () => {
+    render(
+      <NewTaskModal
+        isOpen
+        mode="task"
+        branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
+        isSubmitting={false}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText('Title'), 'Resume feature work');
+    await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
+    expect(screen.getByRole('button', { name: 'Create Task' })).toBeDisabled();
   });
 });

@@ -101,6 +101,18 @@ describe('task-handlers', () => {
     expect(task).toMatchObject({ title: 'Resume feature work', branch: 'feature-x' });
   });
 
+  it('TaskCreate tags the record with kind "review" when requested, and defaults to "worktree" otherwise', async () => {
+    const handler = handlers.get(IpcChannels.TaskCreate);
+    const defaultTask = await handler?.({}, { repoId: 'repo-1', title: 'Fix login bug' });
+    expect(defaultTask).toMatchObject({ kind: 'worktree' });
+
+    const reviewTask = await handler?.(
+      {},
+      { repoId: 'repo-1', title: 'Review PR #42', existingBranch: 'feature-x', kind: 'review' },
+    );
+    expect(reviewTask).toMatchObject({ kind: 'review', branch: 'feature-x' });
+  });
+
   it('TaskCreate rejects creating a second task for a branch that already has one, without calling git', async () => {
     store.tasks.push({
       id: 'task-1',
@@ -109,6 +121,7 @@ describe('task-handlers', () => {
       branch: 'feature-x',
       worktreePath: 'C:\\demo-worktrees\\feature-x',
       status: 'todo',
+      kind: 'worktree',
       createdAt: '2026-07-08T00:00:00.000Z',
       updatedAt: '2026-07-08T00:00:00.000Z',
     });
@@ -129,6 +142,7 @@ describe('task-handlers', () => {
       branch: 'task/fix-login-bug',
       worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
       status: 'todo',
+      kind: 'worktree',
       createdAt: '2026-07-08T00:00:00.000Z',
       updatedAt: '2026-07-08T00:00:00.000Z',
     });
@@ -148,6 +162,7 @@ describe('task-handlers', () => {
       branch: 'task/fix-login-bug',
       worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
       status: 'todo',
+      kind: 'worktree',
       createdAt: '2026-07-08T00:00:00.000Z',
       updatedAt: '2026-07-08T00:00:00.000Z',
     });
@@ -165,6 +180,7 @@ describe('task-handlers', () => {
       branch: 'task/fix-login-bug',
       worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
       status: 'todo',
+      kind: 'worktree',
       createdAt: '2026-07-08T00:00:00.000Z',
       updatedAt: '2026-07-08T00:00:00.000Z',
     });
@@ -181,6 +197,7 @@ describe('task-handlers', () => {
       branch: 'task/fix-login-bug',
       worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
       status: 'todo',
+      kind: 'worktree',
       createdAt: '2026-07-08T00:00:00.000Z',
       updatedAt: '2026-07-08T00:00:00.000Z',
     });

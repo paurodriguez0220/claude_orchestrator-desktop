@@ -78,3 +78,7 @@ export async function listBranches(repoPath: string): Promise<{ local: string[];
     .filter((line) => line.length > 0 && !line.endsWith('/HEAD'));
   return { local, remote };
 }
+
+export async function fetchRepo(repoPath: string): Promise<void> {
+  await runGit(['fetch'], repoPath);
+}

@@ -1,5 +1,7 @@
 export type TaskStatus = 'todo' | 'in-progress' | 'blocked' | 'done';
 
+export type TaskKind = 'worktree' | 'review';
+
 export interface RepoRecord {
   id: string;
   name: string;
@@ -16,6 +18,7 @@ export interface TaskRecord {
   branch: string;
   worktreePath: string;
   status: TaskStatus;
+  kind: TaskKind;
   createdAt: string;
   updatedAt: string;
 }
@@ -31,6 +34,7 @@ export interface TaskNotesFrontmatter {
   branch: string;
   worktreePath: string;
   status: TaskStatus;
+  kind: TaskKind;
 }
 
 export interface TaskNotes {

@@ -28,6 +28,7 @@ vi.mock('../services/store', () => ({
 vi.mock('../services/git-service', () => ({
   cloneRepo: vi.fn(async () => undefined),
   listBranches: vi.fn(async () => ({ local: ['main', 'feature-x'], remote: ['origin/main', 'origin/feature-y'] })),
+  fetchRepo: vi.fn(async () => undefined),
 }));
 
 vi.mock('../paths', () => ({
@@ -37,7 +38,7 @@ vi.mock('../paths', () => ({
 
 import { registerRepoHandlers } from './repo-handlers';
 import { IpcChannels } from '../../shared/ipc-channels';
-import { cloneRepo, listBranches } from '../services/git-service';
+import { cloneRepo, listBranches, fetchRepo } from '../services/git-service';
 
 describe('repo-handlers', () => {
   beforeEach(() => {
@@ -121,5 +122,17 @@ describe('repo-handlers', () => {
     const handler = handlers.get(IpcChannels.DialogSelectFolder);
     const result = await handler?.({});
     expect(result).toBeUndefined();
+  });
+
+  it('RepoFetch runs git fetch for the given repo', async () => {
+    store.repos.push({ id: 'repo-1', name: 'demo', path: 'C:\\demo', createdAt: '2026-07-08T00:00:00.000Z' });
+    const handler = handlers.get(IpcChannels.RepoFetch);
+    await handler?.({}, 'repo-1');
+    expect(fetchRepo).toHaveBeenCalledWith('C:\\demo');
+  });
+
+  it('RepoFetch rejects an unknown repoId', async () => {
+    const handler = handlers.get(IpcChannels.RepoFetch);
+    await expect(handler?.({}, 'nope')).rejects.toThrow('Unknown repo');
   });
 });
