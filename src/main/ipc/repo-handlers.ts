@@ -6,7 +6,7 @@ import type { RepoAddRequest, RepoCloneRequest } from '../../shared/ipc-channels
 import type { RepoRecord } from '../../shared/types';
 import { readStore, writeStore } from '../services/store';
 import { cloneRepo } from '../services/git-service';
-import { assertValidGitUrl } from '../services/slug';
+import { assertValidGitUrl, assertSafeFolderName } from '../services/slug';
 import { getStorePath, getReposRoot } from '../paths';
 
 export function registerRepoHandlers(): void {
@@ -30,6 +30,7 @@ export function registerRepoHandlers(): void {
 
   ipcMain.handle(IpcChannels.RepoClone, async (_event, request: RepoCloneRequest): Promise<RepoRecord> => {
     assertValidGitUrl(request.url);
+    assertSafeFolderName(request.name);
     const destinationPath = join(getReposRoot(), request.name);
     await cloneRepo(request.url, destinationPath);
     const store = await readStore(getStorePath());

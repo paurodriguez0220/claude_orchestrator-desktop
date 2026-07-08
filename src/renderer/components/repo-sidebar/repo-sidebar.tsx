@@ -8,6 +8,7 @@ export interface RepoSidebarProps {
   onOpenRepoClick: () => void;
   onCloneRepoClick: () => void;
   onNewTaskClick: (repoId: string) => void;
+  onRemoveTaskClick: (taskId: string) => void;
 }
 
 export function RepoSidebar({
@@ -18,6 +19,7 @@ export function RepoSidebar({
   onOpenRepoClick,
   onCloneRepoClick,
   onNewTaskClick,
+  onRemoveTaskClick,
 }: RepoSidebarProps): JSX.Element {
   return (
     <nav aria-label="Repositories">
@@ -43,6 +45,9 @@ export function RepoSidebar({
                     onClick={() => onSelectTask(task.id)}
                   >
                     {task.title}
+                  </button>
+                  <button type="button" onClick={() => onRemoveTaskClick(task.id)}>
+                    Remove
                   </button>
                 </li>
               ))}

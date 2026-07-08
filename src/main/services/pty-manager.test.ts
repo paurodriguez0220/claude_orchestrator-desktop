@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const spawnMock = vi.fn();
+const onExitMock = vi.fn();
 
 vi.mock('node-pty', () => ({
   spawn: (...args: unknown[]) => {
     spawnMock(...args);
     return {
       onData: vi.fn(),
+      onExit: onExitMock,
       write: vi.fn(),
       kill: vi.fn(),
     };
@@ -16,7 +18,10 @@ vi.mock('node-pty', () => ({
 import { spawnClaudeSession, writeToSession, isSessionAlive, killSession } from './pty-manager';
 
 describe('pty-manager', () => {
-  beforeEach(() => spawnMock.mockClear());
+  beforeEach(() => {
+    spawnMock.mockClear();
+    onExitMock.mockClear();
+  });
 
   it('spawns a fresh session via cmd.exe /c claude when not resuming', () => {
     spawnClaudeSession('task-1', 'C:\\repo-worktrees\\slug', false, vi.fn());
@@ -54,5 +59,13 @@ describe('pty-manager', () => {
 
   it('writeToSession is a no-op for an unknown taskId (does not throw)', () => {
     expect(() => writeToSession('unknown-task', 'echo hi\n')).not.toThrow();
+  });
+
+  it('removes the session from the map when the underlying process exits on its own', () => {
+    spawnClaudeSession('task-5', 'C:\\repo-worktrees\\slug5', false, vi.fn());
+    expect(isSessionAlive('task-5')).toBe(true);
+    const onExitHandler = onExitMock.mock.calls[0]?.[0] as (() => void) | undefined;
+    onExitHandler?.();
+    expect(isSessionAlive('task-5')).toBe(false);
   });
 });

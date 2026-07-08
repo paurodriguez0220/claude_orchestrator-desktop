@@ -10,6 +10,7 @@ const meta: Meta<typeof RepoSidebar> = {
     onOpenRepoClick: fn(),
     onCloneRepoClick: fn(),
     onNewTaskClick: fn(),
+    onRemoveTaskClick: fn(),
   },
 };
 

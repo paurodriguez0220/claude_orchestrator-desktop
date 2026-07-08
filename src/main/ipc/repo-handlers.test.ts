@@ -58,6 +58,14 @@ describe('repo-handlers', () => {
     expect(cloneRepo).not.toHaveBeenCalled();
   });
 
+  it('RepoClone rejects an unsafe folder name before calling git', async () => {
+    const handler = handlers.get(IpcChannels.RepoClone);
+    await expect(
+      handler?.({}, { url: 'https://github.com/paurodriguez0220/demo.git', name: '../../evil' }),
+    ).rejects.toThrow();
+    expect(cloneRepo).not.toHaveBeenCalled();
+  });
+
   it('RepoClone clones into the repos root and stores a repo record', async () => {
     const handler = handlers.get(IpcChannels.RepoClone);
     const repo = await handler?.({}, { url: 'https://github.com/paurodriguez0220/demo.git', name: 'demo' });

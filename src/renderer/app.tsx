@@ -81,6 +81,24 @@ export function App(): JSX.Element {
     }
   }
 
+  async function handleRemoveTask(taskId: string): Promise<void> {
+    if (!window.confirm('Remove this task? This deletes its git worktree.')) {
+      return;
+    }
+    setErrorMessage(undefined);
+    try {
+      await window.claudeOrchestrator.removeTask(taskId);
+      setTasks((current) => current.filter((task) => task.id !== taskId));
+      if (taskId === selectedTaskId) {
+        setSelectedTaskId(undefined);
+        setNotesBody('');
+        setNotesStatus('todo');
+      }
+    } catch (err) {
+      setErrorMessage(toErrorMessage(err));
+    }
+  }
+
   const tasksByRepoId = tasks.reduce<Record<string, TaskRecord[]>>((acc, task) => {
     (acc[task.repoId] ??= []).push(task);
     return acc;
@@ -97,6 +115,7 @@ export function App(): JSX.Element {
         onOpenRepoClick={() => void handleOpenRepoClick()}
         onCloneRepoClick={() => setIsCloneModalOpen(true)}
         onNewTaskClick={setNewTaskRepoId}
+        onRemoveTaskClick={(taskId) => void handleRemoveTask(taskId)}
       />
       <NewTaskModal
         isOpen={newTaskRepoId !== undefined}

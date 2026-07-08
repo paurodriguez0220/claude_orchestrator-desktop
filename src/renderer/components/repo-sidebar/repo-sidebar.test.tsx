@@ -27,6 +27,7 @@ describe('RepoSidebar', () => {
         onOpenRepoClick={vi.fn()}
         onCloneRepoClick={vi.fn()}
         onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
       />,
     );
     expect(screen.getByText('demo')).toBeInTheDocument();
@@ -44,6 +45,7 @@ describe('RepoSidebar', () => {
         onOpenRepoClick={vi.fn()}
         onCloneRepoClick={vi.fn()}
         onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Fix login bug' }));
@@ -61,6 +63,7 @@ describe('RepoSidebar', () => {
         onOpenRepoClick={onOpenRepoClick}
         onCloneRepoClick={vi.fn()}
         onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Open Existing Repo' }));
@@ -78,9 +81,28 @@ describe('RepoSidebar', () => {
         onOpenRepoClick={vi.fn()}
         onCloneRepoClick={onCloneRepoClick}
         onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Clone Repo' }));
     expect(onCloneRepoClick).toHaveBeenCalledOnce();
+  });
+
+  it('calls onRemoveTaskClick with the task id when "Remove" is clicked', async () => {
+    const onRemoveTaskClick = vi.fn();
+    render(
+      <RepoSidebar
+        repos={[repo]}
+        tasksByRepoId={{ 'repo-1': [task] }}
+        selectedTaskId={undefined}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={onRemoveTaskClick}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    expect(onRemoveTaskClick).toHaveBeenCalledWith('task-1');
   });
 });

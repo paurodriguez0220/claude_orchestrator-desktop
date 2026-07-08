@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { RepoRecord, TaskRecord } from '../shared/types';
 
@@ -43,6 +43,7 @@ const listRepos = vi.fn(async () => [repo]);
 const listTasks = vi.fn(async () => [task]);
 const createTask = vi.fn(async () => task);
 const openTask = vi.fn(async () => undefined);
+const removeTask = vi.fn(async () => undefined);
 const getTaskNotes = vi.fn(async () => ({ body: 'notes', status: 'todo' as const }));
 const setTaskNotes = vi.fn(async () => undefined);
 const selectFolder = vi.fn(async (): Promise<string | undefined> => 'C:\\Users\\paulo.rodriguez\\Paulo\\demo-repo');
@@ -57,7 +58,7 @@ beforeEach(() => {
     createTask,
     openTask,
     closeTask: vi.fn(),
-    removeTask: vi.fn(),
+    removeTask,
     selectFolder,
     addRepo,
     cloneRepo,
@@ -108,5 +109,27 @@ describe('App', () => {
     await userEvent.type(screen.getByLabelText('Title'), 'Fix login bug');
     await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('git worktree add failed: fatal: branch already exists');
+  });
+
+  it('removing a task calls removeTask and removes it from the list when confirmed', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<App />);
+    await screen.findByText('Fix login bug');
+    await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    expect(confirmSpy).toHaveBeenCalledOnce();
+    expect(removeTask).toHaveBeenCalledWith('task-1');
+    await waitFor(() => expect(screen.queryByText('Fix login bug')).not.toBeInTheDocument());
+    confirmSpy.mockRestore();
+  });
+
+  it('does not remove the task when the removal confirmation is cancelled', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<App />);
+    await screen.findByText('Fix login bug');
+    await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    expect(confirmSpy).toHaveBeenCalledOnce();
+    expect(removeTask).not.toHaveBeenCalled();
+    expect(screen.getByText('Fix login bug')).toBeInTheDocument();
+    confirmSpy.mockRestore();
   });
 });

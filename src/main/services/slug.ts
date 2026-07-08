@@ -23,6 +23,14 @@ const SAFE_URL_CHARS = /^[A-Za-z0-9:/_.@-]+$/;
 // enabling argument injection (CVE-2017-1000117 class).
 const SAFE_GIT_AT_URL_PATTERN = /^git@[A-Za-z0-9][A-Za-z0-9.-]*:[A-Za-z0-9/_.-]+$/;
 
+const SAFE_FOLDER_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
+
+export function assertSafeFolderName(name: string): void {
+  if (name.includes('/') || name.includes('\\') || name.includes('..') || !SAFE_FOLDER_NAME_PATTERN.test(name)) {
+    throw new Error(`Unsafe folder name: ${name}`);
+  }
+}
+
 export function assertValidGitUrl(url: string): void {
   const hasKnownScheme = url.startsWith('https://') || url.startsWith('git@');
   if (!hasKnownScheme || !SAFE_URL_CHARS.test(url)) {

@@ -21,6 +21,9 @@ export function spawnClaudeSession(
     rows: 30,
   });
   session.onData((data) => onData(taskId, data));
+  session.onExit(() => {
+    sessions.delete(taskId);
+  });
   sessions.set(taskId, session);
 }
 

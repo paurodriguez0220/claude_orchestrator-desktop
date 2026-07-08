@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { slugify, assertSafeBranchName, assertValidGitUrl } from './slug';
+import { slugify, assertSafeBranchName, assertValidGitUrl, assertSafeFolderName } from './slug';
 
 describe('slugify', () => {
   it('lowercases and hyphenates a plain title', () => {
@@ -65,5 +65,27 @@ describe('assertValidGitUrl', () => {
 
   it('rejects an ssh URL whose host segment starts with a dash (argument injection via -4)', () => {
     expect(() => assertValidGitUrl('git@-4')).toThrow('Invalid git URL');
+  });
+});
+
+describe('assertSafeFolderName', () => {
+  it('accepts a plain folder name', () => {
+    expect(() => assertSafeFolderName('demo')).not.toThrow();
+  });
+
+  it('accepts a folder name with hyphens, underscores, and digits', () => {
+    expect(() => assertSafeFolderName('my-repo_2')).not.toThrow();
+  });
+
+  it('rejects a path-traversal segment with a forward slash', () => {
+    expect(() => assertSafeFolderName('../evil')).toThrow();
+  });
+
+  it('rejects a path-traversal segment with a backslash', () => {
+    expect(() => assertSafeFolderName('..\\evil')).toThrow();
+  });
+
+  it('rejects a name containing a path separator', () => {
+    expect(() => assertSafeFolderName('a/b')).toThrow();
   });
 });
