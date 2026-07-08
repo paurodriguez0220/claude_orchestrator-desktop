@@ -14,6 +14,7 @@ export interface NewTaskModalProps {
   isOpen: boolean;
   branches: BranchOption[];
   isSubmitting: boolean;
+  mode: 'task' | 'review';
   onClose: () => void;
   onSubmit: (fields: NewTaskFields) => void;
 }
@@ -26,6 +27,7 @@ export function NewTaskModal({
   isOpen,
   branches,
   isSubmitting,
+  mode,
   onClose,
   onSubmit,
 }: NewTaskModalProps): JSX.Element | null {
@@ -40,11 +42,12 @@ export function NewTaskModal({
   }
 
   function handleSubmit(): void {
+    const useExisting = mode === 'review' || useExistingBranch;
     onSubmit({
       title,
       adoId: adoId || undefined,
-      branch: useExistingBranch ? undefined : branch || undefined,
-      existingBranch: useExistingBranch ? selectedExistingBranch || undefined : undefined,
+      branch: useExisting ? undefined : branch || undefined,
+      existingBranch: useExisting ? selectedExistingBranch || undefined : undefined,
     });
   }
 
@@ -77,31 +80,33 @@ export function NewTaskModal({
           />
         </div>
 
-        <fieldset className="flex flex-col gap-2">
-          <legend className={fieldLabelClasses}>Branch</legend>
-          <label className="flex items-center gap-2 text-sm text-graphite-100">
-            <input
-              type="radio"
-              name="branch-mode"
-              checked={!useExistingBranch}
-              onChange={() => setUseExistingBranch(false)}
-              className="accent-clay-500"
-            />
-            New branch
-          </label>
-          <label className="flex items-center gap-2 text-sm text-graphite-100">
-            <input
-              type="radio"
-              name="branch-mode"
-              checked={useExistingBranch}
-              onChange={() => setUseExistingBranch(true)}
-              className="accent-clay-500"
-            />
-            Use existing branch
-          </label>
-        </fieldset>
+        {mode === 'task' && (
+          <fieldset className="flex flex-col gap-2">
+            <legend className={fieldLabelClasses}>Branch</legend>
+            <label className="flex items-center gap-2 text-sm text-graphite-100">
+              <input
+                type="radio"
+                name="branch-mode"
+                checked={!useExistingBranch}
+                onChange={() => setUseExistingBranch(false)}
+                className="accent-clay-500"
+              />
+              New branch
+            </label>
+            <label className="flex items-center gap-2 text-sm text-graphite-100">
+              <input
+                type="radio"
+                name="branch-mode"
+                checked={useExistingBranch}
+                onChange={() => setUseExistingBranch(true)}
+                className="accent-clay-500"
+              />
+              Use existing branch
+            </label>
+          </fieldset>
+        )}
 
-        {useExistingBranch ? (
+        {mode === 'review' || useExistingBranch ? (
           <div className="flex flex-col gap-1">
             <label htmlFor="new-task-existing-branch" className={fieldLabelClasses}>
               Existing Branch
