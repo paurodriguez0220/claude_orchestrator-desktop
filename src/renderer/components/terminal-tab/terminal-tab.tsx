@@ -8,6 +8,12 @@ export interface TerminalTabProps {
   taskId: string;
 }
 
+const SUPPORTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+
+function toErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : 'Something went wrong';
+}
+
 export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -54,10 +60,14 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
     }
 
     async function handlePastedImage(file: File): Promise<void> {
-      const dataUrl = await readAsDataUrl(file);
-      const filePath = await window.claudeOrchestrator.saveClipboardImage(dataUrl);
-      const quotedPath = filePath.includes(' ') ? `"${filePath}"` : filePath;
-      window.claudeOrchestrator.sendPtyInput(taskId, quotedPath);
+      try {
+        const dataUrl = await readAsDataUrl(file);
+        const filePath = await window.claudeOrchestrator.saveClipboardImage(dataUrl);
+        const quotedPath = filePath.includes(' ') ? `"${filePath}"` : filePath;
+        window.claudeOrchestrator.sendPtyInput(taskId, quotedPath);
+      } catch (err) {
+        terminal.write(`\r\n[Failed to paste image: ${toErrorMessage(err)}]\r\n`);
+      }
     }
 
     function handlePaste(event: ClipboardEvent): void {
@@ -65,15 +75,15 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
       if (!items) {
         return;
       }
-      const imageItem = Array.from(items).find((item) => item.type.startsWith('image/'));
+      const imageItem = Array.from(items).find((item) => SUPPORTED_IMAGE_TYPES.includes(item.type));
       if (!imageItem) {
         return;
       }
-      event.preventDefault();
       const file = imageItem.getAsFile();
       if (!file) {
         return;
       }
+      event.preventDefault();
       void handlePastedImage(file);
     }
 

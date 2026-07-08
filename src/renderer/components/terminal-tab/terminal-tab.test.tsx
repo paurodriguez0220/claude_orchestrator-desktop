@@ -191,6 +191,40 @@ describe('TerminalTab', () => {
     expect(saveClipboardImage).not.toHaveBeenCalled();
   });
 
+  it('does not intercept a paste with an unsupported image type', () => {
+    const { container } = render(<TerminalTab taskId="task-1" />);
+    const terminalContainer = container.querySelector('[data-task-id="task-1"]') as HTMLDivElement;
+
+    const fakeFile = new File(['fake-image-bytes'], 'image.bmp', { type: 'image/bmp' });
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: { items: [{ type: 'image/bmp', getAsFile: () => fakeFile }] },
+    });
+
+    terminalContainer.dispatchEvent(pasteEvent);
+
+    expect(pasteEvent.defaultPrevented).toBe(false);
+    expect(saveClipboardImage).not.toHaveBeenCalled();
+  });
+
+  it('writes a visible error notice into the terminal when saving the pasted image fails', async () => {
+    saveClipboardImage.mockRejectedValueOnce(new Error('Unsupported image type: image/bmp'));
+    const { container } = render(<TerminalTab taskId="task-1" />);
+    const terminalContainer = container.querySelector('[data-task-id="task-1"]') as HTMLDivElement;
+
+    const fakeFile = new File(['fake-image-bytes'], 'image.png', { type: 'image/png' });
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: { items: [{ type: 'image/png', getAsFile: () => fakeFile }] },
+    });
+
+    terminalContainer.dispatchEvent(pasteEvent);
+
+    await waitFor(() =>
+      expect(writeMock).toHaveBeenCalledWith(expect.stringContaining('Unsupported image type: image/bmp')),
+    );
+  });
+
   it('removes the paste listener on unmount', () => {
     const { container, unmount } = render(<TerminalTab taskId="task-1" />);
     const terminalContainer = container.querySelector('[data-task-id="task-1"]') as HTMLDivElement;
