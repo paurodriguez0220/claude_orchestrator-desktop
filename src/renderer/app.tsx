@@ -5,6 +5,7 @@ import { CloneRepoModal } from './components/clone-repo-modal/clone-repo-modal';
 import { TerminalTab } from './components/terminal-tab/terminal-tab';
 import { TaskNotesPanel } from './components/task-notes-panel/task-notes-panel';
 import { TabBar } from './components/tab-bar/tab-bar';
+import { Spinner } from './components/spinner/spinner';
 import type { RepoRecord, TaskRecord, TaskStatus } from '../shared/types';
 import type { BranchOption } from '../shared/ipc-channels';
 import type { NewTaskFields } from './components/new-task-modal/new-task-modal';
@@ -23,6 +24,8 @@ export function App(): JSX.Element {
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
+  const [isSubmittingModal, setIsSubmittingModal] = useState(false);
+  const [loadingTaskId, setLoadingTaskId] = useState<string | undefined>();
 
   useEffect(() => {
     void window.claudeOrchestrator.listRepos().then(setRepos);
@@ -33,13 +36,18 @@ export function App(): JSX.Element {
     setErrorMessage(undefined);
     try {
       if (!openTaskIds.includes(taskId)) {
-        await window.claudeOrchestrator.openTask(taskId);
-        setOpenTaskIds((current) => [...current, taskId]);
-        // Only fetch notes the first time a tab is opened — switching back
-        // to an already-open tab should be instant and reuse the cache
-        // populated here, not re-fetch over IPC.
-        const notes = await window.claudeOrchestrator.getTaskNotes(taskId);
-        setNotesByTaskId((current) => ({ ...current, [taskId]: notes }));
+        setLoadingTaskId(taskId);
+        try {
+          // Only fetch notes the first time a tab is opened — switching back
+          // to an already-open tab should be instant and reuse the cache
+          // populated here, not re-fetch over IPC.
+          await window.claudeOrchestrator.openTask(taskId);
+          setOpenTaskIds((current) => [...current, taskId]);
+          const notes = await window.claudeOrchestrator.getTaskNotes(taskId);
+          setNotesByTaskId((current) => ({ ...current, [taskId]: notes }));
+        } finally {
+          setLoadingTaskId(undefined);
+        }
       }
       setActiveTaskId(taskId);
     } catch (err) {
@@ -82,13 +90,16 @@ export function App(): JSX.Element {
       return;
     }
     setErrorMessage(undefined);
+    setIsSubmittingModal(true);
     try {
       const task = await window.claudeOrchestrator.createTask({ repoId: newTaskRepoId, ...fields });
       setTasks((current) => [...current, task]);
-      setNewTaskRepoId(undefined);
       await handleSelectTask(task.id);
+      setNewTaskRepoId(undefined);
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
+    } finally {
+      setIsSubmittingModal(false);
     }
   }
 
@@ -108,12 +119,15 @@ export function App(): JSX.Element {
 
   async function handleCloneRepo(fields: { url: string; name: string }): Promise<void> {
     setErrorMessage(undefined);
+    setIsSubmittingModal(true);
     try {
       const repo = await window.claudeOrchestrator.cloneRepo(fields.url, fields.name);
       setRepos((current) => [...current, repo]);
       setIsCloneModalOpen(false);
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
+    } finally {
+      setIsSubmittingModal(false);
     }
   }
 
@@ -169,11 +183,13 @@ export function App(): JSX.Element {
       <NewTaskModal
         isOpen={newTaskRepoId !== undefined}
         branches={branches}
+        isSubmitting={isSubmittingModal}
         onClose={() => setNewTaskRepoId(undefined)}
         onSubmit={(fields) => void handleCreateTask(fields)}
       />
       <CloneRepoModal
         isOpen={isCloneModalOpen}
+        isSubmitting={isSubmittingModal}
         onClose={() => setIsCloneModalOpen(false)}
         onSubmit={(fields) => void handleCloneRepo(fields)}
       />
@@ -190,9 +206,15 @@ export function App(): JSX.Element {
           />
         )}
         <div className="flex flex-1 overflow-hidden">
-          {openTaskIds.length > 0 ? (
+          {openTaskIds.length > 0 || loadingTaskId !== undefined ? (
             <>
               <div className="relative flex-1 overflow-hidden">
+                {loadingTaskId !== undefined && (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-graphite-900/80 text-sm text-graphite-100">
+                    <Spinner />
+                    <span>Starting session…</span>
+                  </div>
+                )}
                 {openTaskIds.map((id) => (
                   <div key={id} className={id === activeTaskId ? 'h-full w-full' : 'hidden'}>
                     <TerminalTab taskId={id} />

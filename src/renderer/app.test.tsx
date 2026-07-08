@@ -28,6 +28,14 @@ vi.mock('@xterm/addon-fit', () => ({
 
 import { App } from './app';
 
+function createDeferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
 const repo: RepoRecord = { id: 'repo-1', name: 'demo', path: 'C:\\demo', createdAt: '2026-07-08T00:00:00.000Z' };
 const task: TaskRecord = {
   id: 'task-1',
@@ -53,7 +61,7 @@ const task2: TaskRecord = {
 const listRepos = vi.fn(async () => [repo]);
 const listTasks = vi.fn(async () => [task, task2]);
 const createTask = vi.fn(async () => task);
-const openTask = vi.fn(async () => undefined);
+const openTask = vi.fn(async (): Promise<void> => undefined);
 const removeTask = vi.fn(async () => undefined);
 const closeTask = vi.fn(async () => undefined);
 const getTaskNotes = vi.fn(async () => ({ body: 'notes', status: 'todo' as const }));
@@ -269,5 +277,52 @@ describe('App', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Add tests' }));
     expect(await screen.findByDisplayValue('notes for task 2')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('notes for task 1')).not.toBeInTheDocument();
+  });
+
+  it('keeps the New Task modal open with a pending state until the new task session starts', async () => {
+    const taskDeferred = createDeferred<TaskRecord>();
+    createTask.mockReturnValueOnce(taskDeferred.promise);
+    render(<App />);
+    const newTaskButtons = await screen.findAllByRole('button', { name: 'New Task' });
+    const firstNewTaskButton = newTaskButtons[0];
+    if (!firstNewTaskButton) {
+      throw new Error('Expected at least one "New Task" button to be rendered');
+    }
+    await userEvent.click(firstNewTaskButton);
+    await userEvent.type(screen.getByLabelText('Title'), 'Fix login bug');
+    await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
+
+    expect(await screen.findByRole('button', { name: /Creating/ })).toBeDisabled();
+    expect(screen.getByRole('dialog', { name: 'New Task' })).toBeInTheDocument();
+
+    taskDeferred.resolve(task);
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'New Task' })).not.toBeInTheDocument());
+  });
+
+  it('shows a starting-session overlay while opening an existing task, then hides it', async () => {
+    const openDeferred = createDeferred<void>();
+    openTask.mockReturnValueOnce(openDeferred.promise);
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Fix login bug' }));
+
+    expect(await screen.findByText('Starting session…')).toBeInTheDocument();
+
+    openDeferred.resolve();
+    await waitFor(() => expect(screen.queryByText('Starting session…')).not.toBeInTheDocument());
+  });
+
+  it('keeps the Clone Repo modal open with a pending state until cloning finishes', async () => {
+    const cloneDeferred = createDeferred<RepoRecord>();
+    cloneRepo.mockReturnValueOnce(cloneDeferred.promise);
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Clone Repo' }));
+    await userEvent.type(screen.getByLabelText('Git URL'), 'https://github.com/paurodriguez0220/demo.git');
+    await userEvent.type(screen.getByLabelText('Local Name'), 'demo');
+    await userEvent.click(screen.getByRole('button', { name: 'Clone' }));
+
+    expect(await screen.findByRole('button', { name: /Cloning/ })).toBeDisabled();
+
+    cloneDeferred.resolve(repo);
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Clone Repo' })).not.toBeInTheDocument());
   });
 });
