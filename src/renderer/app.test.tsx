@@ -49,6 +49,7 @@ const setTaskNotes = vi.fn(async () => undefined);
 const selectFolder = vi.fn(async (): Promise<string | undefined> => 'C:\\Users\\paulo.rodriguez\\Paulo\\demo-repo');
 const addRepo = vi.fn(async () => repo);
 const cloneRepo = vi.fn(async () => repo);
+const listBranches = vi.fn(async () => [{ value: 'feature-x', label: 'feature-x', isRemote: false }]);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -62,6 +63,7 @@ beforeEach(() => {
     selectFolder,
     addRepo,
     cloneRepo,
+    listBranches,
     getTaskNotes,
     setTaskNotes,
     sendPtyInput: vi.fn(),
@@ -131,5 +133,35 @@ describe('App', () => {
     expect(removeTask).not.toHaveBeenCalled();
     expect(screen.getByText('Fix login bug')).toBeInTheDocument();
     confirmSpy.mockRestore();
+  });
+
+  it('fetches branches for the repo when New Task is opened', async () => {
+    render(<App />);
+    const newTaskButtons = await screen.findAllByRole('button', { name: 'New Task' });
+    const firstNewTaskButton = newTaskButtons[0];
+    if (!firstNewTaskButton) {
+      throw new Error('Expected at least one "New Task" button to be rendered');
+    }
+    await userEvent.click(firstNewTaskButton);
+    expect(listBranches).toHaveBeenCalledWith('repo-1');
+    await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
+    expect(await screen.findByRole('option', { name: 'feature-x' })).toBeInTheDocument();
+  });
+
+  it('creating a task with an existing branch selected forwards existingBranch to createTask', async () => {
+    render(<App />);
+    const newTaskButtons = await screen.findAllByRole('button', { name: 'New Task' });
+    const firstNewTaskButton = newTaskButtons[0];
+    if (!firstNewTaskButton) {
+      throw new Error('Expected at least one "New Task" button to be rendered');
+    }
+    await userEvent.click(firstNewTaskButton);
+    await userEvent.type(screen.getByLabelText('Title'), 'Resume feature work');
+    await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
+    await userEvent.selectOptions(await screen.findByRole('combobox'), 'feature-x');
+    await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
+    expect(createTask).toHaveBeenCalledWith(
+      expect.objectContaining({ repoId: 'repo-1', existingBranch: 'feature-x' }),
+    );
   });
 });
