@@ -2,10 +2,10 @@ import { ipcMain, dialog } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { join, basename } from 'node:path';
 import { IpcChannels } from '../../shared/ipc-channels';
-import type { RepoAddRequest, RepoCloneRequest } from '../../shared/ipc-channels';
+import type { RepoAddRequest, RepoCloneRequest, BranchOption } from '../../shared/ipc-channels';
 import type { RepoRecord } from '../../shared/types';
 import { readStore, writeStore } from '../services/store';
-import { cloneRepo } from '../services/git-service';
+import { cloneRepo, listBranches } from '../services/git-service';
 import { assertValidGitUrl, assertSafeFolderName } from '../services/slug';
 import { getStorePath, getReposRoot } from '../paths';
 
@@ -49,5 +49,24 @@ export function registerRepoHandlers(): void {
   ipcMain.handle(IpcChannels.RepoList, async (): Promise<RepoRecord[]> => {
     const store = await readStore(getStorePath());
     return store.repos;
+  });
+
+  ipcMain.handle(IpcChannels.RepoBranches, async (_event, repoId: string): Promise<BranchOption[]> => {
+    const store = await readStore(getStorePath());
+    const repo = store.repos.find((candidate) => candidate.id === repoId);
+    if (!repo) {
+      throw new Error(`Unknown repo: ${repoId}`);
+    }
+    const { local, remote } = await listBranches(repo.path);
+    const localSet = new Set(local);
+    const options: BranchOption[] = local.map((name) => ({ value: name, label: name, isRemote: false }));
+    for (const remoteRef of remote) {
+      const slashIndex = remoteRef.indexOf('/');
+      const bareName = slashIndex === -1 ? remoteRef : remoteRef.slice(slashIndex + 1);
+      if (!localSet.has(bareName)) {
+        options.push({ value: bareName, label: remoteRef, isRemote: true });
+      }
+    }
+    return options;
   });
 }

@@ -27,6 +27,7 @@ vi.mock('../services/store', () => ({
 
 vi.mock('../services/git-service', () => ({
   cloneRepo: vi.fn(async () => undefined),
+  listBranches: vi.fn(async () => ({ local: ['main', 'feature-x'], remote: ['origin/main', 'origin/feature-y'] })),
 }));
 
 vi.mock('../paths', () => ({
@@ -36,7 +37,7 @@ vi.mock('../paths', () => ({
 
 import { registerRepoHandlers } from './repo-handlers';
 import { IpcChannels } from '../../shared/ipc-channels';
-import { cloneRepo } from '../services/git-service';
+import { cloneRepo, listBranches } from '../services/git-service';
 
 describe('repo-handlers', () => {
   beforeEach(() => {
@@ -78,6 +79,34 @@ describe('repo-handlers', () => {
     const handler = handlers.get(IpcChannels.RepoList);
     const result = await handler?.({});
     expect(result).toEqual(store.repos);
+  });
+
+  it('RepoBranches returns local branches plus remote-only branches with bare values', async () => {
+    store.repos.push({ id: 'repo-1', name: 'demo', path: 'C:\\demo', createdAt: '2026-07-08T00:00:00.000Z' });
+    const handler = handlers.get(IpcChannels.RepoBranches);
+    const result = await handler?.({}, 'repo-1');
+    expect(listBranches).toHaveBeenCalledWith('C:\\demo');
+    expect(result).toEqual([
+      { value: 'main', label: 'main', isRemote: false },
+      { value: 'feature-x', label: 'feature-x', isRemote: false },
+      { value: 'feature-y', label: 'origin/feature-y', isRemote: true },
+    ]);
+  });
+
+  it('RepoBranches excludes a remote branch that already has a local counterpart', async () => {
+    store.repos.push({ id: 'repo-1', name: 'demo', path: 'C:\\demo', createdAt: '2026-07-08T00:00:00.000Z' });
+    vi.mocked(listBranches).mockResolvedValueOnce({
+      local: ['main'],
+      remote: ['origin/main'],
+    });
+    const handler = handlers.get(IpcChannels.RepoBranches);
+    const result = await handler?.({}, 'repo-1');
+    expect(result).toEqual([{ value: 'main', label: 'main', isRemote: false }]);
+  });
+
+  it('RepoBranches rejects an unknown repoId', async () => {
+    const handler = handlers.get(IpcChannels.RepoBranches);
+    await expect(handler?.({}, 'nope')).rejects.toThrow('Unknown repo');
   });
 
   it('DialogSelectFolder returns the chosen path', async () => {
