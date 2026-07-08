@@ -44,6 +44,7 @@ const task: TaskRecord = {
   branch: 'task/fix-login-bug',
   worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
   status: 'todo',
+  kind: 'worktree',
   createdAt: '2026-07-08T00:00:00.000Z',
   updatedAt: '2026-07-08T00:00:00.000Z',
 };
@@ -54,6 +55,7 @@ const task2: TaskRecord = {
   branch: 'task/add-tests',
   worktreePath: 'C:\\demo-worktrees\\add-tests',
   status: 'todo',
+  kind: 'worktree',
   createdAt: '2026-07-08T00:00:00.000Z',
   updatedAt: '2026-07-08T00:00:00.000Z',
 };
@@ -70,6 +72,7 @@ const selectFolder = vi.fn(async (): Promise<string | undefined> => 'C:\\Users\\
 const addRepo = vi.fn(async () => repo);
 const cloneRepo = vi.fn(async () => repo);
 const listBranches = vi.fn(async () => [{ value: 'feature-x', label: 'feature-x', isRemote: false }]);
+const fetchRepo = vi.fn(async () => undefined);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -84,6 +87,7 @@ beforeEach(() => {
     addRepo,
     cloneRepo,
     listBranches,
+    fetchRepo,
     getTaskNotes,
     setTaskNotes,
     sendPtyInput: vi.fn(),
@@ -324,5 +328,25 @@ describe('App', () => {
 
     cloneDeferred.resolve(repo);
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Clone Repo' })).not.toBeInTheDocument());
+  });
+
+  it('"Review Code" fetches the repo, lists branches, and opens the modal in review mode', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Review Code' }));
+    expect(fetchRepo).toHaveBeenCalledWith('repo-1');
+    expect(listBranches).toHaveBeenCalledWith('repo-1');
+    expect(screen.queryByRole('radio', { name: 'Use existing branch' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('combobox')).toBeInTheDocument();
+  });
+
+  it('creating a task from the review flow forwards kind "review" to createTask', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Review Code' }));
+    await userEvent.type(screen.getByLabelText('Title'), 'Review PR #42');
+    await userEvent.selectOptions(await screen.findByRole('combobox'), 'feature-x');
+    await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
+    expect(createTask).toHaveBeenCalledWith(
+      expect.objectContaining({ repoId: 'repo-1', existingBranch: 'feature-x', kind: 'review' }),
+    );
   });
 });

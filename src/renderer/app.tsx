@@ -21,6 +21,7 @@ export function App(): JSX.Element {
   const [activeTaskId, setActiveTaskId] = useState<string | undefined>();
   const [notesByTaskId, setNotesByTaskId] = useState<Record<string, { body: string; status: TaskStatus }>>({});
   const [newTaskRepoId, setNewTaskRepoId] = useState<string | undefined>();
+  const [newTaskMode, setNewTaskMode] = useState<'task' | 'review'>('task');
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
@@ -76,8 +77,22 @@ export function App(): JSX.Element {
 
   async function handleNewTaskClick(repoId: string): Promise<void> {
     setErrorMessage(undefined);
+    setNewTaskMode('task');
     setNewTaskRepoId(repoId);
     try {
+      const options = await window.claudeOrchestrator.listBranches(repoId);
+      setBranches(options);
+    } catch (err) {
+      setErrorMessage(toErrorMessage(err));
+    }
+  }
+
+  async function handleReviewCodeClick(repoId: string): Promise<void> {
+    setErrorMessage(undefined);
+    setNewTaskMode('review');
+    setNewTaskRepoId(repoId);
+    try {
+      await window.claudeOrchestrator.fetchRepo(repoId);
       const options = await window.claudeOrchestrator.listBranches(repoId);
       setBranches(options);
     } catch (err) {
@@ -92,7 +107,11 @@ export function App(): JSX.Element {
     setErrorMessage(undefined);
     setIsSubmittingModal(true);
     try {
-      const task = await window.claudeOrchestrator.createTask({ repoId: newTaskRepoId, ...fields });
+      const task = await window.claudeOrchestrator.createTask({
+        repoId: newTaskRepoId,
+        ...fields,
+        kind: newTaskMode === 'review' ? 'review' : undefined,
+      });
       setTasks((current) => [...current, task]);
       await handleSelectTask(task.id);
       setNewTaskRepoId(undefined);
@@ -179,11 +198,13 @@ export function App(): JSX.Element {
         onCloneRepoClick={() => setIsCloneModalOpen(true)}
         onNewTaskClick={(repoId) => void handleNewTaskClick(repoId)}
         onRemoveTaskClick={(taskId) => void handleRemoveTask(taskId)}
+        onReviewCodeClick={(repoId) => void handleReviewCodeClick(repoId)}
       />
       <NewTaskModal
         isOpen={newTaskRepoId !== undefined}
         branches={branches}
         isSubmitting={isSubmittingModal}
+        mode={newTaskMode}
         onClose={() => setNewTaskRepoId(undefined)}
         onSubmit={(fields) => void handleCreateTask(fields)}
       />
