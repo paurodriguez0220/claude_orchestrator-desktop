@@ -18,8 +18,7 @@ export function App(): JSX.Element {
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [openTaskIds, setOpenTaskIds] = useState<string[]>([]);
   const [activeTaskId, setActiveTaskId] = useState<string | undefined>();
-  const [notesBody, setNotesBody] = useState('');
-  const [notesStatus, setNotesStatus] = useState<TaskStatus>('todo');
+  const [notesByTaskId, setNotesByTaskId] = useState<Record<string, { body: string; status: TaskStatus }>>({});
   const [newTaskRepoId, setNewTaskRepoId] = useState<string | undefined>();
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
@@ -36,13 +35,12 @@ export function App(): JSX.Element {
       if (!openTaskIds.includes(taskId)) {
         await window.claudeOrchestrator.openTask(taskId);
         setOpenTaskIds((current) => [...current, taskId]);
+        // Only fetch notes the first time a tab is opened — switching back
+        // to an already-open tab should be instant and reuse the cache
+        // populated here, not re-fetch over IPC.
+        const notes = await window.claudeOrchestrator.getTaskNotes(taskId);
+        setNotesByTaskId((current) => ({ ...current, [taskId]: notes }));
       }
-      const notes = await window.claudeOrchestrator.getTaskNotes(taskId);
-      // Set the task's data together with the selection so TaskNotesPanel
-      // never mounts with a stale/empty body for the newly selected task —
-      // it only initializes its local draft state from `body` on mount.
-      setNotesBody(notes.body);
-      setNotesStatus(notes.status);
       setActiveTaskId(taskId);
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
@@ -64,8 +62,6 @@ export function App(): JSX.Element {
         await handleSelectTask(fallback);
       } else {
         setActiveTaskId(undefined);
-        setNotesBody('');
-        setNotesStatus('todo');
       }
     }
   }
@@ -132,8 +128,6 @@ export function App(): JSX.Element {
       setOpenTaskIds((current) => current.filter((id) => id !== taskId));
       if (taskId === activeTaskId) {
         setActiveTaskId(undefined);
-        setNotesBody('');
-        setNotesStatus('todo');
       }
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
@@ -209,11 +203,15 @@ export function App(): JSX.Element {
                 <div className="w-80 shrink-0 overflow-y-auto border-l border-graphite-700 bg-graphite-800">
                   <TaskNotesPanel
                     key={activeTaskId}
-                    body={notesBody}
-                    status={notesStatus}
-                    onSave={(newBody) =>
-                      window.claudeOrchestrator.setTaskNotes({ taskId: activeTaskId, body: newBody })
-                    }
+                    body={notesByTaskId[activeTaskId]?.body ?? ''}
+                    status={notesByTaskId[activeTaskId]?.status ?? 'todo'}
+                    onSave={async (newBody) => {
+                      await window.claudeOrchestrator.setTaskNotes({ taskId: activeTaskId, body: newBody });
+                      setNotesByTaskId((current) => ({
+                        ...current,
+                        [activeTaskId]: { body: newBody, status: current[activeTaskId]?.status ?? 'todo' },
+                      }));
+                    }}
                   />
                 </div>
               )}

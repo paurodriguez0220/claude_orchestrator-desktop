@@ -214,11 +214,22 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: 'Close Add tests' })).toBeInTheDocument();
   });
 
-  it('clicking an already-open task switches tabs without reopening the pty session', async () => {
+  it('clicking an already-open task switches tabs without reopening the pty session or refetching notes', async () => {
+    // mockImplementationOnce (not mockImplementation) so the override only
+    // applies to these two calls and doesn't leak into later tests — plain
+    // vi.clearAllMocks() in beforeEach clears call history but does not
+    // reset a standing mockImplementation override.
+    getTaskNotes
+      .mockImplementationOnce(async () => ({ body: 'notes for task 1', status: 'todo' as const }))
+      .mockImplementationOnce(async () => ({ body: 'notes for task 2', status: 'todo' as const }));
     render(<App />);
     await userEvent.click(await screen.findByRole('button', { name: 'Fix login bug' }));
+    expect(await screen.findByDisplayValue('notes for task 1')).toBeInTheDocument();
     await userEvent.click(await screen.findByRole('button', { name: 'Add tests' }));
+    expect(await screen.findByDisplayValue('notes for task 2')).toBeInTheDocument();
+    expect(getTaskNotes).toHaveBeenCalledTimes(2);
     openTask.mockClear();
+    getTaskNotes.mockClear();
     const fixLoginBugButtons = screen.getAllByRole('button', { name: 'Fix login bug' });
     const sidebarButton = fixLoginBugButtons[0];
     if (!sidebarButton) {
@@ -226,6 +237,12 @@ describe('App', () => {
     }
     await userEvent.click(sidebarButton);
     expect(openTask).not.toHaveBeenCalled();
+    expect(getTaskNotes).not.toHaveBeenCalled();
+    // Proves a real per-task cache is used (not just a suppressed call):
+    // task-1's own notes body is still shown after switching back to it,
+    // rather than a stale/empty body.
+    expect(await screen.findByDisplayValue('notes for task 1')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('notes for task 2')).not.toBeInTheDocument();
   });
 
   it('closing a tab calls closeTask and removes it, without affecting the sidebar', async () => {
