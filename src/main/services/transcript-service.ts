@@ -1,6 +1,8 @@
 import { readdir, readFile, mkdir, stat, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { getTaskTranscriptPath } from '../paths';
+import { listAliveSessions } from './pty-manager';
 
 interface TranscriptUserMessage {
   type: 'user';
@@ -97,4 +99,14 @@ export async function exportTranscript(cwd: string, outputPath: string): Promise
   const markdown = parseTranscriptToMarkdown(raw);
   await mkdir(dirname(outputPath), { recursive: true });
   await writeFile(outputPath, markdown, 'utf-8');
+}
+
+export function startTranscriptExportScheduler(intervalMs: number): void {
+  setInterval(() => {
+    for (const { taskId, cwd } of listAliveSessions()) {
+      void exportTranscript(cwd, getTaskTranscriptPath(taskId)).catch((err) => {
+        console.error(`Failed to export transcript for task ${taskId}:`, err);
+      });
+    }
+  }, intervalMs);
 }

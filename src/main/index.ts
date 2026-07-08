@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import { join } from 'node:path';
 import { registerRepoHandlers } from './ipc/repo-handlers';
 import { registerTaskHandlers } from './ipc/task-handlers';
+import { startTranscriptExportScheduler } from './services/transcript-service';
 import { IpcChannels } from '../shared/ipc-channels';
 
 function broadcastPtyData(taskId: string, data: string): void {
@@ -41,6 +42,7 @@ function createWindow(): void {
 app.whenReady().then(() => {
   registerRepoHandlers();
   registerTaskHandlers(broadcastPtyData);
+  startTranscriptExportScheduler(5 * 60 * 1000);
 
   ipcMain.on(IpcChannels.PtyInput, (_event, { taskId, data }: { taskId: string; data: string }) => {
     void import('./services/pty-manager').then(({ writeToSession }) => writeToSession(taskId, data));

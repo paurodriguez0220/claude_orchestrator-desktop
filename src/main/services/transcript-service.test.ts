@@ -17,11 +17,22 @@ vi.mock('node:fs/promises', () => ({
 
 vi.mock('node:os', () => ({ homedir: () => 'C:\\Users\\paulo.rodriguez' }));
 
+vi.mock('../paths', () => ({
+  getTaskTranscriptPath: (taskId: string) => `C:\\fake\\tasks\\${taskId}.transcript.md`,
+}));
+
+vi.mock('./pty-manager', () => ({
+  listAliveSessions: vi.fn(() => []),
+}));
+
+import { listAliveSessions } from './pty-manager';
+
 import {
   encodeProjectDirName,
   findLatestTranscriptFile,
   parseTranscriptToMarkdown,
   exportTranscript,
+  startTranscriptExportScheduler,
 } from './transcript-service';
 
 describe('transcript-service', () => {
@@ -136,6 +147,65 @@ describe('transcript-service', () => {
       await exportTranscript('C:\\repo-worktrees\\slug', 'C:\\fake\\tasks\\abc.transcript.md');
       expect(mkdirMock).toHaveBeenCalled();
       expect(writeFileMock).toHaveBeenCalledWith('C:\\fake\\tasks\\abc.transcript.md', '### You\n\nhello\n\n', 'utf-8');
+    });
+  });
+
+  describe('startTranscriptExportScheduler', () => {
+    it('exports a transcript for every currently alive session on each interval tick', async () => {
+      vi.useFakeTimers();
+      try {
+        vi.mocked(listAliveSessions).mockReturnValue([
+          { taskId: 'task-1', cwd: 'C:\\repo-worktrees\\slug1' },
+          { taskId: 'task-2', cwd: 'C:\\repo-worktrees\\slug2' },
+        ]);
+        readdirMock.mockResolvedValue(['session.jsonl']);
+        statMock.mockResolvedValue({ mtimeMs: 1000 });
+        readFileMock.mockResolvedValue(
+          JSON.stringify({ type: 'user', message: { role: 'user', content: 'hi' } }),
+        );
+
+        startTranscriptExportScheduler(5 * 60 * 1000);
+        await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+
+        expect(writeFileMock).toHaveBeenCalledWith(
+          'C:\\fake\\tasks\\task-1.transcript.md',
+          '### You\n\nhi\n\n',
+          'utf-8',
+        );
+        expect(writeFileMock).toHaveBeenCalledWith(
+          'C:\\fake\\tasks\\task-2.transcript.md',
+          '### You\n\nhi\n\n',
+          'utf-8',
+        );
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('does not let one task\'s export failure stop others on the same tick', async () => {
+      vi.useFakeTimers();
+      try {
+        vi.mocked(listAliveSessions).mockReturnValue([
+          { taskId: 'task-1', cwd: 'C:\\repo-worktrees\\slug1' },
+          { taskId: 'task-2', cwd: 'C:\\repo-worktrees\\slug2' },
+        ]);
+        readdirMock.mockResolvedValue(['session.jsonl']);
+        statMock.mockResolvedValue({ mtimeMs: 1000 });
+        readFileMock.mockResolvedValue(
+          JSON.stringify({ type: 'user', message: { role: 'user', content: 'hi' } }),
+        );
+        writeFileMock.mockRejectedValueOnce(new Error('disk full')).mockResolvedValueOnce(undefined);
+        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+        startTranscriptExportScheduler(5 * 60 * 1000);
+        await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+
+        expect(consoleErrorSpy).toHaveBeenCalled();
+        expect(writeFileMock).toHaveBeenCalledTimes(2);
+        consoleErrorSpy.mockRestore();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });
