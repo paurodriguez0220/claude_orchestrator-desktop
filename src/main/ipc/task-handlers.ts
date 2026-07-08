@@ -48,6 +48,7 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
       branch,
       worktreePath,
       status: 'todo',
+      kind: request.kind ?? 'worktree',
       createdAt: now,
       updatedAt: now,
     };
@@ -60,6 +61,7 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
         branch: task.branch,
         worktreePath: task.worktreePath,
         status: task.status,
+        kind: task.kind,
       },
       body: '',
     });
