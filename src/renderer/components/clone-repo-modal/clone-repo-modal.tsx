@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ModalOverlay } from '../modal-overlay/modal-overlay';
+import { Spinner } from '../spinner/spinner';
 
 export interface CloneRepoFields {
   url: string;
@@ -8,6 +9,7 @@ export interface CloneRepoFields {
 
 export interface CloneRepoModalProps {
   isOpen: boolean;
+  isSubmitting: boolean;
   onClose: () => void;
   onSubmit: (fields: CloneRepoFields) => void;
 }
@@ -16,7 +18,7 @@ const fieldInputClasses =
   'rounded-md border border-graphite-600 bg-graphite-900 px-3 py-2 text-graphite-100 focus:border-clay-500 focus:outline-none';
 const fieldLabelClasses = 'text-sm font-medium text-graphite-400';
 
-export function CloneRepoModal({ isOpen, onClose, onSubmit }: CloneRepoModalProps): JSX.Element | null {
+export function CloneRepoModal({ isOpen, isSubmitting, onClose, onSubmit }: CloneRepoModalProps): JSX.Element | null {
   const [url, setUrl] = useState('');
   const [name, setName] = useState('');
 
@@ -57,16 +59,19 @@ export function CloneRepoModal({ isOpen, onClose, onSubmit }: CloneRepoModalProp
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md px-4 py-2 text-sm font-medium text-graphite-400 hover:text-graphite-100"
+            disabled={isSubmitting}
+            className="rounded-md px-4 py-2 text-sm font-medium text-graphite-400 hover:text-graphite-100 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={() => onSubmit({ url, name })}
-            className="rounded-md bg-clay-600 px-4 py-2 text-sm font-medium text-graphite-100 hover:bg-clay-500"
+            disabled={isSubmitting}
+            className="flex items-center gap-2 rounded-md bg-clay-600 px-4 py-2 text-sm font-medium text-graphite-100 hover:bg-clay-500 disabled:opacity-50"
           >
-            Clone
+            {isSubmitting && <Spinner />}
+            {isSubmitting ? 'Cloning…' : 'Clone'}
           </button>
         </div>
       </div>
