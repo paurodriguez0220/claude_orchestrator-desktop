@@ -6,7 +6,8 @@
   "private": true,
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
+    "build": "npm run typecheck && electron-vite build",
     "test:main": "vitest run --config vitest.main.config.ts",
     "test:renderer": "vitest run --config vitest.renderer.config.ts",
     "test": "npm run test:main && npm run test:renderer",
