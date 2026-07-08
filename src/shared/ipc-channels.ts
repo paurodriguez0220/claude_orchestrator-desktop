@@ -17,6 +17,7 @@ export const IpcChannels = {
   PtyOutput: 'pty:output',
   PtyResize: 'pty:resize',
   DialogSelectFolder: 'dialog:select-folder',
+  SaveClipboardImage: 'image:save-clipboard',
 } as const;
 
 export interface RepoAddRequest {

@@ -13,6 +13,10 @@ export function getReposRoot(): string {
   return join(getRuntimeDataRoot(), 'repos');
 }
 
+export function getPastedImagesDir(): string {
+  return join(getRuntimeDataRoot(), 'pasted-images');
+}
+
 export function getTaskNotesPath(taskId: string): string {
   return join(getRuntimeDataRoot(), 'tasks', `${taskId}.md`);
 }

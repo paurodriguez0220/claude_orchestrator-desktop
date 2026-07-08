@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 vi.mock('node:os', () => ({ homedir: () => 'C:\\Users\\paulo.rodriguez' }));
 
-import { getRuntimeDataRoot, getStorePath, getReposRoot, getTaskNotesPath, getTaskTranscriptPath, getWorktreePath } from './paths';
+import { getRuntimeDataRoot, getStorePath, getReposRoot, getTaskNotesPath, getTaskTranscriptPath, getWorktreePath, getPastedImagesDir } from './paths';
 
 describe('paths', () => {
   it('getRuntimeDataRoot is under the user profile, not the source repo', () => {
@@ -31,5 +31,9 @@ describe('paths', () => {
 
   it('getTaskTranscriptPath returns tasks/<id>.transcript.md under the runtime root', () => {
     expect(getTaskTranscriptPath('abc123')).toBe(join(getRuntimeDataRoot(), 'tasks', 'abc123.transcript.md'));
+  });
+
+  it('getPastedImagesDir points at pasted-images/ under the runtime root', () => {
+    expect(getPastedImagesDir()).toBe(join(getRuntimeDataRoot(), 'pasted-images'));
   });
 });
