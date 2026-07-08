@@ -28,6 +28,7 @@ export interface ClaudeOrchestratorApi {
   sendPtyInput(taskId: string, data: string): void;
   resizePty(taskId: string, cols: number, rows: number): void;
   onPtyOutput(listener: (event: PtyOutputEvent) => void): () => void;
+  saveClipboardImage(dataUrl: string): Promise<string>;
 }
 
 const api: ClaudeOrchestratorApi = {
@@ -50,6 +51,7 @@ const api: ClaudeOrchestratorApi = {
     ipcRenderer.on(IpcChannels.PtyOutput, handler);
     return () => ipcRenderer.removeListener(IpcChannels.PtyOutput, handler);
   },
+  saveClipboardImage: (dataUrl) => ipcRenderer.invoke(IpcChannels.SaveClipboardImage, dataUrl),
 };
 
 contextBridge.exposeInMainWorld('claudeOrchestrator', api);
