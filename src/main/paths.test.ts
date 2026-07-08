@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 vi.mock('node:os', () => ({ homedir: () => 'C:\\Users\\paulo.rodriguez' }));
 
-import { getRuntimeDataRoot, getStorePath, getReposRoot, getTaskNotesPath, getWorktreePath } from './paths';
+import { getRuntimeDataRoot, getStorePath, getReposRoot, getTaskNotesPath, getTaskTranscriptPath, getWorktreePath } from './paths';
 
 describe('paths', () => {
   it('getRuntimeDataRoot is under the user profile, not the source repo', () => {
@@ -27,5 +27,9 @@ describe('paths', () => {
     expect(getWorktreePath(repoPath, 'my-repo', 'fix-login-bug')).toBe(
       join(repoPath, '..', 'my-repo-worktrees', 'fix-login-bug'),
     );
+  });
+
+  it('getTaskTranscriptPath returns tasks/<id>.transcript.md under the runtime root', () => {
+    expect(getTaskTranscriptPath('abc123')).toBe(join(getRuntimeDataRoot(), 'tasks', 'abc123.transcript.md'));
   });
 });

@@ -17,6 +17,10 @@ export function getTaskNotesPath(taskId: string): string {
   return join(getRuntimeDataRoot(), 'tasks', `${taskId}.md`);
 }
 
+export function getTaskTranscriptPath(taskId: string): string {
+  return join(getRuntimeDataRoot(), 'tasks', `${taskId}.transcript.md`);
+}
+
 export function getWorktreePath(repoPath: string, repoName: string, taskSlug: string): string {
   return join(repoPath, '..', `${repoName}-worktrees`, taskSlug);
 }
