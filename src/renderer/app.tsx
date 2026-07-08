@@ -22,7 +22,6 @@ export function App(): JSX.Element {
   const [newTaskRepoId, setNewTaskRepoId] = useState<string | undefined>();
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
-  const [isSubmittingTask, setIsSubmittingTask] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
 
   useEffect(() => {
@@ -83,7 +82,6 @@ export function App(): JSX.Element {
       return;
     }
     setErrorMessage(undefined);
-    setIsSubmittingTask(true);
     try {
       const task = await window.claudeOrchestrator.createTask({ repoId: newTaskRepoId, ...fields });
       setTasks((current) => [...current, task]);
@@ -91,8 +89,6 @@ export function App(): JSX.Element {
       await handleSelectTask(task.id);
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
-    } finally {
-      setIsSubmittingTask(false);
     }
   }
 
@@ -173,7 +169,6 @@ export function App(): JSX.Element {
       <NewTaskModal
         isOpen={newTaskRepoId !== undefined}
         branches={branches}
-        isSubmitting={isSubmittingTask}
         onClose={() => setNewTaskRepoId(undefined)}
         onSubmit={(fields) => void handleCreateTask(fields)}
       />
