@@ -119,8 +119,22 @@ export function App(): JSX.Element {
   }, {});
 
   return (
-    <div>
-      {errorMessage !== undefined && <p role="alert">{errorMessage}</p>}
+    <div className="flex h-screen bg-graphite-900 text-graphite-100">
+      {errorMessage !== undefined && (
+        <div
+          role="alert"
+          className="fixed inset-x-0 top-0 z-40 flex items-center justify-between bg-danger-500 px-4 py-2 text-sm font-medium text-graphite-100 shadow-lg"
+        >
+          <span>{errorMessage}</span>
+          <button
+            type="button"
+            onClick={() => setErrorMessage(undefined)}
+            className="ml-4 rounded px-2 py-1 text-xs font-semibold hover:bg-graphite-950/20"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       <RepoSidebar
         repos={repos}
         tasksByRepoId={tasksByRepoId}
@@ -142,16 +156,26 @@ export function App(): JSX.Element {
         onClose={() => setIsCloneModalOpen(false)}
         onSubmit={(fields) => void handleCloneRepo(fields)}
       />
-      {selectedTaskId !== undefined && (
-        <>
-          <TerminalTab taskId={selectedTaskId} />
-          <TaskNotesPanel
-            body={notesBody}
-            status={notesStatus}
-            onSave={(newBody) => window.claudeOrchestrator.setTaskNotes({ taskId: selectedTaskId, body: newBody })}
-          />
-        </>
-      )}
+      <main className="flex flex-1 overflow-hidden">
+        {selectedTaskId !== undefined ? (
+          <>
+            <div className="flex-1 overflow-hidden">
+              <TerminalTab taskId={selectedTaskId} />
+            </div>
+            <div className="w-80 shrink-0 overflow-y-auto border-l border-graphite-700 bg-graphite-800">
+              <TaskNotesPanel
+                body={notesBody}
+                status={notesStatus}
+                onSave={(newBody) => window.claudeOrchestrator.setTaskNotes({ taskId: selectedTaskId, body: newBody })}
+              />
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-1 items-center justify-center text-graphite-400">
+            Select or create a task to get started.
+          </div>
+        )}
+      </main>
     </div>
   );
 }

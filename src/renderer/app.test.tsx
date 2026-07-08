@@ -164,4 +164,20 @@ describe('App', () => {
       expect.objectContaining({ repoId: 'repo-1', existingBranch: 'feature-x' }),
     );
   });
+
+  it('dismissing the error banner clears the error message', async () => {
+    createTask.mockRejectedValueOnce(new Error('git worktree add failed: fatal: branch already exists'));
+    render(<App />);
+    const newTaskButtons = await screen.findAllByRole('button', { name: 'New Task' });
+    const firstNewTaskButton = newTaskButtons[0];
+    if (!firstNewTaskButton) {
+      throw new Error('Expected at least one "New Task" button to be rendered');
+    }
+    await userEvent.click(firstNewTaskButton);
+    await userEvent.type(screen.getByLabelText('Title'), 'Fix login bug');
+    await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });
