@@ -38,11 +38,11 @@ export function App(): JSX.Element {
       if (!openTaskIds.includes(taskId)) {
         setLoadingTaskId(taskId);
         try {
+          await window.claudeOrchestrator.openTask(taskId);
+          setOpenTaskIds((current) => [...current, taskId]);
           // Only fetch notes the first time a tab is opened — switching back
           // to an already-open tab should be instant and reuse the cache
           // populated here, not re-fetch over IPC.
-          await window.claudeOrchestrator.openTask(taskId);
-          setOpenTaskIds((current) => [...current, taskId]);
           const notes = await window.claudeOrchestrator.getTaskNotes(taskId);
           setNotesByTaskId((current) => ({ ...current, [taskId]: notes }));
         } finally {
