@@ -4,6 +4,13 @@ type PtyDataListener = (taskId: string, data: string) => void;
 
 const sessions = new Map<string, pty.IPty>();
 
+// `claude --continue` exits immediately with this message when the target
+// directory has no prior session to resume (e.g. a task whose worktree was
+// created but never had a real conversation). Left unhandled, the PTY dies
+// right after printing it and the terminal pane becomes permanently unusable
+// for that task. Detect it and transparently retry as a fresh session.
+const NO_CONVERSATION_MARKER = 'No conversation found to continue';
+
 export function spawnClaudeSession(
   taskId: string,
   cwd: string,
@@ -20,9 +27,25 @@ export function spawnClaudeSession(
     cols: 80,
     rows: 30,
   });
-  session.onData((data) => onData(taskId, data));
+
+  let respawnedAsFresh = false;
+
+  session.onData((data) => {
+    if (resume && !respawnedAsFresh && data.includes(NO_CONVERSATION_MARKER)) {
+      respawnedAsFresh = true;
+      session.kill();
+      if (sessions.get(taskId) === session) {
+        sessions.delete(taskId);
+      }
+      spawnClaudeSession(taskId, cwd, false, onData);
+      return;
+    }
+    onData(taskId, data);
+  });
   session.onExit(() => {
-    sessions.delete(taskId);
+    if (sessions.get(taskId) === session) {
+      sessions.delete(taskId);
+    }
   });
   sessions.set(taskId, session);
 }
