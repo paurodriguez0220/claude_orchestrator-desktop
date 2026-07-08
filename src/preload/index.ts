@@ -18,6 +18,7 @@ export interface ClaudeOrchestratorApi {
   cloneRepo(url: string, name: string): Promise<RepoRecord>;
   listRepos(): Promise<RepoRecord[]>;
   listBranches(repoId: string): Promise<BranchOption[]>;
+  fetchRepo(repoId: string): Promise<void>;
   createTask(request: TaskCreateRequest): Promise<TaskRecord>;
   listTasks(): Promise<TaskRecord[]>;
   openTask(taskId: string): Promise<void>;
@@ -36,6 +37,7 @@ const api: ClaudeOrchestratorApi = {
   cloneRepo: (url, name) => ipcRenderer.invoke(IpcChannels.RepoClone, { url, name }),
   listRepos: () => ipcRenderer.invoke(IpcChannels.RepoList),
   listBranches: (repoId) => ipcRenderer.invoke(IpcChannels.RepoBranches, repoId),
+  fetchRepo: (repoId) => ipcRenderer.invoke(IpcChannels.RepoFetch, repoId),
   createTask: (request) => ipcRenderer.invoke(IpcChannels.TaskCreate, request),
   listTasks: () => ipcRenderer.invoke(IpcChannels.TaskList),
   openTask: (taskId) => ipcRenderer.invoke(IpcChannels.TaskOpen, taskId),

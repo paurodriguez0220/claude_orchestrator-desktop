@@ -5,7 +5,7 @@ import { IpcChannels } from '../../shared/ipc-channels';
 import type { RepoAddRequest, RepoCloneRequest, BranchOption } from '../../shared/ipc-channels';
 import type { RepoRecord } from '../../shared/types';
 import { readStore, writeStore } from '../services/store';
-import { cloneRepo, listBranches } from '../services/git-service';
+import { cloneRepo, listBranches, fetchRepo } from '../services/git-service';
 import { assertValidGitUrl, assertSafeFolderName } from '../services/slug';
 import { getStorePath, getReposRoot } from '../paths';
 
@@ -68,5 +68,14 @@ export function registerRepoHandlers(): void {
       }
     }
     return options;
+  });
+
+  ipcMain.handle(IpcChannels.RepoFetch, async (_event, repoId: string): Promise<void> => {
+    const store = await readStore(getStorePath());
+    const repo = store.repos.find((candidate) => candidate.id === repoId);
+    if (!repo) {
+      throw new Error(`Unknown repo: ${repoId}`);
+    }
+    await fetchRepo(repo.path);
   });
 }

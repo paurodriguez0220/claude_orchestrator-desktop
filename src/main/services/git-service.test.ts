@@ -20,7 +20,7 @@ vi.mock('node:child_process', () => ({
   },
 }));
 
-import { cloneRepo, addWorktree, addWorktreeForExistingBranch, removeWorktree, listBranches, GitCommandError } from './git-service';
+import { cloneRepo, addWorktree, addWorktreeForExistingBranch, removeWorktree, listBranches, fetchRepo, GitCommandError } from './git-service';
 
 describe('git-service', () => {
   beforeEach(() => {
@@ -77,6 +77,15 @@ describe('git-service', () => {
       local: ['main', 'feature-x'],
       remote: ['origin/main', 'origin/feature-y'],
     });
+  });
+
+  it('fetchRepo calls git fetch with cwd set to the repo path, and enables long paths', async () => {
+    await fetchRepo('C:\\repo');
+    expect(execFileMock).toHaveBeenCalledWith(
+      'git',
+      ['-c', 'core.longpaths=true', 'fetch'],
+      { cwd: 'C:\\repo' },
+    );
   });
 
   it('wraps a failing git command in GitCommandError with the real stderr', async () => {

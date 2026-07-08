@@ -5,6 +5,7 @@ export const IpcChannels = {
   RepoClone: 'repo:clone',
   RepoList: 'repo:list',
   RepoBranches: 'repo:branches',
+  RepoFetch: 'repo:fetch',
   TaskCreate: 'task:create',
   TaskList: 'task:list',
   TaskOpen: 'task:open',
