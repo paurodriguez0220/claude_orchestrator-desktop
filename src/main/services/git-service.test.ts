@@ -10,17 +10,17 @@ vi.mock('node:child_process', () => ({
       err: { stderr?: string } | null,
       result?: { stdout: string; stderr: string }
     ) => void;
-    execFileMock(...args.slice(0, -1));
+    const result = execFileMock(...args.slice(0, -1));
 
     if (mockError) {
       callback(mockError);
     } else {
-      callback(null, { stdout: '', stderr: '' });
+      callback(null, result ?? { stdout: '', stderr: '' });
     }
   },
 }));
 
-import { cloneRepo, addWorktree, removeWorktree, GitCommandError } from './git-service';
+import { cloneRepo, addWorktree, addWorktreeForExistingBranch, removeWorktree, listBranches, GitCommandError } from './git-service';
 
 describe('git-service', () => {
   beforeEach(() => {
@@ -53,6 +53,30 @@ describe('git-service', () => {
       ['worktree', 'remove', 'C:\\repo-worktrees\\slug'],
       { cwd: 'C:\\repo' },
     );
+  });
+
+  it('addWorktreeForExistingBranch calls git worktree add without -b', async () => {
+    await addWorktreeForExistingBranch('C:\\repo', 'C:\\repo-worktrees\\slug', 'feature-x');
+    expect(execFileMock).toHaveBeenCalledWith(
+      'git',
+      ['worktree', 'add', 'C:\\repo-worktrees\\slug', 'feature-x'],
+      { cwd: 'C:\\repo' },
+    );
+  });
+
+  it('listBranches returns parsed local and remote branch names, excluding the remote HEAD pointer', async () => {
+    execFileMock.mockImplementation((...args: unknown[]) => {
+      const gitArgs = args[1] as string[];
+      if (gitArgs[0] === 'branch' && gitArgs[1] === '-r') {
+        return { stdout: 'origin/HEAD\norigin/main\norigin/feature-y\n', stderr: '' };
+      }
+      return { stdout: 'main\nfeature-x\n', stderr: '' };
+    });
+    const result = await listBranches('C:\\repo');
+    expect(result).toEqual({
+      local: ['main', 'feature-x'],
+      remote: ['origin/main', 'origin/feature-y'],
+    });
   });
 
   it('wraps a failing git command in GitCommandError with the real stderr', async () => {

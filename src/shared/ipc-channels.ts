@@ -4,6 +4,7 @@ export const IpcChannels = {
   RepoAdd: 'repo:add',
   RepoClone: 'repo:clone',
   RepoList: 'repo:list',
+  RepoBranches: 'repo:branches',
   TaskCreate: 'task:create',
   TaskList: 'task:list',
   TaskOpen: 'task:open',
@@ -25,11 +26,18 @@ export interface RepoCloneRequest {
   name: string;
 }
 
+export interface BranchOption {
+  value: string;
+  label: string;
+  isRemote: boolean;
+}
+
 export interface TaskCreateRequest {
   repoId: string;
   title: string;
   adoId?: string;
   branch?: string;
+  existingBranch?: string;
 }
 
 export interface TaskNotesSetRequest {
