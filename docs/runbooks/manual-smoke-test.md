@@ -14,6 +14,7 @@ Run through this checklist after any change to the Electron shell, PTY spawning,
 10. Click "Remove" on the task — confirm the browser `confirm()` prompt appears; cancelling it leaves the task untouched. Confirming it removes the task from the sidebar and `git worktree list` no longer shows it.
 11. Try creating a task with a title containing `; rm -rf /` — confirm it's slugified/rejected safely and no shell command actually runs with that payload.
 12. Select an existing branch when creating a task: pick a repo with at least one branch you haven't opened a worktree for, click "New Task", toggle "Use existing branch", pick that branch, submit. Confirm `git worktree list` shows the new worktree checked out on that exact branch (no `-b` was used to create a *new* branch of the same name). Then, in that same repo, run `git fetch` and pick a branch that only exists as `origin/<name>` (not yet local) from the dropdown — after creating the task, run `git branch` in the repo and confirm a new local branch `<name>` now exists, tracking `origin/<name>`.
+13. Visually confirm the new design: dark graphite sidebar with a clay-colored "New Task" button, opening "New Task" or "Clone Repo" shows a centered modal with a dimmed backdrop (clicking the backdrop does NOT close it), selecting a task shows the terminal filling most of the width with a narrower notes panel to its right, and triggering an error (e.g. submit an empty Clone Repo form) shows a red banner at the top with a working "Dismiss" button.
 
 ---
 *Maintained by paurodriguez0220 · Last updated: 2026-07-08*
