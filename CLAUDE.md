@@ -7,10 +7,10 @@ An Electron desktop app that spawns and manages Claude Code CLI sessions across 
 ## Architecture
 
 - **Main process** (Node.js/TypeScript) — owns all system access: git commands (clone, `worktree add`/`remove`), spawns `claude` per task via `node-pty`, reads/writes app data and per-task notes files.
-- **Renderer** (React/TypeScript) — sidebar (repos → tasks), tabbed embedded terminals (`xterm.js`), task detail/notes panel.
-- **IPC boundary** — renderer never touches the filesystem or spawns processes directly; only through defined channels (`repo:add`, `task:create`, `pty:data`, ...).
+- **Renderer** (React/TypeScript) — sidebar (repos → tasks), one embedded terminal pane per selected task (`xterm.js`), task notes panel. (Design originally called this "tabbed"; MVP ships a single swappable pane — multi-tab terminals are a follow-up.)
+- **IPC boundary** — renderer never touches the filesystem or spawns processes directly; only through defined channels (`repo:add`, `repo:clone`, `dialog:select-folder`, `task:create`, `task:remove`, `pty:input`/`pty:output`, ...).
 
-Full design: [`docs/tasks/queue/claude-orchestrator-mvp.md`](docs/tasks/queue/claude-orchestrator-mvp.md).
+Full design and implementation plan: [`docs/tasks/defined/claude-orchestrator-mvp.md`](docs/tasks/defined/claude-orchestrator-mvp.md).
 
 ## Structure
 
@@ -26,7 +26,15 @@ Runtime data (managed repos, worktrees, task notes) lives outside this repo, at 
 
 ## Commands
 
-TBD once the project is scaffolded — will include `npm run dev`, `npm test`, `npm run build`.
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the Electron app in dev mode |
+| `npm run build` | Typecheck (main + renderer) and produce a production bundle |
+| `npm run typecheck` | Typecheck only, no bundling |
+| `npm test` | Run both test suites (`test:main` + `test:renderer`) |
+| `npm run test:main -- <pattern>` | Run main-process tests matching `<pattern>` |
+| `npm run test:renderer -- <pattern>` | Run renderer tests matching `<pattern>` |
+| `npm run storybook` | Start Storybook for renderer components |
 
 ## Conventions
 
