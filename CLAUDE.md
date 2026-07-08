@@ -26,6 +26,8 @@ Runtime data (managed repos, worktrees, task notes) lives outside this repo, at 
 
 ## Commands
 
+**Daily use:** double-click `start.bat` (or the "Claude Orchestrator" Desktop shortcut) — runs `npm run dev`. This is a dev-mode launcher (hot-reload, visible console); packaging a proper installer is tracked in `docs/tasks/queue/package-as-windows-installer.md`.
+
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Start the Electron app in dev mode |
