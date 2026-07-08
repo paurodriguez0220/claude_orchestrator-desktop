@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/react';
+import { Terminal } from '@xterm/xterm';
 
 const writeMock = vi.fn();
 const openMock = vi.fn();
@@ -61,5 +62,14 @@ describe('TerminalTab', () => {
     const { unmount } = render(<TerminalTab taskId="task-1" />);
     unmount();
     expect(unsubscribePtyOutput).toHaveBeenCalled();
+  });
+
+  it('applies the app color theme to the xterm instance', () => {
+    render(<TerminalTab taskId="task-1" />);
+    expect(Terminal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        theme: expect.objectContaining({ background: '#201c17' }),
+      }),
+    );
   });
 });

@@ -17,7 +17,14 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
       return;
     }
 
-    const terminal = new Terminal();
+    const terminal = new Terminal({
+      theme: {
+        background: '#201c17',
+        foreground: '#e8e1d4',
+        cursor: '#d97a52',
+        selectionBackground: '#3d362d',
+      },
+    });
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
     terminal.open(container);
@@ -39,5 +46,5 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
     };
   }, [taskId]);
 
-  return <div ref={containerRef} data-task-id={taskId} />;
+  return <div ref={containerRef} data-task-id={taskId} className="h-full w-full p-2" />;
 }
