@@ -1,5 +1,14 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import { join } from 'node:path';
+import { registerRepoHandlers } from './ipc/repo-handlers';
+import { registerTaskHandlers } from './ipc/task-handlers';
+import { IpcChannels } from '../shared/ipc-channels';
+
+function broadcastPtyData(taskId: string, data: string): void {
+  for (const window of BrowserWindow.getAllWindows()) {
+    window.webContents.send(IpcChannels.PtyOutput, { taskId, data });
+  }
+}
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -30,6 +39,13 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  registerRepoHandlers();
+  registerTaskHandlers(broadcastPtyData);
+
+  ipcMain.on(IpcChannels.PtyInput, (_event, { taskId, data }: { taskId: string; data: string }) => {
+    void import('./services/pty-manager').then(({ writeToSession }) => writeToSession(taskId, data));
+  });
+
   createWindow();
 
   app.on('activate', () => {
