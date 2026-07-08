@@ -7,3 +7,5 @@ out
 
 *storybook.log
 storybook-static
+
+.claude/
