@@ -44,13 +44,15 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
       }
     });
 
-    function handleWindowResize(): void {
-      fitAddon.fit();
-    }
-    window.addEventListener('resize', handleWindowResize);
+    const resizeObserver = new ResizeObserver(() => {
+      if (container.clientWidth > 0 && container.clientHeight > 0) {
+        fitAddon.fit();
+      }
+    });
+    resizeObserver.observe(container);
 
     return () => {
-      window.removeEventListener('resize', handleWindowResize);
+      resizeObserver.disconnect();
       unsubscribe();
       terminal.dispose();
     };

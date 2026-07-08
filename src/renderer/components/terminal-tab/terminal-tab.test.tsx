@@ -33,9 +33,26 @@ const resizePty = vi.fn();
 const unsubscribePtyOutput = vi.fn();
 const onPtyOutput = vi.fn((_listener: (event: { taskId: string; data: string }) => void) => unsubscribePtyOutput);
 
+const resizeObserverDisconnectMock = vi.fn();
+const resizeObserverObserveMock = vi.fn();
+let resizeObserverCallback: ((entries: ResizeObserverEntry[]) => void) | undefined;
+
+class ResizeObserverMock {
+  constructor(callback: (entries: ResizeObserverEntry[]) => void) {
+    resizeObserverCallback = callback;
+  }
+  observe = resizeObserverObserveMock;
+  unobserve = vi.fn();
+  disconnect = resizeObserverDisconnectMock;
+}
+
 beforeEach(() => {
   fitMock.mockClear();
+  resizeObserverDisconnectMock.mockClear();
+  resizeObserverObserveMock.mockClear();
+  resizeObserverCallback = undefined;
   vi.stubGlobal('claudeOrchestrator', { sendPtyInput, resizePty, onPtyOutput });
+  vi.stubGlobal('ResizeObserver', ResizeObserverMock);
 });
 
 import { TerminalTab } from './terminal-tab';
@@ -85,18 +102,34 @@ describe('TerminalTab', () => {
     expect(resizePty).toHaveBeenCalledWith('task-1', 120, 40);
   });
 
-  it('re-fits the terminal when the window resizes', () => {
-    render(<TerminalTab taskId="task-1" />);
+  it('re-fits the terminal when the container is resized (e.g. becomes visible again)', () => {
+    const { container } = render(<TerminalTab taskId="task-1" />);
+    const terminalContainer = container.querySelector('[data-task-id="task-1"]') as HTMLDivElement;
+    Object.defineProperty(terminalContainer, 'clientWidth', { value: 800, configurable: true });
+    Object.defineProperty(terminalContainer, 'clientHeight', { value: 600, configurable: true });
     fitMock.mockClear();
-    window.dispatchEvent(new Event('resize'));
+
+    expect(resizeObserverCallback).toBeDefined();
+    resizeObserverCallback?.([]);
+
     expect(fitMock).toHaveBeenCalled();
   });
 
-  it('removes the window resize listener on unmount', () => {
-    const { unmount } = render(<TerminalTab taskId="task-1" />);
+  it('does not fit while the container is hidden (zero width/height)', () => {
+    const { container } = render(<TerminalTab taskId="task-1" />);
+    const terminalContainer = container.querySelector('[data-task-id="task-1"]') as HTMLDivElement;
+    Object.defineProperty(terminalContainer, 'clientWidth', { value: 0, configurable: true });
+    Object.defineProperty(terminalContainer, 'clientHeight', { value: 0, configurable: true });
     fitMock.mockClear();
-    unmount();
-    window.dispatchEvent(new Event('resize'));
+
+    resizeObserverCallback?.([]);
+
     expect(fitMock).not.toHaveBeenCalled();
+  });
+
+  it('disconnects the resize observer on unmount', () => {
+    const { unmount } = render(<TerminalTab taskId="task-1" />);
+    unmount();
+    expect(resizeObserverDisconnectMock).toHaveBeenCalled();
   });
 });
