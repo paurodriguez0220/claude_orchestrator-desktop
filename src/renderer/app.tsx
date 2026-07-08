@@ -4,6 +4,7 @@ import { NewTaskModal } from './components/new-task-modal/new-task-modal';
 import { CloneRepoModal } from './components/clone-repo-modal/clone-repo-modal';
 import { TerminalTab } from './components/terminal-tab/terminal-tab';
 import { TaskNotesPanel } from './components/task-notes-panel/task-notes-panel';
+import { TabBar } from './components/tab-bar/tab-bar';
 import type { RepoRecord, TaskRecord, TaskStatus } from '../shared/types';
 import type { BranchOption } from '../shared/ipc-channels';
 import type { NewTaskFields } from './components/new-task-modal/new-task-modal';
@@ -15,7 +16,8 @@ function toErrorMessage(err: unknown): string {
 export function App(): JSX.Element {
   const [repos, setRepos] = useState<RepoRecord[]>([]);
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | undefined>();
+  const [openTaskIds, setOpenTaskIds] = useState<string[]>([]);
+  const [activeTaskId, setActiveTaskId] = useState<string | undefined>();
   const [notesBody, setNotesBody] = useState('');
   const [notesStatus, setNotesStatus] = useState<TaskStatus>('todo');
   const [newTaskRepoId, setNewTaskRepoId] = useState<string | undefined>();
@@ -31,16 +33,40 @@ export function App(): JSX.Element {
   async function handleSelectTask(taskId: string): Promise<void> {
     setErrorMessage(undefined);
     try {
-      await window.claudeOrchestrator.openTask(taskId);
+      if (!openTaskIds.includes(taskId)) {
+        await window.claudeOrchestrator.openTask(taskId);
+        setOpenTaskIds((current) => [...current, taskId]);
+      }
       const notes = await window.claudeOrchestrator.getTaskNotes(taskId);
       // Set the task's data together with the selection so TaskNotesPanel
       // never mounts with a stale/empty body for the newly selected task —
       // it only initializes its local draft state from `body` on mount.
       setNotesBody(notes.body);
       setNotesStatus(notes.status);
-      setSelectedTaskId(taskId);
+      setActiveTaskId(taskId);
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
+    }
+  }
+
+  async function handleCloseTab(taskId: string): Promise<void> {
+    setErrorMessage(undefined);
+    try {
+      await window.claudeOrchestrator.closeTask(taskId);
+    } catch (err) {
+      setErrorMessage(toErrorMessage(err));
+    }
+    const remaining = openTaskIds.filter((id) => id !== taskId);
+    setOpenTaskIds(remaining);
+    if (activeTaskId === taskId) {
+      const fallback = remaining[remaining.length - 1];
+      if (fallback !== undefined) {
+        await handleSelectTask(fallback);
+      } else {
+        setActiveTaskId(undefined);
+        setNotesBody('');
+        setNotesStatus('todo');
+      }
     }
   }
 
@@ -103,8 +129,9 @@ export function App(): JSX.Element {
     try {
       await window.claudeOrchestrator.removeTask(taskId);
       setTasks((current) => current.filter((task) => task.id !== taskId));
-      if (taskId === selectedTaskId) {
-        setSelectedTaskId(undefined);
+      setOpenTaskIds((current) => current.filter((id) => id !== taskId));
+      if (taskId === activeTaskId) {
+        setActiveTaskId(undefined);
         setNotesBody('');
         setNotesStatus('todo');
       }
@@ -138,7 +165,7 @@ export function App(): JSX.Element {
       <RepoSidebar
         repos={repos}
         tasksByRepoId={tasksByRepoId}
-        selectedTaskId={selectedTaskId}
+        selectedTaskId={activeTaskId}
         onSelectTask={(taskId) => void handleSelectTask(taskId)}
         onOpenRepoClick={() => void handleOpenRepoClick()}
         onCloneRepoClick={() => setIsCloneModalOpen(true)}
@@ -156,25 +183,47 @@ export function App(): JSX.Element {
         onClose={() => setIsCloneModalOpen(false)}
         onSubmit={(fields) => void handleCloneRepo(fields)}
       />
-      <main className="flex flex-1 overflow-hidden">
-        {selectedTaskId !== undefined ? (
-          <>
-            <div className="flex-1 overflow-hidden">
-              <TerminalTab taskId={selectedTaskId} />
-            </div>
-            <div className="w-80 shrink-0 overflow-y-auto border-l border-graphite-700 bg-graphite-800">
-              <TaskNotesPanel
-                body={notesBody}
-                status={notesStatus}
-                onSave={(newBody) => window.claudeOrchestrator.setTaskNotes({ taskId: selectedTaskId, body: newBody })}
-              />
-            </div>
-          </>
-        ) : (
-          <div className="flex flex-1 items-center justify-center text-graphite-400">
-            Select or create a task to get started.
-          </div>
+      <main className="flex flex-1 flex-col overflow-hidden">
+        {openTaskIds.length > 0 && (
+          <TabBar
+            tabs={openTaskIds.map((id) => ({
+              taskId: id,
+              title: tasks.find((task) => task.id === id)?.title ?? '',
+            }))}
+            activeTaskId={activeTaskId}
+            onSelectTab={(taskId) => void handleSelectTask(taskId)}
+            onCloseTab={(taskId) => void handleCloseTab(taskId)}
+          />
         )}
+        <div className="flex flex-1 overflow-hidden">
+          {openTaskIds.length > 0 ? (
+            <>
+              <div className="relative flex-1 overflow-hidden">
+                {openTaskIds.map((id) => (
+                  <div key={id} className={id === activeTaskId ? 'h-full w-full' : 'hidden'}>
+                    <TerminalTab taskId={id} />
+                  </div>
+                ))}
+              </div>
+              {activeTaskId !== undefined && (
+                <div className="w-80 shrink-0 overflow-y-auto border-l border-graphite-700 bg-graphite-800">
+                  <TaskNotesPanel
+                    key={activeTaskId}
+                    body={notesBody}
+                    status={notesStatus}
+                    onSave={(newBody) =>
+                      window.claudeOrchestrator.setTaskNotes({ taskId: activeTaskId, body: newBody })
+                    }
+                  />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex flex-1 items-center justify-center text-graphite-400">
+              Select or create a task to get started.
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );

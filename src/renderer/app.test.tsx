@@ -39,12 +39,23 @@ const task: TaskRecord = {
   createdAt: '2026-07-08T00:00:00.000Z',
   updatedAt: '2026-07-08T00:00:00.000Z',
 };
+const task2: TaskRecord = {
+  id: 'task-2',
+  repoId: 'repo-1',
+  title: 'Add tests',
+  branch: 'task/add-tests',
+  worktreePath: 'C:\\demo-worktrees\\add-tests',
+  status: 'todo',
+  createdAt: '2026-07-08T00:00:00.000Z',
+  updatedAt: '2026-07-08T00:00:00.000Z',
+};
 
 const listRepos = vi.fn(async () => [repo]);
-const listTasks = vi.fn(async () => [task]);
+const listTasks = vi.fn(async () => [task, task2]);
 const createTask = vi.fn(async () => task);
 const openTask = vi.fn(async () => undefined);
 const removeTask = vi.fn(async () => undefined);
+const closeTask = vi.fn(async () => undefined);
 const getTaskNotes = vi.fn(async () => ({ body: 'notes', status: 'todo' as const }));
 const setTaskNotes = vi.fn(async () => undefined);
 const selectFolder = vi.fn(async (): Promise<string | undefined> => 'C:\\Users\\paulo.rodriguez\\Paulo\\demo-repo');
@@ -59,7 +70,7 @@ beforeEach(() => {
     listTasks,
     createTask,
     openTask,
-    closeTask: vi.fn(),
+    closeTask,
     removeTask,
     selectFolder,
     addRepo,
@@ -119,7 +130,12 @@ describe('App', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<App />);
     await screen.findByText('Fix login bug');
-    await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    const removeButtons = screen.getAllByRole('button', { name: 'Remove' });
+    const firstRemoveButton = removeButtons[0];
+    if (!firstRemoveButton) {
+      throw new Error('Expected at least one "Remove" button to be rendered');
+    }
+    await userEvent.click(firstRemoveButton);
     expect(confirmSpy).toHaveBeenCalledOnce();
     expect(removeTask).toHaveBeenCalledWith('task-1');
     await waitFor(() => expect(screen.queryByText('Fix login bug')).not.toBeInTheDocument());
@@ -130,7 +146,12 @@ describe('App', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<App />);
     await screen.findByText('Fix login bug');
-    await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    const removeButtons = screen.getAllByRole('button', { name: 'Remove' });
+    const firstRemoveButton = removeButtons[0];
+    if (!firstRemoveButton) {
+      throw new Error('Expected at least one "Remove" button to be rendered');
+    }
+    await userEvent.click(firstRemoveButton);
     expect(confirmSpy).toHaveBeenCalledOnce();
     expect(removeTask).not.toHaveBeenCalled();
     expect(screen.getByText('Fix login bug')).toBeInTheDocument();
@@ -181,5 +202,55 @@ describe('App', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('opening a second task adds a new tab without closing the first tab\'s terminal', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Fix login bug' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Add tests' }));
+    expect(openTask).toHaveBeenCalledWith('task-1');
+    expect(openTask).toHaveBeenCalledWith('task-2');
+    expect(screen.getByRole('button', { name: 'Close Fix login bug' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close Add tests' })).toBeInTheDocument();
+  });
+
+  it('clicking an already-open task switches tabs without reopening the pty session', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Fix login bug' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Add tests' }));
+    openTask.mockClear();
+    const fixLoginBugButtons = screen.getAllByRole('button', { name: 'Fix login bug' });
+    const sidebarButton = fixLoginBugButtons[0];
+    if (!sidebarButton) {
+      throw new Error('Expected a "Fix login bug" button to be rendered');
+    }
+    await userEvent.click(sidebarButton);
+    expect(openTask).not.toHaveBeenCalled();
+  });
+
+  it('closing a tab calls closeTask and removes it, without affecting the sidebar', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Fix login bug' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Add tests' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Close Add tests' }));
+    expect(closeTask).toHaveBeenCalledWith('task-2');
+    expect(screen.queryByRole('button', { name: 'Close Add tests' })).not.toBeInTheDocument();
+    expect(screen.getByText('Add tests')).toBeInTheDocument();
+  });
+
+  it('shows the correct notes for each tab when switching, not a stale draft from the other tab', async () => {
+    // mockImplementationOnce (not mockImplementation) so the override only
+    // applies to these two calls and doesn't leak into later tests — plain
+    // vi.clearAllMocks() in beforeEach clears call history but does not
+    // reset a standing mockImplementation override.
+    getTaskNotes
+      .mockImplementationOnce(async () => ({ body: 'notes for task 1', status: 'todo' as const }))
+      .mockImplementationOnce(async () => ({ body: 'notes for task 2', status: 'todo' as const }));
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Fix login bug' }));
+    expect(await screen.findByDisplayValue('notes for task 1')).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: 'Add tests' }));
+    expect(await screen.findByDisplayValue('notes for task 2')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('notes for task 1')).not.toBeInTheDocument();
   });
 });
