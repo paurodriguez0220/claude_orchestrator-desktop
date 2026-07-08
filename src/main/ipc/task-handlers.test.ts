@@ -101,6 +101,45 @@ describe('task-handlers', () => {
     expect(task).toMatchObject({ title: 'Resume feature work', branch: 'feature-x' });
   });
 
+  it('TaskCreate rejects creating a second task for a branch that already has one, without calling git', async () => {
+    store.tasks.push({
+      id: 'task-1',
+      repoId: 'repo-1',
+      title: 'Resume feature work',
+      branch: 'feature-x',
+      worktreePath: 'C:\\demo-worktrees\\feature-x',
+      status: 'todo',
+      createdAt: '2026-07-08T00:00:00.000Z',
+      updatedAt: '2026-07-08T00:00:00.000Z',
+    });
+    const handler = handlers.get(IpcChannels.TaskCreate);
+    await expect(
+      handler?.({}, { repoId: 'repo-1', title: 'Resume feature work again', existingBranch: 'feature-x' }),
+    ).rejects.toThrow('A task for branch "feature-x" already exists');
+    expect(addWorktreeForExistingBranch).not.toHaveBeenCalled();
+    expect(addWorktree).not.toHaveBeenCalled();
+    expect(store.tasks).toHaveLength(1);
+  });
+
+  it('TaskCreate rejects a duplicate generated branch name for a repeated title, without calling git', async () => {
+    store.tasks.push({
+      id: 'task-1',
+      repoId: 'repo-1',
+      title: 'Fix login bug',
+      branch: 'task/fix-login-bug',
+      worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
+      status: 'todo',
+      createdAt: '2026-07-08T00:00:00.000Z',
+      updatedAt: '2026-07-08T00:00:00.000Z',
+    });
+    const handler = handlers.get(IpcChannels.TaskCreate);
+    await expect(handler?.({}, { repoId: 'repo-1', title: 'Fix login bug' })).rejects.toThrow(
+      'A task for branch "task/fix-login-bug" already exists',
+    );
+    expect(addWorktree).not.toHaveBeenCalled();
+    expect(store.tasks).toHaveLength(1);
+  });
+
   it('TaskOpen resumes an existing task session when none is alive', async () => {
     store.tasks.push({
       id: 'task-1',

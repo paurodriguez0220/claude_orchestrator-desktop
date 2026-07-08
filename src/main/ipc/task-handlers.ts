@@ -21,6 +21,16 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
     const slug = existingBranch !== undefined ? slugify(existingBranch) : slugify(request.title);
     const branch = existingBranch !== undefined ? existingBranch : (request.branch ?? `task/${slug}`);
     assertSafeBranchName(branch);
+
+    const duplicateTask = store.tasks.find(
+      (candidate) => candidate.repoId === repo.id && candidate.branch === branch,
+    );
+    if (duplicateTask) {
+      throw new Error(
+        `A task for branch "${branch}" already exists ("${duplicateTask.title}"). Open it from the sidebar instead of creating a new one.`,
+      );
+    }
+
     const worktreePath = getWorktreePath(repo.path, repo.name, slug);
 
     if (existingBranch !== undefined) {
