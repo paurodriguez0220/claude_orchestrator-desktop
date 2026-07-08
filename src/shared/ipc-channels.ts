@@ -14,6 +14,7 @@ export const IpcChannels = {
   TaskNotesSet: 'task:notes:set',
   PtyInput: 'pty:input',
   PtyOutput: 'pty:output',
+  PtyResize: 'pty:resize',
   DialogSelectFolder: 'dialog:select-folder',
 } as const;
 
@@ -53,6 +54,12 @@ export interface PtyInputRequest {
 export interface PtyOutputEvent {
   taskId: string;
   data: string;
+}
+
+export interface PtyResizeRequest {
+  taskId: string;
+  cols: number;
+  rows: number;
 }
 
 export interface TaskNotesGetResponse {

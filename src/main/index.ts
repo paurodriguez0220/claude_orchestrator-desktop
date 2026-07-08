@@ -46,6 +46,10 @@ app.whenReady().then(() => {
     void import('./services/pty-manager').then(({ writeToSession }) => writeToSession(taskId, data));
   });
 
+  ipcMain.on(IpcChannels.PtyResize, (_event, { taskId, cols, rows }: { taskId: string; cols: number; rows: number }) => {
+    void import('./services/pty-manager').then(({ resizeSession }) => resizeSession(taskId, cols, rows));
+  });
+
   createWindow();
 
   app.on('activate', () => {

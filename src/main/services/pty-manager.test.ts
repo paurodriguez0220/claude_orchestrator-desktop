@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const spawnMock = vi.fn();
 const onExitMock = vi.fn();
+const resizeMock = vi.fn();
 
 vi.mock('node-pty', () => ({
   spawn: (...args: unknown[]) => {
@@ -11,16 +12,18 @@ vi.mock('node-pty', () => ({
       onExit: onExitMock,
       write: vi.fn(),
       kill: vi.fn(),
+      resize: resizeMock,
     };
   },
 }));
 
-import { spawnClaudeSession, writeToSession, isSessionAlive, killSession } from './pty-manager';
+import { spawnClaudeSession, writeToSession, isSessionAlive, killSession, resizeSession } from './pty-manager';
 
 describe('pty-manager', () => {
   beforeEach(() => {
     spawnMock.mockClear();
     onExitMock.mockClear();
+    resizeMock.mockClear();
   });
 
   it('spawns a fresh session via cmd.exe /c claude when not resuming', () => {
@@ -67,5 +70,16 @@ describe('pty-manager', () => {
     const onExitHandler = onExitMock.mock.calls[0]?.[0] as (() => void) | undefined;
     onExitHandler?.();
     expect(isSessionAlive('task-5')).toBe(false);
+  });
+
+  it('resizeSession calls resize on the live session for that taskId', () => {
+    spawnClaudeSession('task-6', 'C:\\repo-worktrees\\slug6', false, vi.fn());
+    resizeSession('task-6', 120, 40);
+    expect(resizeMock).toHaveBeenCalledWith(120, 40);
+    killSession('task-6');
+  });
+
+  it('resizeSession is a no-op for an unknown taskId (does not throw)', () => {
+    expect(() => resizeSession('unknown-task', 80, 30)).not.toThrow();
   });
 });

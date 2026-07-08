@@ -39,3 +39,7 @@ export function killSession(taskId: string): void {
   sessions.get(taskId)?.kill();
   sessions.delete(taskId);
 }
+
+export function resizeSession(taskId: string, cols: number, rows: number): void {
+  sessions.get(taskId)?.resize(cols, rows);
+}

@@ -5,7 +5,9 @@ import { Terminal } from '@xterm/xterm';
 const writeMock = vi.fn();
 const openMock = vi.fn();
 const onDataMock = vi.fn();
+const onResizeMock = vi.fn();
 const loadAddonMock = vi.fn();
+const fitMock = vi.fn();
 
 vi.mock('@xterm/xterm', () => ({
   Terminal: vi.fn().mockImplementation(function TerminalMock() {
@@ -13,6 +15,7 @@ vi.mock('@xterm/xterm', () => ({
       open: openMock,
       write: writeMock,
       onData: onDataMock,
+      onResize: onResizeMock,
       loadAddon: loadAddonMock,
       dispose: vi.fn(),
     };
@@ -21,16 +24,18 @@ vi.mock('@xterm/xterm', () => ({
 
 vi.mock('@xterm/addon-fit', () => ({
   FitAddon: vi.fn().mockImplementation(function FitAddonMock() {
-    return { fit: vi.fn() };
+    return { fit: fitMock };
   }),
 }));
 
 const sendPtyInput = vi.fn();
+const resizePty = vi.fn();
 const unsubscribePtyOutput = vi.fn();
 const onPtyOutput = vi.fn((_listener: (event: { taskId: string; data: string }) => void) => unsubscribePtyOutput);
 
 beforeEach(() => {
-  vi.stubGlobal('claudeOrchestrator', { sendPtyInput, onPtyOutput });
+  fitMock.mockClear();
+  vi.stubGlobal('claudeOrchestrator', { sendPtyInput, resizePty, onPtyOutput });
 });
 
 import { TerminalTab } from './terminal-tab';
@@ -71,5 +76,27 @@ describe('TerminalTab', () => {
         theme: expect.objectContaining({ background: '#201c17' }),
       }),
     );
+  });
+
+  it('forwards xterm resize events to resizePty for the right taskId', () => {
+    render(<TerminalTab taskId="task-1" />);
+    const onResizeHandler = onResizeMock.mock.calls[0]?.[0] as (size: { cols: number; rows: number }) => void;
+    onResizeHandler({ cols: 120, rows: 40 });
+    expect(resizePty).toHaveBeenCalledWith('task-1', 120, 40);
+  });
+
+  it('re-fits the terminal when the window resizes', () => {
+    render(<TerminalTab taskId="task-1" />);
+    fitMock.mockClear();
+    window.dispatchEvent(new Event('resize'));
+    expect(fitMock).toHaveBeenCalled();
+  });
+
+  it('removes the window resize listener on unmount', () => {
+    const { unmount } = render(<TerminalTab taskId="task-1" />);
+    fitMock.mockClear();
+    unmount();
+    window.dispatchEvent(new Event('resize'));
+    expect(fitMock).not.toHaveBeenCalled();
   });
 });

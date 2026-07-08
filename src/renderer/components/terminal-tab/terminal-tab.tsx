@@ -30,6 +30,10 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
     terminal.open(container);
     fitAddon.fit();
 
+    terminal.onResize(({ cols, rows }) => {
+      window.claudeOrchestrator.resizePty(taskId, cols, rows);
+    });
+
     terminal.onData((data: string) => {
       window.claudeOrchestrator.sendPtyInput(taskId, data);
     });
@@ -40,7 +44,13 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
       }
     });
 
+    function handleWindowResize(): void {
+      fitAddon.fit();
+    }
+    window.addEventListener('resize', handleWindowResize);
+
     return () => {
+      window.removeEventListener('resize', handleWindowResize);
       unsubscribe();
       terminal.dispose();
     };

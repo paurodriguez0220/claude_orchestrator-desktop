@@ -13,6 +13,7 @@ vi.mock('@xterm/xterm', () => ({
       open: vi.fn(),
       write: vi.fn(),
       onData: vi.fn(),
+      onResize: vi.fn(),
       loadAddon: vi.fn(),
       dispose: vi.fn(),
     };
@@ -67,6 +68,7 @@ beforeEach(() => {
     getTaskNotes,
     setTaskNotes,
     sendPtyInput: vi.fn(),
+    resizePty: vi.fn(),
     onPtyOutput: vi.fn(() => vi.fn()),
   });
 });
