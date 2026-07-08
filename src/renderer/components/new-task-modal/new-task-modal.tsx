@@ -41,13 +41,14 @@ export function NewTaskModal({
     return null;
   }
 
+  const usingExistingBranch = mode === 'review' || useExistingBranch;
+
   function handleSubmit(): void {
-    const useExisting = mode === 'review' || useExistingBranch;
     onSubmit({
       title,
       adoId: adoId || undefined,
-      branch: useExisting ? undefined : branch || undefined,
-      existingBranch: useExisting ? selectedExistingBranch || undefined : undefined,
+      branch: usingExistingBranch ? undefined : branch || undefined,
+      existingBranch: usingExistingBranch ? selectedExistingBranch || undefined : undefined,
     });
   }
 
@@ -151,7 +152,7 @@ export function NewTaskModal({
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || (usingExistingBranch && selectedExistingBranch === '')}
             className="flex items-center gap-2 rounded-md bg-clay-600 px-4 py-2 text-sm font-medium text-graphite-100 hover:bg-clay-500 disabled:opacity-50"
           >
             {isSubmitting && <Spinner />}

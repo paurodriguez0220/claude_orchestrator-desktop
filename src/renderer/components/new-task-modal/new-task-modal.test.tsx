@@ -121,4 +121,59 @@ describe('NewTaskModal', () => {
       existingBranch: 'feature-x',
     });
   });
+
+  it('review mode disables Create Task until a branch is selected', async () => {
+    render(
+      <NewTaskModal
+        isOpen
+        mode="review"
+        branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
+        isSubmitting={false}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText('Title'), 'Review PR #42');
+    expect(screen.getByRole('button', { name: 'Create Task' })).toBeDisabled();
+  });
+
+  it('review mode enables Create Task once a branch is selected and submits it', async () => {
+    const onSubmit = vi.fn();
+    render(
+      <NewTaskModal
+        isOpen
+        mode="review"
+        branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
+        isSubmitting={false}
+        onClose={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText('Title'), 'Review PR #42');
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'feature-x');
+    expect(screen.getByRole('button', { name: 'Create Task' })).not.toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
+    expect(onSubmit).toHaveBeenCalledWith({
+      title: 'Review PR #42',
+      adoId: undefined,
+      branch: undefined,
+      existingBranch: 'feature-x',
+    });
+  });
+
+  it('task mode with "Use existing branch" disables Create Task until a branch is selected', async () => {
+    render(
+      <NewTaskModal
+        isOpen
+        mode="task"
+        branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
+        isSubmitting={false}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText('Title'), 'Resume feature work');
+    await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
+    expect(screen.getByRole('button', { name: 'Create Task' })).toBeDisabled();
+  });
 });
