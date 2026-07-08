@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TaskStatus } from '../../../shared/types';
 
 export interface TaskNotesPanelProps {
@@ -10,15 +10,34 @@ export interface TaskNotesPanelProps {
 export function TaskNotesPanel({ body, status, onSave }: TaskNotesPanelProps): JSX.Element {
   const [draft, setDraft] = useState(body);
   const [saveError, setSaveError] = useState<string | undefined>();
+  const draftRef = useRef(draft);
+  const lastSavedRef = useRef(body);
+
+  useEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
 
   async function handleSave(): Promise<void> {
     setSaveError(undefined);
     try {
       await onSave(draft);
+      lastSavedRef.current = draft;
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Something went wrong');
     }
   }
+
+  // This panel remounts (keyed by task id) every time the active tab
+  // switches, so unmount is the only signal that the user is leaving —
+  // autosave anything typed but not explicitly saved.
+  useEffect(() => {
+    return () => {
+      if (draftRef.current !== lastSavedRef.current) {
+        void onSave(draftRef.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="flex h-full flex-col gap-3 p-4">

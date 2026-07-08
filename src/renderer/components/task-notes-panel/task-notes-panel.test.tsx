@@ -23,4 +23,28 @@ describe('TaskNotesPanel', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText('disk full')).toBeInTheDocument();
   });
+
+  it('auto-saves unsaved edits when the panel unmounts (e.g. switching tabs)', async () => {
+    const onSave = vi.fn();
+    const { unmount } = render(<TaskNotesPanel body="" status="todo" onSave={onSave} />);
+    await userEvent.type(screen.getByRole('textbox'), 'unsaved note');
+    unmount();
+    expect(onSave).toHaveBeenCalledWith('unsaved note');
+  });
+
+  it('does not auto-save on unmount when nothing was edited', () => {
+    const onSave = vi.fn();
+    const { unmount } = render(<TaskNotesPanel body="existing notes" status="todo" onSave={onSave} />);
+    unmount();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('does not auto-save again on unmount after the edit was already saved via the Save button', async () => {
+    const onSave = vi.fn();
+    const { unmount } = render(<TaskNotesPanel body="" status="todo" onSave={onSave} />);
+    await userEvent.type(screen.getByRole('textbox'), 'saved note');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+    unmount();
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
 });
