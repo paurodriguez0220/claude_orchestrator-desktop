@@ -41,6 +41,7 @@ const sample: TaskNotes = {
     branch: 'task/fix-login-bug',
     worktreePath: 'C:\\repo-worktrees\\fix-login-bug',
     status: 'todo',
+    kind: 'worktree',
   },
   body: 'Started investigating the redirect loop.',
 };
@@ -53,6 +54,21 @@ describe('serializeTaskNotes / parseTaskNotes', () => {
 
   it('parseTaskNotes throws on missing frontmatter delimiters', () => {
     expect(() => parseTaskNotes('just some text, no frontmatter')).toThrow('Invalid task notes format');
+  });
+
+  it('round-trips a review-kind task', () => {
+    const reviewSample: TaskNotes = {
+      frontmatter: {
+        title: 'Review PR #42',
+        branch: 'feature-x',
+        worktreePath: 'C:\\repo-worktrees\\feature-x',
+        status: 'todo',
+        kind: 'review',
+      },
+      body: '',
+    };
+    const raw = serializeTaskNotes(reviewSample);
+    expect(parseTaskNotes(raw)).toEqual(reviewSample);
   });
 });
 

@@ -1,6 +1,6 @@
 import { readFile, writeFile, rename, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import type { TaskNotes, TaskStatus } from '../../shared/types';
+import type { TaskNotes, TaskStatus, TaskKind } from '../../shared/types';
 
 export function serializeTaskNotes(notes: TaskNotes): string {
   const lines = ['---', `title: ${notes.frontmatter.title}`];
@@ -10,6 +10,7 @@ export function serializeTaskNotes(notes: TaskNotes): string {
   lines.push(`branch: ${notes.frontmatter.branch}`);
   lines.push(`worktreePath: ${notes.frontmatter.worktreePath}`);
   lines.push(`status: ${notes.frontmatter.status}`);
+  lines.push(`kind: ${notes.frontmatter.kind}`);
   lines.push('---', '', notes.body);
   return lines.join('\n');
 }
@@ -38,6 +39,7 @@ export function parseTaskNotes(raw: string): TaskNotes {
       branch: fields.branch ?? '',
       worktreePath: fields.worktreePath ?? '',
       status: (fields.status as TaskStatus) ?? 'todo',
+      kind: (fields.kind as TaskKind) ?? 'worktree',
     },
     body: body.trim(),
   };
