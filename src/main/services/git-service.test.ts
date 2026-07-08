@@ -28,38 +28,38 @@ describe('git-service', () => {
     mockError = null;
   });
 
-  it('cloneRepo calls git clone with an argument array, never a shell string', async () => {
+  it('cloneRepo calls git clone with an argument array, never a shell string, and enables long paths', async () => {
     await cloneRepo('https://github.com/paurodriguez0220/demo.git', 'C:\\dest\\demo');
     expect(execFileMock).toHaveBeenCalledWith(
       'git',
-      ['clone', 'https://github.com/paurodriguez0220/demo.git', 'C:\\dest\\demo'],
+      ['-c', 'core.longpaths=true', 'clone', 'https://github.com/paurodriguez0220/demo.git', 'C:\\dest\\demo'],
       undefined,
     );
   });
 
-  it('addWorktree calls git worktree add with cwd set to the repo path', async () => {
+  it('addWorktree calls git worktree add with cwd set to the repo path, and enables long paths', async () => {
     await addWorktree('C:\\repo', 'C:\\repo-worktrees\\slug', 'task/slug');
     expect(execFileMock).toHaveBeenCalledWith(
       'git',
-      ['worktree', 'add', 'C:\\repo-worktrees\\slug', '-b', 'task/slug'],
+      ['-c', 'core.longpaths=true', 'worktree', 'add', 'C:\\repo-worktrees\\slug', '-b', 'task/slug'],
       { cwd: 'C:\\repo' },
     );
   });
 
-  it('removeWorktree calls git worktree remove with cwd set to the repo path', async () => {
+  it('removeWorktree calls git worktree remove with cwd set to the repo path, and enables long paths', async () => {
     await removeWorktree('C:\\repo', 'C:\\repo-worktrees\\slug');
     expect(execFileMock).toHaveBeenCalledWith(
       'git',
-      ['worktree', 'remove', 'C:\\repo-worktrees\\slug'],
+      ['-c', 'core.longpaths=true', 'worktree', 'remove', 'C:\\repo-worktrees\\slug'],
       { cwd: 'C:\\repo' },
     );
   });
 
-  it('addWorktreeForExistingBranch calls git worktree add without -b', async () => {
+  it('addWorktreeForExistingBranch calls git worktree add without -b, and enables long paths', async () => {
     await addWorktreeForExistingBranch('C:\\repo', 'C:\\repo-worktrees\\slug', 'feature-x');
     expect(execFileMock).toHaveBeenCalledWith(
       'git',
-      ['worktree', 'add', 'C:\\repo-worktrees\\slug', 'feature-x'],
+      ['-c', 'core.longpaths=true', 'worktree', 'add', 'C:\\repo-worktrees\\slug', 'feature-x'],
       { cwd: 'C:\\repo' },
     );
   });
@@ -67,7 +67,7 @@ describe('git-service', () => {
   it('listBranches returns parsed local and remote branch names, excluding the remote HEAD pointer', async () => {
     execFileMock.mockImplementation((...args: unknown[]) => {
       const gitArgs = args[1] as string[];
-      if (gitArgs[0] === 'branch' && gitArgs[1] === '-r') {
+      if (gitArgs.includes('-r')) {
         return { stdout: 'origin/HEAD\norigin/main\norigin/feature-y\n', stderr: '' };
       }
       return { stdout: 'main\nfeature-x\n', stderr: '' };

@@ -13,9 +13,18 @@ export class GitCommandError extends Error {
   }
 }
 
+// Windows refuses to create files at paths beyond MAX_PATH (260 chars) unless
+// git is told to opt in to long-path support. Our worktree layout (repo root +
+// "-worktrees/<slug>/...") adds enough prefix length that otherwise-fine repos
+// with deeply nested files can fail checkout with "Filename too long". Apply
+// this to every git invocation rather than per-callsite — it's a no-op for
+// commands that don't touch the working tree, and there's no reason a single
+// call site should be exempt.
+const LONG_PATHS_ARGS = ['-c', 'core.longpaths=true'];
+
 async function runGit(args: string[], cwd?: string): Promise<void> {
   try {
-    await execFileAsync('git', args, cwd ? { cwd } : undefined);
+    await execFileAsync('git', [...LONG_PATHS_ARGS, ...args], cwd ? { cwd } : undefined);
   } catch (err) {
     const stderr = (err as { stderr?: string }).stderr ?? String(err);
     throw new GitCommandError(`git ${args.join(' ')} failed`, stderr);
@@ -24,7 +33,7 @@ async function runGit(args: string[], cwd?: string): Promise<void> {
 
 async function runGitCapture(args: string[], cwd: string): Promise<string> {
   try {
-    const { stdout } = await execFileAsync('git', args, { cwd });
+    const { stdout } = await execFileAsync('git', [...LONG_PATHS_ARGS, ...args], { cwd });
     return stdout;
   } catch (err) {
     const stderr = (err as { stderr?: string }).stderr ?? String(err);
