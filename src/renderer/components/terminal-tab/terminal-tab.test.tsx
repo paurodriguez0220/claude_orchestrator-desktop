@@ -25,7 +25,8 @@ vi.mock('@xterm/addon-fit', () => ({
 }));
 
 const sendPtyInput = vi.fn();
-const onPtyOutput = vi.fn();
+const unsubscribePtyOutput = vi.fn();
+const onPtyOutput = vi.fn((_listener: (event: { taskId: string; data: string }) => void) => unsubscribePtyOutput);
 
 beforeEach(() => {
   vi.stubGlobal('claudeOrchestrator', { sendPtyInput, onPtyOutput });
@@ -54,5 +55,11 @@ describe('TerminalTab', () => {
     expect(writeMock).not.toHaveBeenCalledWith('ignored');
     outputHandler({ taskId: 'task-1', data: 'hello' });
     expect(writeMock).toHaveBeenCalledWith('hello');
+  });
+
+  it('unsubscribes the pty output listener on unmount', () => {
+    const { unmount } = render(<TerminalTab taskId="task-1" />);
+    unmount();
+    expect(unsubscribePtyOutput).toHaveBeenCalled();
   });
 });

@@ -24,7 +24,7 @@ export interface ClaudeOrchestratorApi {
   getTaskNotes(taskId: string): Promise<TaskNotesGetResponse>;
   setTaskNotes(request: TaskNotesSetRequest): Promise<void>;
   sendPtyInput(taskId: string, data: string): void;
-  onPtyOutput(listener: (event: PtyOutputEvent) => void): void;
+  onPtyOutput(listener: (event: PtyOutputEvent) => void): () => void;
 }
 
 const api: ClaudeOrchestratorApi = {
@@ -41,7 +41,9 @@ const api: ClaudeOrchestratorApi = {
   setTaskNotes: (request) => ipcRenderer.invoke(IpcChannels.TaskNotesSet, request),
   sendPtyInput: (taskId, data) => ipcRenderer.send(IpcChannels.PtyInput, { taskId, data }),
   onPtyOutput: (listener) => {
-    ipcRenderer.on(IpcChannels.PtyOutput, (_event, payload: PtyOutputEvent) => listener(payload));
+    const handler = (_event: Electron.IpcRendererEvent, payload: PtyOutputEvent): void => listener(payload);
+    ipcRenderer.on(IpcChannels.PtyOutput, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.PtyOutput, handler);
   },
 };
 

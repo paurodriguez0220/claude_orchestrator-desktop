@@ -26,13 +26,14 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
       window.claudeOrchestrator.sendPtyInput(taskId, data);
     });
 
-    window.claudeOrchestrator.onPtyOutput((event: PtyOutputEvent) => {
+    const unsubscribe = window.claudeOrchestrator.onPtyOutput((event: PtyOutputEvent) => {
       if (event.taskId === taskId) {
         terminal.write(event.data);
       }
     });
 
     return () => {
+      unsubscribe();
       terminal.dispose();
     };
   }, [taskId]);
