@@ -16,7 +16,7 @@ Target machine is the fefundinfo.com corporate laptop. No blocking constraint id
 
 ### Architecture
 
-Electron app: Node.js main process + React renderer.
+Electron app: Node.js main process + React renderer, written entirely in TypeScript with `strict` mode enabled (per `code-style.md` — no exceptions, no `any`). Named exports only, no barrel (`index.ts`) files, kebab-case filenames, one component per file with an explicit exported props `interface` (per `web-components.md`).
 
 - **Main process** — owns all system access: spawns git commands (clone, `worktree add`/`remove`), spawns `claude` per task via `node-pty`, reads/writes app data and per-task notes files.
 - **Renderer** — sidebar tree (repos → tasks), tabbed embedded terminals (`xterm.js`) wired to PTYs over IPC, a task detail/notes panel.
@@ -26,7 +26,7 @@ Electron app: Node.js main process + React renderer.
 
 Runtime data is kept separate from the app's own source code, and out of any corporate-managed/synced folder (e.g. `Documents`, which is subject to FE OneDrive redirection policy).
 
-- **App source code**: `C:\Users\paulo.rodriguez\Paulo\claude-orchestrator` (this repo, alongside the user's other projects).
+- **App source code**: `C:\Users\paulo.rodriguez\Paulo\claude_orchestrator-desktop` (this repo, alongside the user's other projects — named per `code-style.md`'s `{purpose}-{apptype}` repo naming convention, using the new `-desktop` suffix for Electron/Tauri apps).
 - **Runtime data root**: `C:\Users\paulo.rodriguez\claude-orchestrator\` — directly under the user profile, separate from the source tree above.
   - `store.json` — registry of repos + tasks (id, path, remote url, branch, timestamps).
   - `tasks/<taskId>.md` — per-task file: YAML frontmatter (ADO id, title, branch, worktree path, status) + freeform markdown notes body, user-editable.
@@ -49,10 +49,22 @@ Runtime data is kept separate from the app's own source code, and out of any cor
 - PTY spawn failure (e.g. `claude` not on `PATH`) shows a clear inline error in the terminal tab instead of a silent hang.
 - Worktree removal failure (e.g. uncommitted changes) surfaces git's own error; requires an explicit second confirmation to force — never force-removes by default.
 
+### Security
+
+The app spawns real shell processes and builds git commands from user-supplied input (repo URLs, branch names, task titles), so this is a genuine command-injection surface — `security.md`'s "never trust user input, validate at every boundary" rule applies directly, not just to web APIs.
+
+- All process spawning uses `child_process.execFile`/`spawn` with argument arrays — never string-interpolated into a shell (`exec`, or `spawn(..., { shell: true })`).
+- Branch names and task-slug generation are derived from user input via an explicit allow-list transform (lowercase, alphanumeric + hyphen only) — never passed through raw.
+- Repo URLs for "clone new" are validated to look like a git URL (`https://`, `git@`) before being handed to `git clone` as a single argument — never concatenated into a shell string.
+- No feature ever shells out with elevated/admin rights — everything runs at the user's own permission level (see Context above).
+
 ### Testing approach
 
-- Main-process logic (git command construction, store read/write, slug generation) is pure-function-testable — unit tests, no Electron runtime required.
+Per `testing.md`, this project has a test project from the start — not added later.
+
+- Main-process logic (git command construction, store read/write, slug generation) is pure-function-testable — Vitest unit tests, no Electron runtime required. These are the highest-priority tests given the command-injection surface above.
 - IPC handlers tested with mocked `child_process`/`fs`.
+- Renderer components follow `web-components.md`: Vitest + React Testing Library for behavior, Storybook stories for visual states (default/loading/error at minimum for the terminal tab and task list).
 - The Electron shell itself (real PTY spawning, terminal rendering) is inherently interactive — covered by a manual smoke-test checklist rather than automated E2E for v1.
 
 ### MVP scope
@@ -76,6 +88,7 @@ Runtime data is kept separate from the app's own source code, and out of any cor
 - [ ] Removing a task removes the git worktree (with confirmation) and archives its notes file
 - [ ] Git/PTY errors are surfaced visibly in the UI, never silently swallowed
 - [ ] App restart restores the full repo/task list from `store.json`
+- [ ] All git/process invocations use argument arrays (no shell string interpolation); unit tests cover malicious input (e.g. branch names containing `;`, `&&`, backticks) and assert they're rejected or safely escaped
 
 ---
 *Maintained by paurodriguez0220 · Last updated: 2026-07-08*
