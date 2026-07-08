@@ -36,6 +36,10 @@ describe('assertSafeBranchName', () => {
   it('rejects a branch name containing a space', () => {
     expect(() => assertSafeBranchName('feat/with space')).toThrow('Unsafe branch name');
   });
+
+  it('rejects a branch name containing a path-traversal segment', () => {
+    expect(() => assertSafeBranchName('feat/..')).toThrow('Unsafe branch name');
+  });
 });
 
 describe('assertValidGitUrl', () => {
@@ -53,5 +57,13 @@ describe('assertValidGitUrl', () => {
 
   it('rejects a URL without a known scheme', () => {
     expect(() => assertValidGitUrl('javascript:alert(1)')).toThrow('Invalid git URL');
+  });
+
+  it('rejects an ssh URL whose host segment starts with a dash (argument injection via -F)', () => {
+    expect(() => assertValidGitUrl('git@-F/tmp/evil_ssh_config')).toThrow('Invalid git URL');
+  });
+
+  it('rejects an ssh URL whose host segment starts with a dash (argument injection via -4)', () => {
+    expect(() => assertValidGitUrl('git@-4')).toThrow('Invalid git URL');
   });
 });
