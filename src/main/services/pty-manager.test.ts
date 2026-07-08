@@ -27,7 +27,7 @@ vi.mock('node-pty', () => ({
   },
 }));
 
-import { spawnClaudeSession, writeToSession, isSessionAlive, killSession, resizeSession } from './pty-manager';
+import { spawnClaudeSession, writeToSession, isSessionAlive, killSession, resizeSession, listAliveSessions } from './pty-manager';
 
 describe('pty-manager', () => {
   beforeEach(() => {
@@ -129,5 +129,26 @@ describe('pty-manager', () => {
     expect(onData).toHaveBeenCalledWith('task-8', 'Claude Code v2.1.198\r\n');
     expect(spawnMock).toHaveBeenCalledTimes(1);
     killSession('task-8');
+  });
+
+  it('listAliveSessions returns taskId/cwd pairs for every currently alive session', () => {
+    spawnClaudeSession('task-9', 'C:\\repo-worktrees\\slug9', false, vi.fn());
+    spawnClaudeSession('task-10', 'C:\\repo-worktrees\\slug10', false, vi.fn());
+    expect(listAliveSessions()).toEqual(
+      expect.arrayContaining([
+        { taskId: 'task-9', cwd: 'C:\\repo-worktrees\\slug9' },
+        { taskId: 'task-10', cwd: 'C:\\repo-worktrees\\slug10' },
+      ]),
+    );
+    killSession('task-9');
+    killSession('task-10');
+  });
+
+  it('listAliveSessions excludes a session after it is killed', () => {
+    spawnClaudeSession('task-11', 'C:\\repo-worktrees\\slug11', false, vi.fn());
+    killSession('task-11');
+    expect(listAliveSessions()).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ taskId: 'task-11' })]),
+    );
   });
 });
