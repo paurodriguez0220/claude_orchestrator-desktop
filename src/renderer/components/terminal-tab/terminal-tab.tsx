@@ -44,6 +44,41 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
       }
     });
 
+    function readAsDataUrl(file: File): Promise<string> {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function handlePastedImage(file: File): Promise<void> {
+      const dataUrl = await readAsDataUrl(file);
+      const filePath = await window.claudeOrchestrator.saveClipboardImage(dataUrl);
+      const quotedPath = filePath.includes(' ') ? `"${filePath}"` : filePath;
+      window.claudeOrchestrator.sendPtyInput(taskId, quotedPath);
+    }
+
+    function handlePaste(event: ClipboardEvent): void {
+      const items = event.clipboardData?.items;
+      if (!items) {
+        return;
+      }
+      const imageItem = Array.from(items).find((item) => item.type.startsWith('image/'));
+      if (!imageItem) {
+        return;
+      }
+      event.preventDefault();
+      const file = imageItem.getAsFile();
+      if (!file) {
+        return;
+      }
+      void handlePastedImage(file);
+    }
+
+    container.addEventListener('paste', handlePaste);
+
     const resizeObserver = new ResizeObserver(() => {
       if (container.clientWidth > 0 && container.clientHeight > 0) {
         fitAddon.fit();
@@ -54,6 +89,7 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
     return () => {
       resizeObserver.disconnect();
       unsubscribe();
+      container.removeEventListener('paste', handlePaste);
       terminal.dispose();
     };
   }, [taskId]);

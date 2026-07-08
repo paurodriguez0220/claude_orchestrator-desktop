@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { Terminal } from '@xterm/xterm';
 
 const writeMock = vi.fn();
@@ -32,6 +32,7 @@ const sendPtyInput = vi.fn();
 const resizePty = vi.fn();
 const unsubscribePtyOutput = vi.fn();
 const onPtyOutput = vi.fn((_listener: (event: { taskId: string; data: string }) => void) => unsubscribePtyOutput);
+const saveClipboardImage = vi.fn(async () => 'C:\\Users\\paulo.rodriguez\\claude-orchestrator\\pasted-images\\abc123.png');
 
 const resizeObserverDisconnectMock = vi.fn();
 const resizeObserverObserveMock = vi.fn();
@@ -51,7 +52,8 @@ beforeEach(() => {
   resizeObserverDisconnectMock.mockClear();
   resizeObserverObserveMock.mockClear();
   resizeObserverCallback = undefined;
-  vi.stubGlobal('claudeOrchestrator', { sendPtyInput, resizePty, onPtyOutput });
+  saveClipboardImage.mockClear();
+  vi.stubGlobal('claudeOrchestrator', { sendPtyInput, resizePty, onPtyOutput, saveClipboardImage });
   vi.stubGlobal('ResizeObserver', ResizeObserverMock);
 });
 
@@ -131,5 +133,69 @@ describe('TerminalTab', () => {
     const { unmount } = render(<TerminalTab taskId="task-1" />);
     unmount();
     expect(resizeObserverDisconnectMock).toHaveBeenCalled();
+  });
+
+  it('detects a pasted image, saves it via IPC, and types its path into the terminal', async () => {
+    const { container } = render(<TerminalTab taskId="task-1" />);
+    const terminalContainer = container.querySelector('[data-task-id="task-1"]') as HTMLDivElement;
+
+    const fakeFile = new File(['fake-image-bytes'], 'image.png', { type: 'image/png' });
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: { items: [{ type: 'image/png', getAsFile: () => fakeFile }] },
+    });
+
+    terminalContainer.dispatchEvent(pasteEvent);
+
+    await waitFor(() => expect(saveClipboardImage).toHaveBeenCalled());
+    expect(sendPtyInput).toHaveBeenCalledWith(
+      'task-1',
+      'C:\\Users\\paulo.rodriguez\\claude-orchestrator\\pasted-images\\abc123.png',
+    );
+    expect(pasteEvent.defaultPrevented).toBe(true);
+  });
+
+  it('quotes the pasted image path when it contains a space', async () => {
+    saveClipboardImage.mockResolvedValueOnce('C:\\Users\\John Smith\\claude-orchestrator\\pasted-images\\abc123.png');
+    const { container } = render(<TerminalTab taskId="task-1" />);
+    const terminalContainer = container.querySelector('[data-task-id="task-1"]') as HTMLDivElement;
+
+    const fakeFile = new File(['fake-image-bytes'], 'image.png', { type: 'image/png' });
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: { items: [{ type: 'image/png', getAsFile: () => fakeFile }] },
+    });
+
+    terminalContainer.dispatchEvent(pasteEvent);
+
+    await waitFor(() =>
+      expect(sendPtyInput).toHaveBeenCalledWith(
+        'task-1',
+        '"C:\\Users\\John Smith\\claude-orchestrator\\pasted-images\\abc123.png"',
+      ),
+    );
+  });
+
+  it('does not intercept a normal text paste', () => {
+    const { container } = render(<TerminalTab taskId="task-1" />);
+    const terminalContainer = container.querySelector('[data-task-id="task-1"]') as HTMLDivElement;
+
+    const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
+    Object.defineProperty(pasteEvent, 'clipboardData', {
+      value: { items: [{ type: 'text/plain', getAsFile: () => null }] },
+    });
+
+    terminalContainer.dispatchEvent(pasteEvent);
+
+    expect(pasteEvent.defaultPrevented).toBe(false);
+    expect(saveClipboardImage).not.toHaveBeenCalled();
+  });
+
+  it('removes the paste listener on unmount', () => {
+    const { container, unmount } = render(<TerminalTab taskId="task-1" />);
+    const terminalContainer = container.querySelector('[data-task-id="task-1"]') as HTMLDivElement;
+    const removeEventListenerSpy = vi.spyOn(terminalContainer, 'removeEventListener');
+    unmount();
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('paste', expect.any(Function));
   });
 });
