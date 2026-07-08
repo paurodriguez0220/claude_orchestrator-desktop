@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { TaskStatus } from '../../../shared/types';
 
+const AUTOSAVE_INTERVAL_MS = 5 * 60 * 1000;
+
 export interface TaskNotesPanelProps {
   body: string;
   status: TaskStatus;
@@ -29,12 +31,26 @@ export function TaskNotesPanel({ body, status, onSave }: TaskNotesPanelProps): J
 
   // This panel remounts (keyed by task id) every time the active tab
   // switches, so unmount is the only signal that the user is leaving —
-  // autosave anything typed but not explicitly saved.
+  // autosave anything typed but not explicitly saved. A periodic timer
+  // covers the case where the user stays on one task for a long stretch
+  // without ever switching away.
   useEffect(() => {
-    return () => {
+    function saveIfDirty(): void {
       if (draftRef.current !== lastSavedRef.current) {
-        void onSave(draftRef.current);
+        const toSave = draftRef.current;
+        void onSave(toSave)
+          .then(() => {
+            lastSavedRef.current = toSave;
+          })
+          .catch(() => {
+            // Silent — the next periodic tick or unmount-autosave will retry.
+          });
       }
+    }
+    const intervalId = setInterval(saveIfDirty, AUTOSAVE_INTERVAL_MS);
+    return () => {
+      clearInterval(intervalId);
+      saveIfDirty();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
