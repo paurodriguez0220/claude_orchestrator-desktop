@@ -22,6 +22,7 @@ vi.mock('../services/store', () => ({
 
 vi.mock('../services/git-service', () => ({
   addWorktree: vi.fn(async () => undefined),
+  addWorktreeForExistingBranch: vi.fn(async () => undefined),
   removeWorktree: vi.fn(async () => undefined),
 }));
 
@@ -53,7 +54,7 @@ vi.mock('../paths', () => ({
 
 import { registerTaskHandlers } from './task-handlers';
 import { IpcChannels } from '../../shared/ipc-channels';
-import { addWorktree, removeWorktree } from '../services/git-service';
+import { addWorktree, addWorktreeForExistingBranch, removeWorktree } from '../services/git-service';
 
 describe('task-handlers', () => {
   const onPtyData = vi.fn();
@@ -67,6 +68,9 @@ describe('task-handlers', () => {
     spawnClaudeSession.mockClear();
     isSessionAlive.mockClear();
     killSession.mockClear();
+    vi.mocked(addWorktree).mockClear();
+    vi.mocked(addWorktreeForExistingBranch).mockClear();
+    vi.mocked(removeWorktree).mockClear();
     registerTaskHandlers(onPtyData);
   });
 
@@ -87,6 +91,14 @@ describe('task-handlers', () => {
   it('TaskCreate rejects an unknown repoId', async () => {
     const handler = handlers.get(IpcChannels.TaskCreate);
     await expect(handler?.({}, { repoId: 'nope', title: 'x' })).rejects.toThrow('Unknown repo');
+  });
+
+  it('TaskCreate attaches to an existing branch instead of creating one when existingBranch is set', async () => {
+    const handler = handlers.get(IpcChannels.TaskCreate);
+    const task = await handler?.({}, { repoId: 'repo-1', title: 'Resume feature work', existingBranch: 'feature-x' });
+    expect(addWorktreeForExistingBranch).toHaveBeenCalledWith('C:\\demo', 'C:\\demo\\..\\demo-worktrees\\feature-x', 'feature-x');
+    expect(addWorktree).not.toHaveBeenCalled();
+    expect(task).toMatchObject({ title: 'Resume feature work', branch: 'feature-x' });
   });
 
   it('TaskOpen resumes an existing task session when none is alive', async () => {

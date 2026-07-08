@@ -4,7 +4,7 @@ import { IpcChannels } from '../../shared/ipc-channels';
 import type { TaskCreateRequest, TaskNotesSetRequest, TaskNotesGetResponse } from '../../shared/ipc-channels';
 import type { TaskRecord } from '../../shared/types';
 import { readStore, writeStore } from '../services/store';
-import { addWorktree, removeWorktree } from '../services/git-service';
+import { addWorktree, addWorktreeForExistingBranch, removeWorktree } from '../services/git-service';
 import { slugify, assertSafeBranchName } from '../services/slug';
 import { readTaskNotes, writeTaskNotes, archiveTaskNotes } from '../services/notes-service';
 import { spawnClaudeSession, isSessionAlive, killSession } from '../services/pty-manager';
@@ -17,11 +17,17 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
     if (!repo) {
       throw new Error(`Unknown repo: ${request.repoId}`);
     }
-    const slug = slugify(request.title);
-    const branch = request.branch ?? `task/${slug}`;
+    const existingBranch = request.existingBranch;
+    const slug = existingBranch !== undefined ? slugify(existingBranch) : slugify(request.title);
+    const branch = existingBranch !== undefined ? existingBranch : (request.branch ?? `task/${slug}`);
     assertSafeBranchName(branch);
     const worktreePath = getWorktreePath(repo.path, repo.name, slug);
-    await addWorktree(repo.path, worktreePath, branch);
+
+    if (existingBranch !== undefined) {
+      await addWorktreeForExistingBranch(repo.path, worktreePath, branch);
+    } else {
+      await addWorktree(repo.path, worktreePath, branch);
+    }
 
     const now = new Date().toISOString();
     const task: TaskRecord = {
