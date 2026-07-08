@@ -22,31 +22,59 @@ export function RepoSidebar({
   onRemoveTaskClick,
 }: RepoSidebarProps): JSX.Element {
   return (
-    <nav aria-label="Repositories">
-      <button type="button" onClick={onOpenRepoClick}>
-        Open Existing Repo
-      </button>
-      <button type="button" onClick={onCloneRepoClick}>
-        Clone Repo
-      </button>
-      <ul>
+    <nav
+      aria-label="Repositories"
+      className="flex w-72 shrink-0 flex-col gap-4 overflow-y-auto border-r border-graphite-700 bg-graphite-800 p-4"
+    >
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onOpenRepoClick}
+          className="flex-1 rounded-md border border-graphite-600 px-3 py-2 text-sm font-medium text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+        >
+          Open Existing Repo
+        </button>
+        <button
+          type="button"
+          onClick={onCloneRepoClick}
+          className="flex-1 rounded-md border border-graphite-600 px-3 py-2 text-sm font-medium text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+        >
+          Clone Repo
+        </button>
+      </div>
+      <ul className="flex flex-col gap-3">
         {repos.map((repo) => (
-          <li key={repo.id}>
-            <span>{repo.name}</span>
-            <button type="button" onClick={() => onNewTaskClick(repo.id)}>
-              New Task
-            </button>
-            <ul>
+          <li key={repo.id} className="flex flex-col gap-1">
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate text-sm font-semibold text-graphite-100">{repo.name}</span>
+              <button
+                type="button"
+                onClick={() => onNewTaskClick(repo.id)}
+                className="shrink-0 rounded-md bg-clay-600 px-2 py-1 text-xs font-medium text-graphite-100 hover:bg-clay-500"
+              >
+                New Task
+              </button>
+            </div>
+            <ul className="flex flex-col gap-1 pl-2">
               {(tasksByRepoId[repo.id] ?? []).map((task) => (
-                <li key={task.id}>
+                <li key={task.id} className="flex items-center justify-between gap-2">
                   <button
                     type="button"
                     aria-pressed={task.id === selectedTaskId}
                     onClick={() => onSelectTask(task.id)}
+                    className={
+                      task.id === selectedTaskId
+                        ? 'flex-1 truncate rounded-md bg-clay-600/20 px-2 py-1 text-left text-sm font-medium text-clay-400'
+                        : 'flex-1 truncate rounded-md px-2 py-1 text-left text-sm text-graphite-200 hover:bg-graphite-700'
+                    }
                   >
                     {task.title}
                   </button>
-                  <button type="button" onClick={() => onRemoveTaskClick(task.id)}>
+                  <button
+                    type="button"
+                    onClick={() => onRemoveTaskClick(task.id)}
+                    className="shrink-0 rounded-md px-2 py-1 text-xs text-graphite-400 hover:text-danger-400"
+                  >
                     Remove
                   </button>
                 </li>
