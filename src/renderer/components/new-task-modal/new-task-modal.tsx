@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { BranchOption } from '../../../shared/ipc-channels';
+import { ModalOverlay } from '../modal-overlay/modal-overlay';
 
 export interface NewTaskFields {
   title: string;
@@ -14,6 +15,10 @@ export interface NewTaskModalProps {
   onClose: () => void;
   onSubmit: (fields: NewTaskFields) => void;
 }
+
+const fieldInputClasses =
+  'rounded-md border border-graphite-600 bg-graphite-900 px-3 py-2 text-graphite-100 focus:border-clay-500 focus:outline-none';
+const fieldLabelClasses = 'text-sm font-medium text-graphite-400';
 
 export function NewTaskModal({ isOpen, branches, onClose, onSubmit }: NewTaskModalProps): JSX.Element | null {
   const [title, setTitle] = useState('');
@@ -36,64 +41,108 @@ export function NewTaskModal({ isOpen, branches, onClose, onSubmit }: NewTaskMod
   }
 
   return (
-    <div role="dialog" aria-label="New Task">
-      <label htmlFor="new-task-title">Title</label>
-      <input id="new-task-title" value={title} onChange={(event) => setTitle(event.target.value)} />
+    <ModalOverlay>
+      <div role="dialog" aria-label="New Task" className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold text-graphite-100">New Task</h2>
 
-      <label htmlFor="new-task-ado-id">ADO Task ID (optional)</label>
-      <input id="new-task-ado-id" value={adoId} onChange={(event) => setAdoId(event.target.value)} />
-
-      <fieldset>
-        <legend>Branch</legend>
-        <label>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="new-task-title" className={fieldLabelClasses}>
+            Title
+          </label>
           <input
-            type="radio"
-            name="branch-mode"
-            checked={!useExistingBranch}
-            onChange={() => setUseExistingBranch(false)}
+            id="new-task-title"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            className={fieldInputClasses}
           />
-          New branch
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="branch-mode"
-            checked={useExistingBranch}
-            onChange={() => setUseExistingBranch(true)}
-          />
-          Use existing branch
-        </label>
-      </fieldset>
+        </div>
 
-      {useExistingBranch ? (
-        <>
-          <label htmlFor="new-task-existing-branch">Existing Branch</label>
-          <select
-            id="new-task-existing-branch"
-            value={selectedExistingBranch}
-            onChange={(event) => setSelectedExistingBranch(event.target.value)}
+        <div className="flex flex-col gap-1">
+          <label htmlFor="new-task-ado-id" className={fieldLabelClasses}>
+            ADO Task ID (optional)
+          </label>
+          <input
+            id="new-task-ado-id"
+            value={adoId}
+            onChange={(event) => setAdoId(event.target.value)}
+            className={fieldInputClasses}
+          />
+        </div>
+
+        <fieldset className="flex flex-col gap-2">
+          <legend className={fieldLabelClasses}>Branch</legend>
+          <label className="flex items-center gap-2 text-sm text-graphite-100">
+            <input
+              type="radio"
+              name="branch-mode"
+              checked={!useExistingBranch}
+              onChange={() => setUseExistingBranch(false)}
+              className="accent-clay-500"
+            />
+            New branch
+          </label>
+          <label className="flex items-center gap-2 text-sm text-graphite-100">
+            <input
+              type="radio"
+              name="branch-mode"
+              checked={useExistingBranch}
+              onChange={() => setUseExistingBranch(true)}
+              className="accent-clay-500"
+            />
+            Use existing branch
+          </label>
+        </fieldset>
+
+        {useExistingBranch ? (
+          <div className="flex flex-col gap-1">
+            <label htmlFor="new-task-existing-branch" className={fieldLabelClasses}>
+              Existing Branch
+            </label>
+            <select
+              id="new-task-existing-branch"
+              value={selectedExistingBranch}
+              onChange={(event) => setSelectedExistingBranch(event.target.value)}
+              className={fieldInputClasses}
+            >
+              <option value="">Select a branch</option>
+              {branches.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1">
+            <label htmlFor="new-task-branch" className={fieldLabelClasses}>
+              Branch (optional)
+            </label>
+            <input
+              id="new-task-branch"
+              value={branch}
+              onChange={(event) => setBranch(event.target.value)}
+              className={fieldInputClasses}
+            />
+          </div>
+        )}
+
+        <div className="mt-2 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md px-4 py-2 text-sm font-medium text-graphite-400 hover:text-graphite-100"
           >
-            <option value="">Select a branch</option>
-            {branches.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </>
-      ) : (
-        <>
-          <label htmlFor="new-task-branch">Branch (optional)</label>
-          <input id="new-task-branch" value={branch} onChange={(event) => setBranch(event.target.value)} />
-        </>
-      )}
-
-      <button type="button" onClick={handleSubmit}>
-        Create Task
-      </button>
-      <button type="button" onClick={onClose}>
-        Cancel
-      </button>
-    </div>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className="rounded-md bg-clay-600 px-4 py-2 text-sm font-medium text-graphite-100 hover:bg-clay-500"
+          >
+            Create Task
+          </button>
+        </div>
+      </div>
+    </ModalOverlay>
   );
 }
