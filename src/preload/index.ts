@@ -33,6 +33,7 @@ export interface ClaudeOrchestratorApi {
   onPtyOutput(listener: (event: PtyOutputEvent) => void): () => void;
   onTaskFinishedStateChanged(listener: (event: TaskFinishedStateChangedEvent) => void): () => void;
   saveClipboardImage(dataUrl: string): Promise<string>;
+  getAppVersion(): Promise<string>;
 }
 
 const api: ClaudeOrchestratorApi = {
@@ -64,6 +65,7 @@ const api: ClaudeOrchestratorApi = {
     return () => ipcRenderer.removeListener(IpcChannels.TaskFinishedStateChanged, handler);
   },
   saveClipboardImage: (dataUrl) => ipcRenderer.invoke(IpcChannels.SaveClipboardImage, dataUrl),
+  getAppVersion: () => ipcRenderer.invoke(IpcChannels.GetAppVersion),
 };
 
 contextBridge.exposeInMainWorld('claudeOrchestrator', api);

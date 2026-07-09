@@ -36,6 +36,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
       />,
     );
     expect(screen.getByText('demo')).toBeInTheDocument();
@@ -60,6 +61,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Fix login bug' }));
@@ -84,6 +86,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Open Existing Repo' }));
@@ -108,6 +111,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Clone Repo' }));
@@ -132,6 +136,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={onRemoveTaskClick}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
@@ -156,6 +161,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={onReviewCodeClick}
         onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Review Code' }));
@@ -180,6 +186,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
       />,
     );
     expect(screen.getByText('Review', { selector: 'span' })).toBeInTheDocument();
@@ -203,6 +210,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
       />,
     );
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search tasks' }), 'x');
@@ -227,6 +235,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
       />,
     );
     expect(screen.getByText('demo')).toBeInTheDocument();
@@ -251,6 +260,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
       />,
     );
     expect(screen.getByText('empty-repo')).toBeInTheDocument();
@@ -282,6 +292,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
       />,
     );
     expect(screen.getByText('Quick Questions')).toBeInTheDocument();
@@ -307,6 +318,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={onNewQuestionClick}
+        appVersion={undefined}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: '+ New Question' }));
@@ -330,6 +342,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
       />,
     );
     expect(screen.queryByRole('button', { name: /Archived/ })).not.toBeInTheDocument();
@@ -352,6 +365,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
       />,
     );
     expect(screen.getByRole('button', { name: 'Archived (1)' })).toHaveAttribute('aria-expanded', 'false');
@@ -375,6 +389,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Archived (1)' }));
@@ -400,6 +415,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Archived (1)' }));
@@ -425,6 +441,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={onRemoveTaskClick}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Archived (1)' }));
@@ -435,5 +452,51 @@ describe('RepoSidebar', () => {
     }
     await userEvent.click(archivedRemoveButton);
     expect(onRemoveTaskClick).toHaveBeenCalledWith('task-3');
+  });
+
+  it('shows the app version in the footer once it is known', () => {
+    render(
+      <RepoSidebar
+        repos={[]}
+        activeTasksByRepoId={{}}
+        archivedTasksByRepoId={{}}
+        scratchTasks={[]}
+        selectedTaskId={undefined}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
+        appVersion="1.2.3"
+      />,
+    );
+    expect(screen.getByText('v1.2.3')).toBeInTheDocument();
+  });
+
+  it('shows no version footer while the version has not resolved yet', () => {
+    render(
+      <RepoSidebar
+        repos={[]}
+        activeTasksByRepoId={{}}
+        archivedTasksByRepoId={{}}
+        scratchTasks={[]}
+        selectedTaskId={undefined}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
+      />,
+    );
+    expect(screen.queryByText(/^v\d/)).not.toBeInTheDocument();
   });
 });

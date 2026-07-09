@@ -49,7 +49,10 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
     // reach the pty untouched so SIGINT keeps working. Returning `false`
     // tells xterm to swallow the event instead of forwarding it via onData.
     terminal.attachCustomKeyEventHandler((event) => {
-      if (event.type === 'keydown' && event.ctrlKey && event.key === 'c' && terminal.hasSelection()) {
+      // event.key is 'c' with no Shift held and 'C' with Shift held (Shift
+      // changes the reported character) — accept either so Ctrl+C and
+      // Ctrl+Shift+C both copy.
+      if (event.type === 'keydown' && event.ctrlKey && event.key.toLowerCase() === 'c' && terminal.hasSelection()) {
         void navigator.clipboard.writeText(terminal.getSelection());
         return false;
       }
@@ -84,6 +87,13 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
 
     function handlePaste(event: ClipboardEvent): void {
       const items = event.clipboardData?.items;
+      // TEMPORARY diagnostic — remove once the real clipboard item shape for
+      // a Windows screenshot paste is confirmed. Logs every paste this
+      // listener actually sees, and exactly what clipboardData contains.
+      console.log(
+        '[paste-debug] handlePaste fired. items:',
+        items ? Array.from(items).map((item) => ({ kind: item.kind, type: item.type })) : 'no clipboardData.items',
+      );
       if (!items) {
         return;
       }

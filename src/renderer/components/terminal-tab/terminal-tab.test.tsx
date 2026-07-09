@@ -257,6 +257,22 @@ describe('TerminalTab', () => {
     expect(result).toBe(false);
   });
 
+  it('also copies on Ctrl+Shift+C (Shift makes event.key uppercase "C")', () => {
+    hasSelectionMock.mockReturnValue(true);
+    getSelectionMock.mockReturnValue('some selected output');
+    render(<TerminalTab taskId="task-1" />);
+    const customKeyEventHandler = attachCustomKeyEventHandlerMock.mock.calls[0]?.[0] as (
+      event: KeyboardEvent,
+    ) => boolean;
+
+    const result = customKeyEventHandler(
+      new KeyboardEvent('keydown', { key: 'C', ctrlKey: true, shiftKey: true }),
+    );
+
+    expect(clipboardWriteText).toHaveBeenCalledWith('some selected output');
+    expect(result).toBe(false);
+  });
+
   it('lets Ctrl+C reach the pty as normal (e.g. to send SIGINT) when nothing is selected', () => {
     hasSelectionMock.mockReturnValue(false);
     render(<TerminalTab taskId="task-1" />);

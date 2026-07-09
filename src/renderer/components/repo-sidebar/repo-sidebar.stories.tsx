@@ -15,6 +15,7 @@ const meta: Meta<typeof RepoSidebar> = {
     onReviewCodeClick: fn(),
     onNewQuestionClick: fn(),
     scratchTasks: [],
+    appVersion: '0.1.0',
   },
 };
 

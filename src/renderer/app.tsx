@@ -33,6 +33,7 @@ export function App(): JSX.Element {
   const [finishedTaskIds, setFinishedTaskIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [matchingTaskIds, setMatchingTaskIds] = useState<string[] | undefined>();
+  const [appVersion, setAppVersion] = useState<string | undefined>();
   // Mirrors newTaskRepoId so handleNewTaskClick's in-flight listBranches
   // callback can check, after the fact, whether its response is still
   // relevant — reading state directly from inside an already-started async
@@ -42,6 +43,7 @@ export function App(): JSX.Element {
   useEffect(() => {
     void window.claudeOrchestrator.listRepos().then(setRepos);
     void window.claudeOrchestrator.listTasks().then(setTasks);
+    void window.claudeOrchestrator.getAppVersion().then(setAppVersion);
   }, []);
 
   useEffect(() => {
@@ -301,6 +303,7 @@ export function App(): JSX.Element {
           onRemoveTaskClick={(taskId) => void handleRemoveTask(taskId)}
           onReviewCodeClick={(repoId) => void handleReviewCodeClick(repoId)}
           onNewQuestionClick={() => setIsNewQuestionModalOpen(true)}
+          appVersion={appVersion}
         />
         <NewTaskModal
           isOpen={newTaskRepoId !== undefined}

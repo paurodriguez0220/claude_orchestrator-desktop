@@ -17,6 +17,7 @@ export interface RepoSidebarProps {
   onRemoveTaskClick: (taskId: string) => void;
   onReviewCodeClick: (repoId: string) => void;
   onNewQuestionClick: () => void;
+  appVersion: string | undefined;
 }
 
 interface TaskRowProps {
@@ -72,6 +73,7 @@ export function RepoSidebar({
   onRemoveTaskClick,
   onReviewCodeClick,
   onNewQuestionClick,
+  appVersion,
 }: RepoSidebarProps): JSX.Element {
   const isSearchActive = searchQuery.trim() !== '';
   const visibleRepos = isSearchActive
@@ -218,6 +220,9 @@ export function RepoSidebar({
           ))}
         </ul>
       </div>
+      {appVersion !== undefined && (
+        <span className="text-center text-xs text-graphite-500">{`v${appVersion}`}</span>
+      )}
     </nav>
   );
 }

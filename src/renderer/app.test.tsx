@@ -89,6 +89,7 @@ const cloneRepo = vi.fn(async () => repo);
 const listBranches = vi.fn(async () => [{ value: 'feature-x', label: 'feature-x', isRemote: false }]);
 const fetchRepo = vi.fn(async () => undefined);
 const taskSearch = vi.fn(async (): Promise<string[]> => []);
+const getAppVersion = vi.fn(async () => '0.1.0');
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -105,6 +106,7 @@ beforeEach(() => {
     listBranches,
     fetchRepo,
     taskSearch,
+    getAppVersion,
     getTaskNotes,
     setTaskNotes,
     sendPtyInput: vi.fn(),
@@ -474,6 +476,7 @@ describe('App', () => {
       cloneRepo,
       listBranches,
       fetchRepo,
+      getAppVersion,
       getTaskNotes,
       setTaskNotes,
       sendPtyInput: vi.fn(),
