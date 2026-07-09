@@ -27,6 +27,7 @@ export interface ClaudeOrchestratorApi {
   removeTask(taskId: string): Promise<void>;
   getTaskNotes(taskId: string): Promise<TaskNotesGetResponse>;
   setTaskNotes(request: TaskNotesSetRequest): Promise<void>;
+  taskSearch(query: string): Promise<string[]>;
   sendPtyInput(taskId: string, data: string): void;
   resizePty(taskId: string, cols: number, rows: number): void;
   onPtyOutput(listener: (event: PtyOutputEvent) => void): () => void;
@@ -48,6 +49,7 @@ const api: ClaudeOrchestratorApi = {
   removeTask: (taskId) => ipcRenderer.invoke(IpcChannels.TaskRemove, taskId),
   getTaskNotes: (taskId) => ipcRenderer.invoke(IpcChannels.TaskNotesGet, taskId),
   setTaskNotes: (request) => ipcRenderer.invoke(IpcChannels.TaskNotesSet, request),
+  taskSearch: (query) => ipcRenderer.invoke(IpcChannels.TaskSearch, query),
   sendPtyInput: (taskId, data) => ipcRenderer.send(IpcChannels.PtyInput, { taskId, data }),
   resizePty: (taskId, cols, rows) => ipcRenderer.send(IpcChannels.PtyResize, { taskId, cols, rows }),
   onPtyOutput: (listener) => {

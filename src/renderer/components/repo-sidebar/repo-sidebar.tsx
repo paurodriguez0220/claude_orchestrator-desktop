@@ -1,9 +1,12 @@
 import type { RepoRecord, TaskRecord } from '../../../shared/types';
+import { TaskSearchInput } from '../task-search-input/task-search-input';
 
 export interface RepoSidebarProps {
   repos: RepoRecord[];
   tasksByRepoId: Record<string, TaskRecord[]>;
   selectedTaskId: string | undefined;
+  searchQuery: string;
+  onSearchQueryChange: (value: string) => void;
   onSelectTask: (taskId: string) => void;
   onOpenRepoClick: () => void;
   onCloneRepoClick: () => void;
@@ -16,6 +19,8 @@ export function RepoSidebar({
   repos,
   tasksByRepoId,
   selectedTaskId,
+  searchQuery,
+  onSearchQueryChange,
   onSelectTask,
   onOpenRepoClick,
   onCloneRepoClick,
@@ -23,6 +28,11 @@ export function RepoSidebar({
   onRemoveTaskClick,
   onReviewCodeClick,
 }: RepoSidebarProps): JSX.Element {
+  const isSearchActive = searchQuery.trim() !== '';
+  const visibleRepos = isSearchActive
+    ? repos.filter((repo) => (tasksByRepoId[repo.id] ?? []).length > 0)
+    : repos;
+
   return (
     <nav
       aria-label="Repositories"
@@ -44,8 +54,9 @@ export function RepoSidebar({
           Clone Repo
         </button>
       </div>
+      <TaskSearchInput value={searchQuery} onChange={onSearchQueryChange} />
       <ul className="flex flex-col gap-3">
-        {repos.map((repo) => (
+        {visibleRepos.map((repo) => (
           <li key={repo.id} className="flex flex-col gap-1">
             <div className="flex items-center justify-between gap-2">
               <span className="truncate text-sm font-semibold text-graphite-100">{repo.name}</span>

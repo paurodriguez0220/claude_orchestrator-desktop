@@ -13,6 +13,7 @@ export const IpcChannels = {
   TaskRemove: 'task:remove',
   TaskNotesGet: 'task:notes:get',
   TaskNotesSet: 'task:notes:set',
+  TaskSearch: 'task:search',
   PtyInput: 'pty:input',
   PtyOutput: 'pty:output',
   PtyResize: 'pty:resize',
