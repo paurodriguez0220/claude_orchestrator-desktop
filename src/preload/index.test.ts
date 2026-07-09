@@ -109,4 +109,14 @@ describe('preload', () => {
     await (api.saveClipboardImage as any)('data:image/png;base64,aGVsbG8=');
     expect(ipcRendererInvoke).toHaveBeenCalledWith('image:save-clipboard', 'data:image/png;base64,aGVsbG8=');
   });
+
+  it('taskSearch invokes the TaskSearch channel with the query string', async () => {
+    await import('./index');
+    const call = exposeInMainWorld.mock.calls[0];
+    if (!call) throw new Error('exposeInMainWorld not called');
+    const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (api.taskSearch as any)('login');
+    expect(ipcRendererInvoke).toHaveBeenCalledWith('task:search', 'login');
+  });
 });
