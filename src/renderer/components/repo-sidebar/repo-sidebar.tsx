@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GitPullRequest, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, GitPullRequest, Trash2 } from 'lucide-react';
 import type { RepoRecord, TaskRecord } from '../../../shared/types';
 import { TaskSearchInput } from '../task-search-input/task-search-input';
 
@@ -160,7 +160,11 @@ export function RepoSidebar({
                     onClick={() => toggleArchived(repo.id)}
                     className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-graphite-400 hover:text-graphite-100"
                   >
-                    <span aria-hidden="true">{isExpanded ? '▾' : '▸'}</span>
+                    {isExpanded ? (
+                      <ChevronDown aria-hidden="true" className="h-3 w-3" />
+                    ) : (
+                      <ChevronRight aria-hidden="true" className="h-3 w-3" />
+                    )}
                     {`Archived (${archivedTasks.length})`}
                   </button>
                   {isExpanded && (
