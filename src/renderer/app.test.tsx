@@ -191,6 +191,7 @@ describe('App', () => {
     await userEvent.click(firstNewTaskButton);
     expect(listBranches).toHaveBeenCalledWith('repo-1');
     await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
+    await userEvent.click(await screen.findByRole('combobox'));
     expect(await screen.findByRole('option', { name: 'feature-x' })).toBeInTheDocument();
   });
 
@@ -218,6 +219,7 @@ describe('App', () => {
     // result must not clobber what's shown for B.
     branchesB.resolve([{ value: 'feature-b', label: 'feature-b', isRemote: false }]);
     await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
+    await userEvent.click(await screen.findByRole('combobox'));
     expect(await screen.findByRole('option', { name: 'feature-b' })).toBeInTheDocument();
 
     branchesA.resolve([{ value: 'feature-a', label: 'feature-a', isRemote: false }]);
@@ -238,12 +240,14 @@ describe('App', () => {
     }
     await userEvent.click(firstNewTaskButton);
     await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
+    await userEvent.click(await screen.findByRole('combobox'));
     expect(await screen.findByRole('option', { name: 'feature-x' })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     await userEvent.click(firstNewTaskButton);
     await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
-    // The reopen's listBranches call hasn't resolved yet — the select must
+    await userEvent.click(await screen.findByRole('combobox'));
+    // The reopen's listBranches call hasn't resolved yet — the picker must
     // not still be showing the previous, now-stale branch list.
     expect(screen.queryByRole('option', { name: 'feature-x' })).not.toBeInTheDocument();
 
@@ -261,7 +265,8 @@ describe('App', () => {
     await userEvent.click(firstNewTaskButton);
     await userEvent.type(screen.getByLabelText('Title'), 'Resume feature work');
     await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
-    await userEvent.selectOptions(await screen.findByRole('combobox'), 'feature-x');
+    await userEvent.click(await screen.findByRole('combobox'));
+    await userEvent.click(screen.getByRole('option', { name: 'feature-x' }));
     await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
     expect(createTask).toHaveBeenCalledWith(
       expect.objectContaining({ repoId: 'repo-1', existingBranch: 'feature-x' }),
@@ -434,7 +439,8 @@ describe('App', () => {
     render(<App />);
     await userEvent.click(await screen.findByRole('button', { name: 'Review Code' }));
     await userEvent.type(screen.getByLabelText('Title'), 'Review PR #42');
-    await userEvent.selectOptions(await screen.findByRole('combobox'), 'feature-x');
+    await userEvent.click(await screen.findByRole('combobox'));
+    await userEvent.click(screen.getByRole('option', { name: 'feature-x' }));
     await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
     expect(createTask).toHaveBeenCalledWith(
       expect.objectContaining({ repoId: 'repo-1', existingBranch: 'feature-x', kind: 'review' }),

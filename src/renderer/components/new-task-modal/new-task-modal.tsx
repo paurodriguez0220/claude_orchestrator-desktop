@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { BranchOption } from '../../../shared/ipc-channels';
 import { ModalOverlay } from '../modal-overlay/modal-overlay';
 import { Spinner } from '../spinner/spinner';
+import { BranchPicker } from '../branch-picker/branch-picker';
 
 export interface NewTaskFields {
   title: string;
@@ -108,24 +109,13 @@ export function NewTaskModal({
         )}
 
         {mode === 'review' || useExistingBranch ? (
-          <div className="flex flex-col gap-1">
-            <label htmlFor="new-task-existing-branch" className={fieldLabelClasses}>
-              Existing Branch
-            </label>
-            <select
-              id="new-task-existing-branch"
-              value={selectedExistingBranch}
-              onChange={(event) => setSelectedExistingBranch(event.target.value)}
-              className={fieldInputClasses}
-            >
-              <option value="">Select a branch</option>
-              {branches.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          <BranchPicker
+            id="new-task-existing-branch"
+            label="Existing Branch"
+            branches={branches}
+            value={selectedExistingBranch}
+            onChange={setSelectedExistingBranch}
+          />
         ) : (
           <div className="flex flex-col gap-1">
             <label htmlFor="new-task-branch" className={fieldLabelClasses}>
