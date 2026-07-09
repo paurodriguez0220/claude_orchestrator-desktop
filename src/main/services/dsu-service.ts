@@ -43,7 +43,7 @@ export async function generateDsuSummary(taskSummaries: TaskCommitSummary[]): Pr
   const prompt = buildDsuPrompt(taskSummaries);
   try {
     const { stdout } = await execFileAsync('cmd.exe', ['/c', 'claude', '-p', prompt], undefined);
-    return stdout.trim();
+    return stdout.toString().trim();
   } catch (err) {
     const stderr = (err as { stderr?: string }).stderr ?? String(err);
     throw new DsuCommandError('claude -p failed to generate the DSU summary', stderr);
