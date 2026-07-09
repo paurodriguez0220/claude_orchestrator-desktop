@@ -11,6 +11,7 @@ import type {
   PtyOutputEvent,
   TaskFinishedStateChangedEvent,
   BranchOption,
+  DsuGenerateResponse,
 } from '../shared/ipc-channels';
 
 export interface ClaudeOrchestratorApi {
@@ -34,6 +35,7 @@ export interface ClaudeOrchestratorApi {
   onTaskFinishedStateChanged(listener: (event: TaskFinishedStateChangedEvent) => void): () => void;
   saveClipboardImage(dataUrl: string): Promise<string>;
   getAppVersion(): Promise<string>;
+  generateDsuSummary(): Promise<DsuGenerateResponse>;
 }
 
 const api: ClaudeOrchestratorApi = {
@@ -66,6 +68,7 @@ const api: ClaudeOrchestratorApi = {
   },
   saveClipboardImage: (dataUrl) => ipcRenderer.invoke(IpcChannels.SaveClipboardImage, dataUrl),
   getAppVersion: () => ipcRenderer.invoke(IpcChannels.GetAppVersion),
+  generateDsuSummary: () => ipcRenderer.invoke(IpcChannels.GenerateDsuSummary),
 };
 
 contextBridge.exposeInMainWorld('claudeOrchestrator', api);

@@ -7,6 +7,7 @@ import { TerminalTab } from './components/terminal-tab/terminal-tab';
 import { TaskNotesPanel } from './components/task-notes-panel/task-notes-panel';
 import { TabBar } from './components/tab-bar/tab-bar';
 import { Spinner } from './components/spinner/spinner';
+import { DsuSummaryModal } from './components/dsu-summary-modal/dsu-summary-modal';
 import type { RepoRecord, TaskRecord, TaskStatus } from '../shared/types';
 import type { BranchOption } from '../shared/ipc-channels';
 import type { NewTaskFields } from './components/new-task-modal/new-task-modal';
@@ -34,6 +35,9 @@ export function App(): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
   const [matchingTaskIds, setMatchingTaskIds] = useState<string[] | undefined>();
   const [appVersion, setAppVersion] = useState<string | undefined>();
+  const [isDsuModalOpen, setIsDsuModalOpen] = useState(false);
+  const [dsuSummary, setDsuSummary] = useState<{ markdown: string; filePath: string } | undefined>();
+  const [isGeneratingDsu, setIsGeneratingDsu] = useState(false);
   // Mirrors newTaskRepoId so handleNewTaskClick's in-flight listBranches
   // callback can check, after the fact, whether its response is still
   // relevant — reading state directly from inside an already-started async
@@ -245,6 +249,20 @@ export function App(): JSX.Element {
     }
   }
 
+  async function handleGenerateDsu(): Promise<void> {
+    setErrorMessage(undefined);
+    setIsGeneratingDsu(true);
+    try {
+      const result = await window.claudeOrchestrator.generateDsuSummary();
+      setDsuSummary(result);
+      setIsDsuModalOpen(true);
+    } catch (err) {
+      setErrorMessage(toErrorMessage(err));
+    } finally {
+      setIsGeneratingDsu(false);
+    }
+  }
+
   const activeTasksByRepoId = tasks.reduce<Record<string, TaskRecord[]>>((acc, task) => {
     if (task.repoId !== undefined && task.status !== 'done') {
       (acc[task.repoId] ??= []).push(task);
@@ -304,6 +322,8 @@ export function App(): JSX.Element {
           onReviewCodeClick={(repoId) => void handleReviewCodeClick(repoId)}
           onNewQuestionClick={() => setIsNewQuestionModalOpen(true)}
           appVersion={appVersion}
+          onGenerateDsuClick={() => void handleGenerateDsu()}
+          isGeneratingDsu={isGeneratingDsu}
         />
         <NewTaskModal
           isOpen={newTaskRepoId !== undefined}
@@ -327,6 +347,12 @@ export function App(): JSX.Element {
           isSubmitting={isSubmittingModal}
           onClose={() => setIsNewQuestionModalOpen(false)}
           onSubmit={(fields) => void handleCreateQuestion(fields)}
+        />
+        <DsuSummaryModal
+          isOpen={isDsuModalOpen}
+          summary={dsuSummary?.markdown ?? ''}
+          filePath={dsuSummary?.filePath}
+          onClose={() => setIsDsuModalOpen(false)}
         />
         <main className="flex flex-1 flex-col overflow-hidden">
           {openTaskIds.length > 0 && (

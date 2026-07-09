@@ -20,7 +20,7 @@ vi.mock('node:child_process', () => ({
   },
 }));
 
-import { cloneRepo, addWorktree, addWorktreeForExistingBranch, removeWorktree, listBranches, fetchRepo, GitCommandError } from './git-service';
+import { cloneRepo, addWorktree, addWorktreeForExistingBranch, removeWorktree, listBranches, fetchRepo, getLastWorkingDayCutoff, getCommitSubjectsSince, GitCommandError } from './git-service';
 
 describe('git-service', () => {
   beforeEach(() => {
@@ -98,5 +98,42 @@ describe('git-service', () => {
     );
     expect(thrownError).toBeInstanceOf(GitCommandError);
     expect(thrownError.stderr).toBe('fatal: destination path already exists');
+  });
+
+  describe('getLastWorkingDayCutoff', () => {
+    it('returns last Friday at local midnight when today is Monday', () => {
+      // 2024-01-08 is a Monday.
+      const monday = new Date(2024, 0, 8, 14, 30, 0);
+      expect(getLastWorkingDayCutoff(monday)).toEqual(new Date(2024, 0, 5, 0, 0, 0, 0));
+    });
+
+    it('returns yesterday at local midnight for any non-Monday day', () => {
+      // 2024-01-10 is a Wednesday.
+      const wednesday = new Date(2024, 0, 10, 9, 15, 0);
+      expect(getLastWorkingDayCutoff(wednesday)).toEqual(new Date(2024, 0, 9, 0, 0, 0, 0));
+    });
+  });
+
+  describe('getCommitSubjectsSince', () => {
+    it('runs git log --since=<cutoff ISO> --pretty=%s in the worktree and returns non-empty subjects', async () => {
+      execFileMock.mockImplementation(() => ({
+        stdout: 'fix: handle empty input\nfeat: add DSU button\n\n',
+        stderr: '',
+      }));
+      const cutoff = new Date(2024, 0, 9, 0, 0, 0, 0);
+      const result = await getCommitSubjectsSince('C:\\repo-worktrees\\slug', cutoff);
+      expect(execFileMock).toHaveBeenCalledWith(
+        'git',
+        ['-c', 'core.longpaths=true', 'log', `--since=${cutoff.toISOString()}`, '--pretty=%s'],
+        { cwd: 'C:\\repo-worktrees\\slug' },
+      );
+      expect(result).toEqual(['fix: handle empty input', 'feat: add DSU button']);
+    });
+
+    it('returns an empty array when there are no commits since the cutoff', async () => {
+      execFileMock.mockImplementation(() => ({ stdout: '', stderr: '' }));
+      const result = await getCommitSubjectsSince('C:\\repo-worktrees\\slug', new Date(2024, 0, 9));
+      expect(result).toEqual([]);
+    });
   });
 });

@@ -82,3 +82,17 @@ export async function listBranches(repoPath: string): Promise<{ local: string[];
 export async function fetchRepo(repoPath: string): Promise<void> {
   await runGit(['fetch'], repoPath);
 }
+
+export function getLastWorkingDayCutoff(now: Date): Date {
+  const isMonday = now.getDay() === 1;
+  const daysBack = isMonday ? 3 : 1;
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysBack, 0, 0, 0, 0);
+}
+
+export async function getCommitSubjectsSince(worktreePath: string, cutoff: Date): Promise<string[]> {
+  const output = await runGitCapture(['log', `--since=${cutoff.toISOString()}`, '--pretty=%s'], worktreePath);
+  return output
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}

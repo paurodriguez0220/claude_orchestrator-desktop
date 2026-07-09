@@ -21,6 +21,7 @@ export const IpcChannels = {
   DialogSelectFolder: 'dialog:select-folder',
   SaveClipboardImage: 'image:save-clipboard',
   GetAppVersion: 'app:get-version',
+  GenerateDsuSummary: 'dsu:generate',
 } as const;
 
 export interface RepoAddRequest {
@@ -76,4 +77,9 @@ export interface PtyResizeRequest {
 export interface TaskNotesGetResponse {
   body: string;
   status: TaskStatus;
+}
+
+export interface DsuGenerateResponse {
+  markdown: string;
+  filePath: string;
 }

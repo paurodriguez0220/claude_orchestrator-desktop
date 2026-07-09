@@ -32,3 +32,7 @@ export function getWorktreePath(repoPath: string, repoName: string, taskSlug: st
 export function getScratchPath(taskId: string): string {
   return join(getRuntimeDataRoot(), 'scratch', taskId);
 }
+
+export function getDsuSummaryPath(date: string): string {
+  return join(getRuntimeDataRoot(), 'dsu', `${date}.md`);
+}
