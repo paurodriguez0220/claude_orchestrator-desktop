@@ -350,6 +350,8 @@ describe('RepoSidebar', () => {
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
         appVersion={undefined}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Remove question' }));
