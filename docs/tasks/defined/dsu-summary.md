@@ -313,7 +313,7 @@ export async function generateDsuSummary(taskSummaries: TaskCommitSummary[]): Pr
   }
   const prompt = buildDsuPrompt(taskSummaries);
   try {
-    const { stdout } = await execFileAsync('cmd.exe', ['/c', 'claude', '-p', prompt]);
+    const { stdout } = await execFileAsync('cmd.exe', ['/c', 'claude', '-p', prompt], undefined);
     return stdout.trim();
   } catch (err) {
     const stderr = (err as { stderr?: string }).stderr ?? String(err);
