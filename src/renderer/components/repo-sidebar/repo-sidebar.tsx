@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { GitPullRequest, Trash2 } from 'lucide-react';
 import type { RepoRecord, TaskRecord } from '../../../shared/types';
 import { TaskSearchInput } from '../task-search-input/task-search-input';
 
@@ -42,16 +43,17 @@ function TaskRow({ task, selectedTaskId, onSelectTask, onRemoveTaskClick }: Task
         {task.title}
       </button>
       {task.kind === 'review' && (
-        <span className="shrink-0 rounded-full bg-clay-600/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-clay-400">
-          Review
+        <span className="shrink-0 rounded-full bg-clay-600/20 px-1.5 py-0.5 text-clay-400">
+          <GitPullRequest role="img" aria-label="Review" className="h-3 w-3" />
         </span>
       )}
       <button
         type="button"
+        aria-label="Remove task"
         onClick={() => onRemoveTaskClick(task.id)}
-        className="shrink-0 rounded-md px-2 py-1 text-xs text-graphite-400 hover:text-danger-400"
+        className="shrink-0 rounded-md px-2 py-1 text-graphite-400 hover:text-danger-400"
       >
-        Remove
+        <Trash2 aria-hidden="true" className="h-4 w-4" />
       </button>
     </li>
   );
@@ -209,10 +211,11 @@ export function RepoSidebar({
               <span className="shrink-0 text-xs text-graphite-400">{task.status}</span>
               <button
                 type="button"
+                aria-label="Remove question"
                 onClick={() => onRemoveTaskClick(task.id)}
-                className="shrink-0 rounded-md px-2 py-1 text-xs text-graphite-400 hover:text-danger-400"
+                className="shrink-0 rounded-md px-2 py-1 text-graphite-400 hover:text-danger-400"
               >
-                Remove
+                <Trash2 aria-hidden="true" className="h-4 w-4" />
               </button>
             </li>
           ))}

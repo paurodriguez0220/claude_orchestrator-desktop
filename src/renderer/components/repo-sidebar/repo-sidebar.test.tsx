@@ -114,7 +114,7 @@ describe('RepoSidebar', () => {
     expect(onCloneRepoClick).toHaveBeenCalledOnce();
   });
 
-  it('calls onRemoveTaskClick with the task id when "Remove" is clicked', async () => {
+  it('calls onRemoveTaskClick with the task id when "Remove task" is clicked', async () => {
     const onRemoveTaskClick = vi.fn();
     render(
       <RepoSidebar
@@ -134,7 +134,7 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remove task' }));
     expect(onRemoveTaskClick).toHaveBeenCalledWith('task-1');
   });
 
@@ -182,7 +182,7 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
       />,
     );
-    expect(screen.getByText('Review', { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Review' })).toBeInTheDocument();
   });
 
   it('renders the search input and forwards typed text via onSearchQueryChange', async () => {
@@ -287,6 +287,39 @@ describe('RepoSidebar', () => {
     expect(screen.getByText('Quick Questions')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'What does this error mean?' })).toBeInTheDocument();
     expect(screen.getByText('in-progress')).toBeInTheDocument();
+  });
+
+  it('calls onRemoveTaskClick with the scratch task id when "Remove question" is clicked', async () => {
+    const onRemoveTaskClick = vi.fn();
+    const scratchTask: TaskRecord = {
+      id: 'task-4',
+      title: 'What does this error mean?',
+      worktreePath: 'C:\\scratch\\task-4',
+      status: 'in-progress',
+      kind: 'scratch',
+      createdAt: '2026-07-08T00:00:00.000Z',
+      updatedAt: '2026-07-08T00:00:00.000Z',
+    };
+    render(
+      <RepoSidebar
+        repos={[]}
+        activeTasksByRepoId={{}}
+        archivedTasksByRepoId={{}}
+        scratchTasks={[scratchTask]}
+        selectedTaskId={undefined}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={onRemoveTaskClick}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Remove question' }));
+    expect(onRemoveTaskClick).toHaveBeenCalledWith('task-4');
   });
 
   it('calls onNewQuestionClick when "+ New Question" is clicked', async () => {
@@ -428,7 +461,7 @@ describe('RepoSidebar', () => {
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Archived (1)' }));
-    const removeButtons = screen.getAllByRole('button', { name: 'Remove' });
+    const removeButtons = screen.getAllByRole('button', { name: 'Remove task' });
     const archivedRemoveButton = removeButtons[removeButtons.length - 1];
     if (!archivedRemoveButton) {
       throw new Error('Expected an archived task Remove button to be rendered');

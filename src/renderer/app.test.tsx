@@ -157,10 +157,10 @@ describe('App', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<App />);
     await screen.findByText('Fix login bug');
-    const removeButtons = screen.getAllByRole('button', { name: 'Remove' });
+    const removeButtons = screen.getAllByRole('button', { name: 'Remove task' });
     const firstRemoveButton = removeButtons[0];
     if (!firstRemoveButton) {
-      throw new Error('Expected at least one "Remove" button to be rendered');
+      throw new Error('Expected at least one "Remove task" button to be rendered');
     }
     await userEvent.click(firstRemoveButton);
     expect(confirmSpy).toHaveBeenCalledOnce();
@@ -173,10 +173,10 @@ describe('App', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<App />);
     await screen.findByText('Fix login bug');
-    const removeButtons = screen.getAllByRole('button', { name: 'Remove' });
+    const removeButtons = screen.getAllByRole('button', { name: 'Remove task' });
     const firstRemoveButton = removeButtons[0];
     if (!firstRemoveButton) {
-      throw new Error('Expected at least one "Remove" button to be rendered');
+      throw new Error('Expected at least one "Remove task" button to be rendered');
     }
     await userEvent.click(firstRemoveButton);
     expect(confirmSpy).toHaveBeenCalledOnce();
@@ -560,10 +560,10 @@ describe('App', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<App />);
     await screen.findByText('What does this error mean?');
-    const removeButtons = screen.getAllByRole('button', { name: 'Remove' });
+    const removeButtons = screen.getAllByRole('button', { name: 'Remove question' });
     const scratchRemoveButton = removeButtons[removeButtons.length - 1];
     if (!scratchRemoveButton) {
-      throw new Error('Expected a "Remove" button for the scratch task to be rendered');
+      throw new Error('Expected a "Remove question" button for the scratch task to be rendered');
     }
     await userEvent.click(scratchRemoveButton);
     expect(confirmSpy).toHaveBeenCalledWith('Remove this question? This deletes its scratch folder.');
