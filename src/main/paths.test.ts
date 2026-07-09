@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 vi.mock('node:os', () => ({ homedir: () => 'C:\\Users\\paulo.rodriguez' }));
 
-import { getRuntimeDataRoot, getStorePath, getReposRoot, getTaskNotesPath, getTaskTranscriptPath, getWorktreePath, getPastedImagesDir, getScratchPath } from './paths';
+import { getRuntimeDataRoot, getStorePath, getReposRoot, getTaskNotesPath, getTaskTranscriptPath, getWorktreePath, getPastedImagesDir, getScratchPath, getDsuSummaryPath } from './paths';
 
 describe('paths', () => {
   it('getRuntimeDataRoot is under the user profile, not the source repo', () => {
@@ -39,5 +39,9 @@ describe('paths', () => {
 
   it('getScratchPath returns scratch/<id> under the runtime root', () => {
     expect(getScratchPath('task-9')).toBe(join(getRuntimeDataRoot(), 'scratch', 'task-9'));
+  });
+
+  it('getDsuSummaryPath returns dsu/<date>.md under the runtime root', () => {
+    expect(getDsuSummaryPath('2026-07-09')).toBe(join(getRuntimeDataRoot(), 'dsu', '2026-07-09.md'));
   });
 });
