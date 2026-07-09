@@ -20,6 +20,7 @@ export const IpcChannels = {
   TaskFinishedStateChanged: 'task:finished-state-changed',
   DialogSelectFolder: 'dialog:select-folder',
   SaveClipboardImage: 'image:save-clipboard',
+  GenerateDsuSummary: 'dsu:generate',
 } as const;
 
 export interface RepoAddRequest {
@@ -75,4 +76,9 @@ export interface PtyResizeRequest {
 export interface TaskNotesGetResponse {
   body: string;
   status: TaskStatus;
+}
+
+export interface DsuGenerateResponse {
+  markdown: string;
+  filePath: string;
 }
