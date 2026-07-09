@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RepoSidebar } from './components/repo-sidebar/repo-sidebar';
 import { NewTaskModal } from './components/new-task-modal/new-task-modal';
 import { CloneRepoModal } from './components/clone-repo-modal/clone-repo-modal';
@@ -27,11 +27,20 @@ export function App(): JSX.Element {
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [isSubmittingModal, setIsSubmittingModal] = useState(false);
   const [loadingTaskId, setLoadingTaskId] = useState<string | undefined>();
+  // Mirrors newTaskRepoId so handleNewTaskClick's in-flight listBranches
+  // callback can check, after the fact, whether its response is still
+  // relevant — reading state directly from inside an already-started async
+  // function would only ever see the value captured at call time.
+  const newTaskRepoIdRef = useRef(newTaskRepoId);
 
   useEffect(() => {
     void window.claudeOrchestrator.listRepos().then(setRepos);
     void window.claudeOrchestrator.listTasks().then(setTasks);
   }, []);
+
+  useEffect(() => {
+    newTaskRepoIdRef.current = newTaskRepoId;
+  }, [newTaskRepoId]);
 
   async function handleSelectTask(taskId: string): Promise<void> {
     setErrorMessage(undefined);
@@ -81,7 +90,12 @@ export function App(): JSX.Element {
     setNewTaskRepoId(repoId);
     try {
       const options = await window.claudeOrchestrator.listBranches(repoId);
-      setBranches(options);
+      // Guard against out-of-order responses: if the user closed this modal
+      // and opened another repo's before this call resolved, newTaskRepoIdRef
+      // will have moved on and this stale list must not be applied.
+      if (newTaskRepoIdRef.current === repoId) {
+        setBranches(options);
+      }
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
     }
@@ -205,7 +219,10 @@ export function App(): JSX.Element {
         branches={branches}
         isSubmitting={isSubmittingModal}
         mode={newTaskMode}
-        onClose={() => setNewTaskRepoId(undefined)}
+        onClose={() => {
+          setNewTaskRepoId(undefined);
+          setBranches([]);
+        }}
         onSubmit={(fields) => void handleCreateTask(fields)}
       />
       <CloneRepoModal

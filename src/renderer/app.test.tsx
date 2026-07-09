@@ -37,6 +37,7 @@ function createDeferred<T>(): { promise: Promise<T>; resolve: (value: T) => void
 }
 
 const repo: RepoRecord = { id: 'repo-1', name: 'demo', path: 'C:\\demo', createdAt: '2026-07-08T00:00:00.000Z' };
+const repoB: RepoRecord = { id: 'repo-2', name: 'other', path: 'C:\\other', createdAt: '2026-07-08T00:00:00.000Z' };
 const task: TaskRecord = {
   id: 'task-1',
   repoId: 'repo-1',
@@ -181,6 +182,63 @@ describe('App', () => {
     expect(listBranches).toHaveBeenCalledWith('repo-1');
     await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
     expect(await screen.findByRole('option', { name: 'feature-x' })).toBeInTheDocument();
+  });
+
+  it('ignores a stale listBranches response from a previously opened repo\'s modal', async () => {
+    listRepos.mockResolvedValueOnce([repo, repoB]);
+    const branchesA = createDeferred<{ value: string; label: string; isRemote: boolean }[]>();
+    const branchesB = createDeferred<{ value: string; label: string; isRemote: boolean }[]>();
+    listBranches.mockReturnValueOnce(branchesA.promise).mockReturnValueOnce(branchesB.promise);
+    render(<App />);
+
+    const newTaskButtons = await screen.findAllByRole('button', { name: 'New Task' });
+    const [repoAButton, repoBButton] = newTaskButtons;
+    if (!repoAButton || !repoBButton) {
+      throw new Error('Expected two "New Task" buttons to be rendered');
+    }
+
+    // Open repo A's modal (kicks off its listBranches call), close it, then
+    // open repo B's modal (kicks off a second listBranches call) before A's
+    // response has arrived.
+    await userEvent.click(repoAButton);
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await userEvent.click(repoBButton);
+
+    // Resolve B's response first, then A's stale one arrives after — A's
+    // result must not clobber what's shown for B.
+    branchesB.resolve([{ value: 'feature-b', label: 'feature-b', isRemote: false }]);
+    await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
+    expect(await screen.findByRole('option', { name: 'feature-b' })).toBeInTheDocument();
+
+    branchesA.resolve([{ value: 'feature-a', label: 'feature-a', isRemote: false }]);
+    await waitFor(() => expect(listBranches).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole('option', { name: 'feature-b' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'feature-a' })).not.toBeInTheDocument();
+  });
+
+  it('clears the branch list when the New Task modal is closed, so a reopened modal never briefly shows a stale list', async () => {
+    const branchesReopen = createDeferred<{ value: string; label: string; isRemote: boolean }[]>();
+    listBranches.mockResolvedValueOnce([{ value: 'feature-x', label: 'feature-x', isRemote: false }]);
+    listBranches.mockReturnValueOnce(branchesReopen.promise);
+    render(<App />);
+    const newTaskButtons = await screen.findAllByRole('button', { name: 'New Task' });
+    const firstNewTaskButton = newTaskButtons[0];
+    if (!firstNewTaskButton) {
+      throw new Error('Expected at least one "New Task" button to be rendered');
+    }
+    await userEvent.click(firstNewTaskButton);
+    await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
+    expect(await screen.findByRole('option', { name: 'feature-x' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await userEvent.click(firstNewTaskButton);
+    await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
+    // The reopen's listBranches call hasn't resolved yet — the select must
+    // not still be showing the previous, now-stale branch list.
+    expect(screen.queryByRole('option', { name: 'feature-x' })).not.toBeInTheDocument();
+
+    branchesReopen.resolve([{ value: 'feature-y', label: 'feature-y', isRemote: false }]);
+    expect(await screen.findByRole('option', { name: 'feature-y' })).toBeInTheDocument();
   });
 
   it('creating a task with an existing branch selected forwards existingBranch to createTask', async () => {

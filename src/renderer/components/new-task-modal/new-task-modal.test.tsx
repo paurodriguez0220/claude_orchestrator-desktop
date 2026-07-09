@@ -175,5 +175,8 @@ describe('NewTaskModal', () => {
     await userEvent.type(screen.getByLabelText('Title'), 'Resume feature work');
     await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
     expect(screen.getByRole('button', { name: 'Create Task' })).toBeDisabled();
+
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'feature-x');
+    expect(screen.getByRole('button', { name: 'Create Task' })).not.toBeDisabled();
   });
 });

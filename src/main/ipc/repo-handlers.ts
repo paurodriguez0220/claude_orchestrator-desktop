@@ -58,6 +58,10 @@ export function registerRepoHandlers(): void {
       throw new Error(`Unknown repo: ${repoId}`);
     }
     const { local, remote } = await listBranches(repo.path);
+    // Note: bareName is deduped only against local branches. If multi-remote
+    // support is ever added, two remotes exposing the same bare name would
+    // collide on `value` (duplicate React keys, ambiguous branch to attach
+    // to) — not handled today since single-remote is the common case.
     const localSet = new Set(local);
     const options: BranchOption[] = local.map((name) => ({ value: name, label: name, isRemote: false }));
     for (const remoteRef of remote) {
