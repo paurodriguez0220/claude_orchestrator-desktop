@@ -59,9 +59,18 @@ export function App(): JSX.Element {
   async function handleCloseTab(taskId: string): Promise<void> {
     setErrorMessage(undefined);
     try {
+      // Block the UI close until the backend confirms the PTY is actually gone.
+      // This mirrors the pattern used elsewhere in this file (handleRemoveTask,
+      // handleSelectTask): openTaskIds/activeTaskId only advance after the IPC
+      // call succeeds. If closeTask rejected and we removed the tab anyway, the
+      // tab would look closed while its PTY process kept running in the
+      // background with no surviving UI to reach it — an orphaned process the
+      // user can no longer see or retry closing. Leaving the tab open on
+      // failure (with the error banner shown) keeps that retry path available.
       await window.claudeOrchestrator.closeTask(taskId);
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
+      return;
     }
     const remaining = openTaskIds.filter((id) => id !== taskId);
     setOpenTaskIds(remaining);
