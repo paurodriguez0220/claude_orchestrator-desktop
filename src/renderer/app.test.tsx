@@ -74,6 +74,7 @@ const addRepo = vi.fn(async () => repo);
 const cloneRepo = vi.fn(async () => repo);
 const listBranches = vi.fn(async () => [{ value: 'feature-x', label: 'feature-x', isRemote: false }]);
 const fetchRepo = vi.fn(async () => undefined);
+const taskSearch = vi.fn(async (): Promise<string[]> => []);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -89,6 +90,7 @@ beforeEach(() => {
     cloneRepo,
     listBranches,
     fetchRepo,
+    taskSearch,
     getTaskNotes,
     setTaskNotes,
     sendPtyInput: vi.fn(),
@@ -429,5 +431,41 @@ describe('App', () => {
     expect(createTask).toHaveBeenCalledWith(
       expect.objectContaining({ repoId: 'repo-1', existingBranch: 'feature-x', kind: 'review' }),
     );
+  });
+
+  it('debounces typing in the search box before calling taskSearch, and filters the sidebar to the results', async () => {
+    taskSearch.mockResolvedValueOnce(['task-2']);
+    render(<App />);
+    await screen.findByText('Fix login bug');
+    const searchBox = screen.getByRole('searchbox', { name: 'Search tasks' });
+
+    await userEvent.type(searchBox, 'tests');
+    expect(taskSearch).not.toHaveBeenCalled();
+
+    // "Add tests" is already rendered before the debounced search resolves
+    // (both tasks show until filtering kicks in), so waiting on its
+    // appearance would resolve immediately without exercising the debounce.
+    // "Fix login bug" disappearing can only happen once the debounced
+    // taskSearch call resolves and the sidebar is actually filtered.
+    await waitFor(() => expect(screen.queryByText('Fix login bug')).not.toBeInTheDocument());
+    expect(taskSearch).toHaveBeenCalledWith('tests');
+    expect(screen.getByText('Add tests')).toBeInTheDocument();
+  });
+
+  it('clearing the search box restores the full task list without a new taskSearch call', async () => {
+    taskSearch.mockResolvedValueOnce(['task-2']);
+    render(<App />);
+    await screen.findByText('Fix login bug');
+    const searchBox = screen.getByRole('searchbox', { name: 'Search tasks' });
+
+    await userEvent.type(searchBox, 'tests');
+    expect(await screen.findByText('Add tests')).toBeInTheDocument();
+
+    taskSearch.mockClear();
+    await userEvent.clear(searchBox);
+
+    expect(await screen.findByText('Fix login bug')).toBeInTheDocument();
+    expect(screen.getByText('Add tests')).toBeInTheDocument();
+    expect(taskSearch).not.toHaveBeenCalled();
   });
 });

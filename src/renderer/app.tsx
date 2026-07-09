@@ -27,6 +27,8 @@ export function App(): JSX.Element {
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [isSubmittingModal, setIsSubmittingModal] = useState(false);
   const [loadingTaskId, setLoadingTaskId] = useState<string | undefined>();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [matchingTaskIds, setMatchingTaskIds] = useState<string[] | undefined>();
   // Mirrors newTaskRepoId so handleNewTaskClick's in-flight listBranches
   // callback can check, after the fact, whether its response is still
   // relevant — reading state directly from inside an already-started async
@@ -37,6 +39,21 @@ export function App(): JSX.Element {
     void window.claudeOrchestrator.listRepos().then(setRepos);
     void window.claudeOrchestrator.listTasks().then(setTasks);
   }, []);
+
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (trimmed === '') {
+      setMatchingTaskIds(undefined);
+      return;
+    }
+    const timeoutId = setTimeout(() => {
+      window.claudeOrchestrator
+        .taskSearch(searchQuery)
+        .then(setMatchingTaskIds)
+        .catch((err: unknown) => setErrorMessage(toErrorMessage(err)));
+    }, 250);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   useEffect(() => {
     newTaskRepoIdRef.current = newTaskRepoId;
@@ -195,6 +212,16 @@ export function App(): JSX.Element {
     return acc;
   }, {});
 
+  const filteredTasksByRepoId =
+    matchingTaskIds === undefined
+      ? tasksByRepoId
+      : Object.fromEntries(
+          Object.entries(tasksByRepoId).map(([repoId, repoTasks]) => [
+            repoId,
+            repoTasks.filter((task) => matchingTaskIds.includes(task.id)),
+          ]),
+        );
+
   return (
     <div className="flex h-screen flex-col bg-graphite-900 text-graphite-100">
       {errorMessage !== undefined && (
@@ -215,8 +242,10 @@ export function App(): JSX.Element {
       <div className="flex flex-1 overflow-hidden">
         <RepoSidebar
           repos={repos}
-          tasksByRepoId={tasksByRepoId}
+          tasksByRepoId={filteredTasksByRepoId}
           selectedTaskId={activeTaskId}
+          searchQuery={searchQuery}
+          onSearchQueryChange={setSearchQuery}
           onSelectTask={(taskId) => void handleSelectTask(taskId)}
           onOpenRepoClick={() => void handleOpenRepoClick()}
           onCloneRepoClick={() => setIsCloneModalOpen(true)}
