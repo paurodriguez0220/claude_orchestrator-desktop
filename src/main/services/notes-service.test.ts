@@ -70,6 +70,20 @@ describe('serializeTaskNotes / parseTaskNotes', () => {
     const raw = serializeTaskNotes(reviewSample);
     expect(parseTaskNotes(raw)).toEqual(reviewSample);
   });
+
+  it('round-trips a scratch-kind task with no branch', () => {
+    const scratchSample: TaskNotes = {
+      frontmatter: {
+        title: 'What does this error mean?',
+        worktreePath: 'C:\\Users\\paulo.rodriguez\\claude-orchestrator\\scratch\\task-9',
+        status: 'todo',
+        kind: 'scratch',
+      },
+      body: '',
+    };
+    const raw = serializeTaskNotes(scratchSample);
+    expect(parseTaskNotes(raw)).toEqual(scratchSample);
+  });
 });
 
 describe('readTaskNotes / writeTaskNotes / archiveTaskNotes', () => {

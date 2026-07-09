@@ -36,7 +36,7 @@ export interface BranchOption {
 }
 
 export interface TaskCreateRequest {
-  repoId: string;
+  repoId?: string;
   title: string;
   adoId?: string;
   branch?: string;
