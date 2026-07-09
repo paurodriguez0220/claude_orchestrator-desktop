@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Download, FolderOpen, GitPullRequest, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, Eye, FolderOpen, GitPullRequest, Plus, Trash2 } from 'lucide-react';
 import type { RepoRecord, TaskRecord } from '../../../shared/types';
 import { TaskSearchInput } from '../task-search-input/task-search-input';
 
@@ -131,17 +131,21 @@ export function RepoSidebar({
                 <div className="flex shrink-0 gap-1">
                   <button
                     type="button"
+                    aria-label="Review Code"
+                    title="Review Code"
                     onClick={() => onReviewCodeClick(repo.id)}
-                    className="rounded-md border border-graphite-600 px-2 py-1 text-xs font-medium text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+                    className="flex items-center justify-center rounded-md border border-graphite-600 p-1.5 text-graphite-100 hover:border-clay-500 hover:text-clay-400"
                   >
-                    Review Code
+                    <Eye aria-hidden="true" className="h-4 w-4" />
                   </button>
                   <button
                     type="button"
+                    aria-label="New Task"
+                    title="New Task"
                     onClick={() => onNewTaskClick(repo.id)}
-                    className="rounded-md bg-clay-600 px-2 py-1 text-xs font-medium text-graphite-100 hover:bg-clay-500"
+                    className="flex items-center justify-center rounded-md bg-clay-600 p-1.5 text-graphite-100 hover:bg-clay-500"
                   >
-                    New Task
+                    <Plus aria-hidden="true" className="h-4 w-4" />
                   </button>
                 </div>
               </div>
