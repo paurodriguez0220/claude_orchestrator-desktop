@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { RepoRecord, TaskRecord } from '../shared/types';
+import { getLastWorkingDayStamp } from '../shared/dates';
 
 // TerminalTab renders a real xterm.js Terminal, which requires browser APIs
 // (matchMedia, canvas) that jsdom doesn't implement. App's own tests aren't
@@ -598,18 +599,22 @@ describe('App', () => {
     expect(openTask).toHaveBeenCalledWith('task-3');
   });
 
-  it('"Generate DSU" fetches the summary and shows it in a modal', async () => {
+  it('"Generate DSU" opens the modal, and Generate fetches the summary for the picked day', async () => {
     render(<App />);
     await userEvent.click(await screen.findByRole('button', { name: 'Generate DSU' }));
-    expect(generateDsuSummary).toHaveBeenCalledOnce();
-    expect(await screen.findByRole('dialog', { name: 'DSU Summary' })).toBeInTheDocument();
-    expect(screen.getByText(/Fixed a null check/)).toBeInTheDocument();
+    const dialog = await screen.findByRole('dialog', { name: 'DSU Summary' });
+    expect(dialog).toBeInTheDocument();
+    expect(generateDsuSummary).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Generate' }));
+    expect(generateDsuSummary).toHaveBeenCalledWith(getLastWorkingDayStamp(new Date()));
+    expect(await screen.findByText(/Fixed a null check/)).toBeInTheDocument();
   });
 
   it('shows a visible error when generating the DSU summary fails, instead of failing silently', async () => {
     generateDsuSummary.mockRejectedValueOnce(new Error('claude -p failed to generate the DSU summary'));
     render(<App />);
     await userEvent.click(await screen.findByRole('button', { name: 'Generate DSU' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Generate' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('claude -p failed to generate the DSU summary');
   });
 });

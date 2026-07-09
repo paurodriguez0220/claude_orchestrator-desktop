@@ -249,13 +249,12 @@ export function App(): JSX.Element {
     }
   }
 
-  async function handleGenerateDsu(): Promise<void> {
+  async function handleGenerateDsu(date: string): Promise<void> {
     setErrorMessage(undefined);
     setIsGeneratingDsu(true);
     try {
-      const result = await window.claudeOrchestrator.generateDsuSummary();
+      const result = await window.claudeOrchestrator.generateDsuSummary(date);
       setDsuSummary(result);
-      setIsDsuModalOpen(true);
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
     } finally {
@@ -322,7 +321,7 @@ export function App(): JSX.Element {
           onReviewCodeClick={(repoId) => void handleReviewCodeClick(repoId)}
           onNewQuestionClick={() => setIsNewQuestionModalOpen(true)}
           appVersion={appVersion}
-          onGenerateDsuClick={() => void handleGenerateDsu()}
+          onGenerateDsuClick={() => setIsDsuModalOpen(true)}
           isGeneratingDsu={isGeneratingDsu}
         />
         <NewTaskModal
@@ -350,8 +349,10 @@ export function App(): JSX.Element {
         />
         <DsuSummaryModal
           isOpen={isDsuModalOpen}
-          summary={dsuSummary?.markdown ?? ''}
+          summary={dsuSummary?.markdown}
           filePath={dsuSummary?.filePath}
+          isGenerating={isGeneratingDsu}
+          onGenerate={(date) => void handleGenerateDsu(date)}
           onClose={() => setIsDsuModalOpen(false)}
         />
         <main className="flex flex-1 flex-col overflow-hidden">
