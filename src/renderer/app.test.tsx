@@ -325,6 +325,29 @@ describe('App', () => {
     expect(screen.getByText('Add tests')).toBeInTheDocument();
   });
 
+  it('closing the sole open tab sets activeTaskId to undefined', async () => {
+    render(<App />);
+    const sidebarTaskButton = await screen.findByRole('button', { name: 'Fix login bug' });
+    await userEvent.click(sidebarTaskButton);
+    expect(sidebarTaskButton).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Close Fix login bug' }));
+
+    expect(sidebarTaskButton).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('closing a tab that is not the active one leaves activeTaskId unchanged', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Fix login bug' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Add tests' }));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Close Fix login bug' }));
+
+    expect(closeTask).toHaveBeenCalledWith('task-1');
+    const addTestsButtons = screen.getAllByRole('button', { name: 'Add tests' });
+    addTestsButtons.forEach((button) => expect(button).toHaveAttribute('aria-pressed', 'true'));
+  });
+
   it('shows the correct notes for each tab when switching, not a stale draft from the other tab', async () => {
     // mockImplementationOnce (not mockImplementation) so the override only
     // applies to these two calls and doesn't leak into later tests — plain
