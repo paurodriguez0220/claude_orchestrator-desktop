@@ -24,6 +24,8 @@ describe('RepoSidebar', () => {
         repos={[repo]}
         tasksByRepoId={{ 'repo-1': [task] }}
         selectedTaskId={undefined}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
         onOpenRepoClick={vi.fn()}
         onCloneRepoClick={vi.fn()}
@@ -43,6 +45,8 @@ describe('RepoSidebar', () => {
         repos={[repo]}
         tasksByRepoId={{ 'repo-1': [task] }}
         selectedTaskId={undefined}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
         onSelectTask={onSelectTask}
         onOpenRepoClick={vi.fn()}
         onCloneRepoClick={vi.fn()}
@@ -62,6 +66,8 @@ describe('RepoSidebar', () => {
         repos={[]}
         tasksByRepoId={{}}
         selectedTaskId={undefined}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
         onOpenRepoClick={onOpenRepoClick}
         onCloneRepoClick={vi.fn()}
@@ -81,6 +87,8 @@ describe('RepoSidebar', () => {
         repos={[]}
         tasksByRepoId={{}}
         selectedTaskId={undefined}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
         onOpenRepoClick={vi.fn()}
         onCloneRepoClick={onCloneRepoClick}
@@ -100,6 +108,8 @@ describe('RepoSidebar', () => {
         repos={[repo]}
         tasksByRepoId={{ 'repo-1': [task] }}
         selectedTaskId={undefined}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
         onOpenRepoClick={vi.fn()}
         onCloneRepoClick={vi.fn()}
@@ -119,6 +129,8 @@ describe('RepoSidebar', () => {
         repos={[repo]}
         tasksByRepoId={{ 'repo-1': [task] }}
         selectedTaskId={undefined}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
         onOpenRepoClick={vi.fn()}
         onCloneRepoClick={vi.fn()}
@@ -138,6 +150,8 @@ describe('RepoSidebar', () => {
         repos={[repo]}
         tasksByRepoId={{ 'repo-1': [task, reviewTask] }}
         selectedTaskId={undefined}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
         onOpenRepoClick={vi.fn()}
         onCloneRepoClick={vi.fn()}
@@ -147,5 +161,67 @@ describe('RepoSidebar', () => {
       />,
     );
     expect(screen.getByText('Review', { selector: 'span' })).toBeInTheDocument();
+  });
+
+  it('renders the search input and forwards typed text via onSearchQueryChange', async () => {
+    const onSearchQueryChange = vi.fn();
+    render(
+      <RepoSidebar
+        repos={[repo]}
+        tasksByRepoId={{ 'repo-1': [task] }}
+        selectedTaskId={undefined}
+        searchQuery=""
+        onSearchQueryChange={onSearchQueryChange}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+      />,
+    );
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Search tasks' }), 'x');
+    expect(onSearchQueryChange).toHaveBeenCalledWith('x');
+  });
+
+  it('hides a repo with zero matching tasks while a search query is active', () => {
+    const otherRepo: RepoRecord = { ...repo, id: 'repo-2', name: 'other-repo' };
+    render(
+      <RepoSidebar
+        repos={[repo, otherRepo]}
+        tasksByRepoId={{ 'repo-1': [task], 'repo-2': [] }}
+        selectedTaskId={undefined}
+        searchQuery="login"
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('demo')).toBeInTheDocument();
+    expect(screen.queryByText('other-repo')).not.toBeInTheDocument();
+  });
+
+  it('shows a repo with zero tasks when the search query is empty (not an active search)', () => {
+    const emptyRepo: RepoRecord = { ...repo, id: 'repo-2', name: 'empty-repo' };
+    render(
+      <RepoSidebar
+        repos={[emptyRepo]}
+        tasksByRepoId={{}}
+        selectedTaskId={undefined}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('empty-repo')).toBeInTheDocument();
   });
 });
