@@ -1,6 +1,6 @@
 # Task: Task search bar
 
-**Status:** Defined
+**Status:** Done
 
 ## Goal
 

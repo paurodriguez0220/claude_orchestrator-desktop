@@ -1,6 +1,6 @@
 # Task: Export the agent's conversation transcript to Markdown
 
-**Status:** Defined
+**Status:** Done
 
 ## Goal
 

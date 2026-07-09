@@ -1,6 +1,6 @@
 # Task: Loading indicators for create/clone/open
 
-**Status:** Defined
+**Status:** Done
 
 ## Goal
 

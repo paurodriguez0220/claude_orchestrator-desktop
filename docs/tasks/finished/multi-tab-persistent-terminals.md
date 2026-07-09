@@ -1,6 +1,6 @@
 # Task: Multi-tab persistent terminals
 
-**Status:** Defined
+**Status:** Done
 
 ## Goal
 

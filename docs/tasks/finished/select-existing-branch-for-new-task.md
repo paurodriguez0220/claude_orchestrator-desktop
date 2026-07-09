@@ -1,6 +1,6 @@
 # Task: Select an existing branch when creating a new task
 
-**Status:** Defined
+**Status:** Done
 
 ## Goal
 

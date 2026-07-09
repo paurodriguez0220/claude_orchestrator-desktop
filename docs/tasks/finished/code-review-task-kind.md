@@ -1,6 +1,6 @@
 # Task: Code Review task kind (first slice)
 
-**Status:** Defined
+**Status:** Done
 
 ## Goal
 

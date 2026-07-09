@@ -1,6 +1,6 @@
 # Task: Daily stand-up (DSU) summary service
 
-**Status:** Defined
+**Status:** Done
 
 ## Goal
 

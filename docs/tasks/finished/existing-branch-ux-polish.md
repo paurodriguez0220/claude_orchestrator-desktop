@@ -1,6 +1,6 @@
 # Task: Polish for existing-branch selection
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 

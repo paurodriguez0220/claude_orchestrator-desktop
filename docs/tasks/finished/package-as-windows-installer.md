@@ -1,6 +1,6 @@
 # Task: Package as a proper Windows installer
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 

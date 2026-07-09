@@ -1,6 +1,6 @@
 # Task: Paste images into the terminal
 
-**Status:** Defined
+**Status:** Done
 
 ## Goal
 

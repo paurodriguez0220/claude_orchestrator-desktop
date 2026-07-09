@@ -10,7 +10,7 @@ An Electron desktop app that spawns and manages Claude Code CLI sessions across 
 - **Renderer** (React/TypeScript) — sidebar (repos → tasks), one embedded terminal pane per selected task (`xterm.js`), task notes panel. (Design originally called this "tabbed"; MVP ships a single swappable pane — multi-tab terminals are a follow-up.)
 - **IPC boundary** — renderer never touches the filesystem or spawns processes directly; only through defined channels (`repo:add`, `repo:clone`, `dialog:select-folder`, `task:create`, `task:remove`, `pty:input`/`pty:output`, ...).
 
-Full design and implementation plan: [`docs/tasks/defined/claude-orchestrator-mvp.md`](docs/tasks/defined/claude-orchestrator-mvp.md).
+Full design and implementation plan: [`docs/tasks/finished/claude-orchestrator-mvp.md`](docs/tasks/finished/claude-orchestrator-mvp.md).
 
 ## Structure
 
@@ -45,7 +45,7 @@ Runtime data (managed repos, worktrees, task notes) lives outside this repo, at 
 
 ## Conventions
 
-Follow `C:\Users\paulo.rodriguez\Paulo\standards-docs\`: `code-style.md` (TypeScript strict mode, no `any`, named exports), `web-components.md` (React/Storybook/Vitest), `testing.md`, `security.md`, `git-workflow.md`.
+Follow `C:\Users\paulo.rodriguez\Paulo\standards-docs\`: `electron.md` (IPC boundary, native modules, preload facade, packaging — distilled from this project), `code-style.md` (TypeScript strict mode, no `any`, named exports), `web-components.md` (React/Storybook/Vitest), `testing.md`, `security.md`, `git-workflow.md`.
 
 ## Never Do
 

@@ -1,6 +1,6 @@
 # Task: Icon-based declutter across the sidebar
 
-**Status:** Defined
+**Status:** Done
 
 ## Goal
 

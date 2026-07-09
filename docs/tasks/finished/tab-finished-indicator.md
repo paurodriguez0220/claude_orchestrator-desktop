@@ -1,6 +1,6 @@
 # Task: Tab indicator when Claude finishes responding
 
-**Status:** Defined
+**Status:** Done
 
 ## Goal
 

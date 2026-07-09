@@ -1,6 +1,6 @@
 # Task: Archive tasks marked done
 
-**Status:** Defined
+**Status:** Done
 
 ## Goal
 

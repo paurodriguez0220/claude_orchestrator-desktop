@@ -1,6 +1,6 @@
 # Task: UI polish follow-ups
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 

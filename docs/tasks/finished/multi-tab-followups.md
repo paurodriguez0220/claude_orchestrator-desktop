@@ -1,6 +1,6 @@
 # Task: Multi-tab terminal follow-ups
 
-**Status:** Planned
+**Status:** Done
 
 ## Goal
 
