@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, GitPullRequest, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, FolderOpen, GitPullRequest, Trash2 } from 'lucide-react';
 import type { RepoRecord, TaskRecord } from '../../../shared/types';
 import { TaskSearchInput } from '../task-search-input/task-search-input';
 
@@ -102,17 +102,21 @@ export function RepoSidebar({
       <div className="flex gap-2">
         <button
           type="button"
+          aria-label="Open Existing Repo"
+          title="Open Existing Repo"
           onClick={onOpenRepoClick}
-          className="flex-1 rounded-md border border-graphite-600 px-3 py-2 text-sm font-medium text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+          className="flex flex-1 items-center justify-center rounded-md border border-graphite-600 px-3 py-2 text-graphite-100 hover:border-clay-500 hover:text-clay-400"
         >
-          Open Existing Repo
+          <FolderOpen aria-hidden="true" className="h-4 w-4" />
         </button>
         <button
           type="button"
+          aria-label="Clone Repo"
+          title="Clone Repo"
           onClick={onCloneRepoClick}
-          className="flex-1 rounded-md border border-graphite-600 px-3 py-2 text-sm font-medium text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+          className="flex flex-1 items-center justify-center rounded-md border border-graphite-600 px-3 py-2 text-graphite-100 hover:border-clay-500 hover:text-clay-400"
         >
-          Clone Repo
+          <Download aria-hidden="true" className="h-4 w-4" />
         </button>
       </div>
       <TaskSearchInput value={searchQuery} onChange={onSearchQueryChange} />
