@@ -8,6 +8,9 @@ const onDataMock = vi.fn();
 const onResizeMock = vi.fn();
 const loadAddonMock = vi.fn();
 const fitMock = vi.fn();
+const attachCustomKeyEventHandlerMock = vi.fn();
+const hasSelectionMock = vi.fn(() => false);
+const getSelectionMock = vi.fn(() => '');
 
 vi.mock('@xterm/xterm', () => ({
   Terminal: vi.fn().mockImplementation(function TerminalMock() {
@@ -17,6 +20,9 @@ vi.mock('@xterm/xterm', () => ({
       onData: onDataMock,
       onResize: onResizeMock,
       loadAddon: loadAddonMock,
+      attachCustomKeyEventHandler: attachCustomKeyEventHandlerMock,
+      hasSelection: hasSelectionMock,
+      getSelection: getSelectionMock,
       dispose: vi.fn(),
     };
   }),
@@ -47,14 +53,24 @@ class ResizeObserverMock {
   disconnect = resizeObserverDisconnectMock;
 }
 
+const clipboardWriteText = vi.fn(async () => undefined);
+
 beforeEach(() => {
   fitMock.mockClear();
   resizeObserverDisconnectMock.mockClear();
   resizeObserverObserveMock.mockClear();
   resizeObserverCallback = undefined;
   saveClipboardImage.mockClear();
+  attachCustomKeyEventHandlerMock.mockClear();
+  hasSelectionMock.mockReset().mockReturnValue(false);
+  getSelectionMock.mockReset().mockReturnValue('');
+  clipboardWriteText.mockClear();
   vi.stubGlobal('claudeOrchestrator', { sendPtyInput, resizePty, onPtyOutput, saveClipboardImage });
   vi.stubGlobal('ResizeObserver', ResizeObserverMock);
+  Object.defineProperty(navigator, 'clipboard', {
+    value: { writeText: clipboardWriteText },
+    configurable: true,
+  });
 });
 
 import { TerminalTab } from './terminal-tab';
@@ -225,11 +241,65 @@ describe('TerminalTab', () => {
     );
   });
 
+  it('copies the selection to the clipboard on Ctrl+C when text is selected, without sending it to the pty', () => {
+    hasSelectionMock.mockReturnValue(true);
+    getSelectionMock.mockReturnValue('some selected output');
+    render(<TerminalTab taskId="task-1" />);
+    const customKeyEventHandler = attachCustomKeyEventHandlerMock.mock.calls[0]?.[0] as (
+      event: KeyboardEvent,
+    ) => boolean;
+
+    const result = customKeyEventHandler(
+      new KeyboardEvent('keydown', { key: 'c', ctrlKey: true }),
+    );
+
+    expect(clipboardWriteText).toHaveBeenCalledWith('some selected output');
+    expect(result).toBe(false);
+  });
+
+  it('lets Ctrl+C reach the pty as normal (e.g. to send SIGINT) when nothing is selected', () => {
+    hasSelectionMock.mockReturnValue(false);
+    render(<TerminalTab taskId="task-1" />);
+    const customKeyEventHandler = attachCustomKeyEventHandlerMock.mock.calls[0]?.[0] as (
+      event: KeyboardEvent,
+    ) => boolean;
+
+    const result = customKeyEventHandler(
+      new KeyboardEvent('keydown', { key: 'c', ctrlKey: true }),
+    );
+
+    expect(clipboardWriteText).not.toHaveBeenCalled();
+    expect(result).toBe(true);
+  });
+
+  it('lets an unrelated key event pass through even when text is selected', () => {
+    hasSelectionMock.mockReturnValue(true);
+    getSelectionMock.mockReturnValue('some selected output');
+    render(<TerminalTab taskId="task-1" />);
+    const customKeyEventHandler = attachCustomKeyEventHandlerMock.mock.calls[0]?.[0] as (
+      event: KeyboardEvent,
+    ) => boolean;
+
+    const result = customKeyEventHandler(
+      new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }),
+    );
+
+    expect(clipboardWriteText).not.toHaveBeenCalled();
+    expect(result).toBe(true);
+  });
+
   it('removes the paste listener on unmount', () => {
     const { container, unmount } = render(<TerminalTab taskId="task-1" />);
     const terminalContainer = container.querySelector('[data-task-id="task-1"]') as HTMLDivElement;
     const removeEventListenerSpy = vi.spyOn(terminalContainer, 'removeEventListener');
     unmount();
-    expect(removeEventListenerSpy).toHaveBeenCalledWith('paste', expect.any(Function));
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('paste', expect.any(Function), { capture: true });
+  });
+
+  it('registers the paste listener on the capture phase, so it runs before xterm\'s own internal handler can stop propagation', () => {
+    const addEventListenerSpy = vi.spyOn(HTMLDivElement.prototype, 'addEventListener');
+    render(<TerminalTab taskId="task-1" />);
+    expect(addEventListenerSpy).toHaveBeenCalledWith('paste', expect.any(Function), { capture: true });
+    addEventListenerSpy.mockRestore();
   });
 });

@@ -15,6 +15,9 @@ vi.mock('@xterm/xterm', () => ({
       onData: vi.fn(),
       onResize: vi.fn(),
       loadAddon: vi.fn(),
+      attachCustomKeyEventHandler: vi.fn(),
+      hasSelection: vi.fn(() => false),
+      getSelection: vi.fn(() => ''),
       dispose: vi.fn(),
     };
   }),

@@ -44,6 +44,18 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
       window.claudeOrchestrator.sendPtyInput(taskId, data);
     });
 
+    // Ctrl+C is ambiguous in a terminal: with a selection, it should copy
+    // (matching every other terminal app); with no selection, it must still
+    // reach the pty untouched so SIGINT keeps working. Returning `false`
+    // tells xterm to swallow the event instead of forwarding it via onData.
+    terminal.attachCustomKeyEventHandler((event) => {
+      if (event.type === 'keydown' && event.ctrlKey && event.key === 'c' && terminal.hasSelection()) {
+        void navigator.clipboard.writeText(terminal.getSelection());
+        return false;
+      }
+      return true;
+    });
+
     const unsubscribe = window.claudeOrchestrator.onPtyOutput((event: PtyOutputEvent) => {
       if (event.taskId === taskId) {
         terminal.write(event.data);
@@ -87,7 +99,11 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
       void handlePastedImage(file);
     }
 
-    container.addEventListener('paste', handlePaste);
+    // xterm's own internal paste handler (on its hidden textarea, inside
+    // this container) calls stopPropagation() before our bubble-phase
+    // listener would ever see the event. Listening on the capture phase
+    // runs us first, before that internal handler gets a chance to stop it.
+    container.addEventListener('paste', handlePaste, { capture: true });
 
     const resizeObserver = new ResizeObserver(() => {
       if (container.clientWidth > 0 && container.clientHeight > 0) {
@@ -99,7 +115,7 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
     return () => {
       resizeObserver.disconnect();
       unsubscribe();
-      container.removeEventListener('paste', handlePaste);
+      container.removeEventListener('paste', handlePaste, { capture: true });
       terminal.dispose();
     };
   }, [taskId]);
