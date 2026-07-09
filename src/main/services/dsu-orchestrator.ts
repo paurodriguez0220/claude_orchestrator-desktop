@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type { DsuGenerateResponse } from '../../shared/ipc-channels';
-import { dateStampToRange } from '../../shared/dates';
+import { dateStampToRange, toDateStamp } from '../../shared/dates';
 import { readStore } from './store';
 import { listBranches, getBranchCommitsInRange } from './git-service';
 import type { BranchCommit } from './git-service';
@@ -59,4 +59,33 @@ export async function generateAndSaveDsu(dateStamp: string): Promise<DsuGenerate
   await mkdir(dirname(filePath), { recursive: true });
   await writeFile(filePath, markdown, 'utf-8');
   return { markdown, filePath };
+}
+
+let activeRun: Promise<void> | null = null;
+let hasQueuedRun = false;
+
+// Closing a tab must never wait on (or fail because of) a DSU run —
+// production callers `void` the returned promise. Back-to-back closes
+// coalesce: one run at a time, at most one queued follow-up to pick up the
+// latest state. The promise resolves once the coalesced chain drains and
+// never rejects (failures are logged), which is what makes this testable.
+export function queueDsuAutoRegenerate(
+  runGeneration: (dateStamp: string) => Promise<DsuGenerateResponse> = generateAndSaveDsu,
+): Promise<void> {
+  if (activeRun) {
+    hasQueuedRun = true;
+    return activeRun;
+  }
+  activeRun = (async () => {
+    do {
+      hasQueuedRun = false;
+      try {
+        await runGeneration(toDateStamp(new Date()));
+      } catch (err) {
+        console.error('DSU auto-regenerate failed', err);
+      }
+    } while (hasQueuedRun);
+    activeRun = null;
+  })();
+  return activeRun;
 }

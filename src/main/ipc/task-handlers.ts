@@ -9,6 +9,7 @@ import { addWorktree, addWorktreeForExistingBranch, removeWorktree } from '../se
 import { slugify, assertSafeBranchName } from '../services/slug';
 import { readTaskNotes, writeTaskNotes, archiveTaskNotes } from '../services/notes-service';
 import { spawnClaudeSession, isSessionAlive, killSession } from '../services/pty-manager';
+import { queueDsuAutoRegenerate } from '../services/dsu-orchestrator';
 import { getStorePath, getTaskNotesPath, getWorktreePath, getScratchPath } from '../paths';
 
 export function registerTaskHandlers(onPtyData: (taskId: string, data: string) => void): void {
@@ -122,6 +123,11 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
 
   ipcMain.handle(IpcChannels.TaskClose, async (_event, taskId: string): Promise<void> => {
     killSession(taskId);
+    const store = await readStore(getStorePath());
+    const task = store.tasks.find((candidate) => candidate.id === taskId);
+    if (task && task.kind !== 'scratch') {
+      void queueDsuAutoRegenerate();
+    }
   });
 
   ipcMain.handle(IpcChannels.TaskRemove, async (_event, taskId: string): Promise<void> => {
@@ -143,6 +149,9 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
     store.tasks = store.tasks.filter((candidate) => candidate.id !== taskId);
     await writeStore(getStorePath(), store);
     await archiveTaskNotes(getTaskNotesPath(taskId));
+    if (task.kind !== 'scratch') {
+      void queueDsuAutoRegenerate();
+    }
   });
 
   ipcMain.handle(IpcChannels.TaskNotesGet, async (_event, taskId: string): Promise<TaskNotesGetResponse> => {

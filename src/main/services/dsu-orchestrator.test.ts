@@ -30,9 +30,10 @@ vi.mock('../paths', () => ({
   getDsuSummaryPath: (date: string) => `C:\\fake\\dsu\\${date}.md`,
 }));
 
-import { orderBranchesDefaultLast, generateAndSaveDsu } from './dsu-orchestrator';
+import { orderBranchesDefaultLast, generateAndSaveDsu, queueDsuAutoRegenerate } from './dsu-orchestrator';
 import { listBranches, getBranchCommitsInRange } from './git-service';
 import { generateDsuSummary } from './dsu-service';
+import { toDateStamp } from '../../shared/dates';
 
 const from = new Date(2026, 6, 8, 0, 0, 0, 0);
 const to = new Date(2026, 6, 9, 0, 0, 0, 0);
@@ -131,6 +132,42 @@ describe('dsu-orchestrator', () => {
         [{ repoName: 'demo', branch: 'task/ok', commitSubjects: ['feat: ok work'] }],
         '2026-07-08',
       );
+    });
+  });
+
+  describe('queueDsuAutoRegenerate', () => {
+    it("runs immediately when idle, passing today's date stamp", async () => {
+      const runner = vi.fn(async () => ({ markdown: '', filePath: '' }));
+      await queueDsuAutoRegenerate(runner);
+      expect(runner).toHaveBeenCalledOnce();
+      expect(runner).toHaveBeenCalledWith(toDateStamp(new Date()));
+    });
+
+    it('coalesces calls made while a run is in flight into a single follow-up run', async () => {
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const runner = vi.fn(() => gate.then(() => ({ markdown: '', filePath: '' })));
+      const firstRun = queueDsuAutoRegenerate(runner);
+      void queueDsuAutoRegenerate(runner);
+      void queueDsuAutoRegenerate(runner);
+      expect(runner).toHaveBeenCalledOnce();
+      release();
+      // The returned promise resolves only after the coalesced follow-up run
+      // drains, so awaiting it makes the assertion deterministic.
+      await firstRun;
+      expect(runner).toHaveBeenCalledTimes(2);
+    });
+
+    it('logs and swallows a failed run instead of rejecting', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      const runner = vi.fn(async () => {
+        throw new Error('claude exploded');
+      });
+      await queueDsuAutoRegenerate(runner);
+      expect(consoleErrorSpy).toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
     });
   });
 });
