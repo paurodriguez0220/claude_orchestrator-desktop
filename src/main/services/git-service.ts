@@ -83,16 +83,27 @@ export async function fetchRepo(repoPath: string): Promise<void> {
   await runGit(['fetch'], repoPath);
 }
 
-export function getLastWorkingDayCutoff(now: Date): Date {
-  const isMonday = now.getDay() === 1;
-  const daysBack = isMonday ? 3 : 1;
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysBack, 0, 0, 0, 0);
+export interface BranchCommit {
+  hash: string;
+  subject: string;
 }
 
-export async function getCommitSubjectsSince(worktreePath: string, cutoff: Date): Promise<string[]> {
-  const output = await runGitCapture(['log', `--since=${cutoff.toISOString()}`, '--pretty=%s'], worktreePath);
+export async function getBranchCommitsInRange(
+  repoPath: string,
+  branch: string,
+  from: Date,
+  to: Date,
+): Promise<BranchCommit[]> {
+  const output = await runGitCapture(
+    ['log', branch, `--since=${from.toISOString()}`, `--until=${to.toISOString()}`, '--pretty=%H%x09%s'],
+    repoPath,
+  );
   return output
     .split('\n')
     .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const tabIndex = line.indexOf('\t');
+      return { hash: line.slice(0, tabIndex), subject: line.slice(tabIndex + 1) };
+    });
 }

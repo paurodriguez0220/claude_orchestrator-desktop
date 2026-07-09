@@ -58,6 +58,12 @@ vi.mock('../paths', () => ({
   getScratchPath: (taskId: string) => `C:\\fake\\scratch\\${taskId}`,
 }));
 
+const queueDsuAutoRegenerate = vi.fn();
+
+vi.mock('../services/dsu-orchestrator', () => ({
+  queueDsuAutoRegenerate: (...args: unknown[]) => queueDsuAutoRegenerate(...args),
+}));
+
 import { registerTaskHandlers } from './task-handlers';
 import { IpcChannels } from '../../shared/ipc-channels';
 import { addWorktree, addWorktreeForExistingBranch, removeWorktree } from '../services/git-service';
@@ -82,6 +88,7 @@ describe('task-handlers', () => {
     vi.mocked(readTaskNotes).mockClear();
     vi.mocked(mkdir).mockClear();
     vi.mocked(rm).mockClear();
+    queueDsuAutoRegenerate.mockClear();
     registerTaskHandlers(onPtyData);
   });
 
@@ -348,5 +355,76 @@ describe('task-handlers', () => {
     expect(rm).toHaveBeenCalledWith('C:\\fake\\scratch\\task-2', { recursive: true, force: true });
     expect(removeWorktree).not.toHaveBeenCalled();
     expect(store.tasks).toHaveLength(0);
+  });
+
+  it('TaskClose queues a DSU auto-regenerate for a worktree task', async () => {
+    store.tasks = [
+      {
+        id: 'task-1',
+        repoId: 'repo-1',
+        title: 'Fix login bug',
+        worktreePath: 'C:\\w',
+        status: 'todo',
+        kind: 'worktree',
+        createdAt: '2026-07-08T00:00:00.000Z',
+        updatedAt: '2026-07-08T00:00:00.000Z',
+      },
+    ];
+    const handler = handlers.get(IpcChannels.TaskClose);
+    await handler?.({}, 'task-1');
+    expect(killSession).toHaveBeenCalledWith('task-1');
+    expect(queueDsuAutoRegenerate).toHaveBeenCalledOnce();
+  });
+
+  it('TaskClose does not queue a DSU auto-regenerate for a scratch task', async () => {
+    store.tasks = [
+      {
+        id: 'task-1',
+        title: 'Quick question',
+        worktreePath: 'C:\\fake\\scratch\\task-1',
+        status: 'todo',
+        kind: 'scratch',
+        createdAt: '2026-07-08T00:00:00.000Z',
+        updatedAt: '2026-07-08T00:00:00.000Z',
+      },
+    ];
+    const handler = handlers.get(IpcChannels.TaskClose);
+    await handler?.({}, 'task-1');
+    expect(queueDsuAutoRegenerate).not.toHaveBeenCalled();
+  });
+
+  it('TaskRemove queues a DSU auto-regenerate for a worktree task', async () => {
+    store.tasks = [
+      {
+        id: 'task-1',
+        repoId: 'repo-1',
+        title: 'Fix login bug',
+        worktreePath: 'C:\\w',
+        status: 'todo',
+        kind: 'worktree',
+        createdAt: '2026-07-08T00:00:00.000Z',
+        updatedAt: '2026-07-08T00:00:00.000Z',
+      },
+    ];
+    const handler = handlers.get(IpcChannels.TaskRemove);
+    await handler?.({}, 'task-1');
+    expect(queueDsuAutoRegenerate).toHaveBeenCalledOnce();
+  });
+
+  it('TaskRemove does not queue a DSU auto-regenerate for a scratch task', async () => {
+    store.tasks = [
+      {
+        id: 'task-1',
+        title: 'Quick question',
+        worktreePath: 'C:\\fake\\scratch\\task-1',
+        status: 'todo',
+        kind: 'scratch',
+        createdAt: '2026-07-08T00:00:00.000Z',
+        updatedAt: '2026-07-08T00:00:00.000Z',
+      },
+    ];
+    const handler = handlers.get(IpcChannels.TaskRemove);
+    await handler?.({}, 'task-1');
+    expect(queueDsuAutoRegenerate).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  CalendarClock,
   ChevronDown,
   ChevronRight,
   Download,
@@ -12,7 +13,6 @@ import {
 } from 'lucide-react';
 import type { RepoRecord, TaskRecord } from '../../../shared/types';
 import { TaskSearchInput } from '../task-search-input/task-search-input';
-import { Spinner } from '../spinner/spinner';
 
 export interface RepoSidebarProps {
   repos: RepoRecord[];
@@ -31,7 +31,6 @@ export interface RepoSidebarProps {
   onNewQuestionClick: () => void;
   appVersion: string | undefined;
   onGenerateDsuClick: () => void;
-  isGeneratingDsu: boolean;
 }
 
 interface TaskRowProps {
@@ -90,7 +89,6 @@ export function RepoSidebar({
   onNewQuestionClick,
   appVersion,
   onGenerateDsuClick,
-  isGeneratingDsu,
 }: RepoSidebarProps): JSX.Element {
   const isSearchActive = searchQuery.trim() !== '';
   const visibleRepos = isSearchActive
@@ -137,12 +135,12 @@ export function RepoSidebar({
         </button>
         <button
           type="button"
+          aria-label="Generate DSU"
+          title="Generate DSU"
           onClick={onGenerateDsuClick}
-          disabled={isGeneratingDsu}
-          className="flex flex-1 items-center justify-center gap-2 rounded-md border border-graphite-600 px-3 py-2 text-sm font-medium text-graphite-100 hover:border-clay-500 hover:text-clay-400 disabled:opacity-50"
+          className="flex flex-1 items-center justify-center rounded-md border border-graphite-600 px-3 py-2 text-graphite-100 hover:border-clay-500 hover:text-clay-400"
         >
-          {isGeneratingDsu && <Spinner />}
-          {isGeneratingDsu ? 'Generating…' : 'Generate DSU'}
+          <CalendarClock aria-hidden="true" className="h-4 w-4" />
         </button>
       </div>
       <TaskSearchInput value={searchQuery} onChange={onSearchQueryChange} />

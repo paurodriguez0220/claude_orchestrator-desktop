@@ -164,7 +164,7 @@ describe('preload', () => {
     if (!call) throw new Error('exposeInMainWorld not called');
     const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (api.generateDsuSummary as any)();
-    expect(ipcRendererInvoke).toHaveBeenCalledWith('dsu:generate');
+    await (api.generateDsuSummary as any)('2026-07-08');
+    expect(ipcRendererInvoke).toHaveBeenCalledWith('dsu:generate', '2026-07-08');
   });
 });

@@ -35,7 +35,7 @@ export interface ClaudeOrchestratorApi {
   onTaskFinishedStateChanged(listener: (event: TaskFinishedStateChangedEvent) => void): () => void;
   saveClipboardImage(dataUrl: string): Promise<string>;
   getAppVersion(): Promise<string>;
-  generateDsuSummary(): Promise<DsuGenerateResponse>;
+  generateDsuSummary(date: string): Promise<DsuGenerateResponse>;
 }
 
 const api: ClaudeOrchestratorApi = {
@@ -68,7 +68,7 @@ const api: ClaudeOrchestratorApi = {
   },
   saveClipboardImage: (dataUrl) => ipcRenderer.invoke(IpcChannels.SaveClipboardImage, dataUrl),
   getAppVersion: () => ipcRenderer.invoke(IpcChannels.GetAppVersion),
-  generateDsuSummary: () => ipcRenderer.invoke(IpcChannels.GenerateDsuSummary),
+  generateDsuSummary: (date) => ipcRenderer.invoke(IpcChannels.GenerateDsuSummary, date),
 };
 
 contextBridge.exposeInMainWorld('claudeOrchestrator', api);
