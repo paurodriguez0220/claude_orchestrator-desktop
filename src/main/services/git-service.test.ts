@@ -24,7 +24,7 @@ import { cloneRepo, addWorktree, addWorktreeForExistingBranch, removeWorktree, l
 
 describe('git-service', () => {
   beforeEach(() => {
-    execFileMock.mockClear();
+    execFileMock.mockReset();
     mockError = null;
   });
 
