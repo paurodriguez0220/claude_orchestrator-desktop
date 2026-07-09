@@ -44,16 +44,74 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
       window.claudeOrchestrator.sendPtyInput(taskId, data);
     });
 
-    // Ctrl+C is ambiguous in a terminal: with a selection, it should copy
-    // (matching every other terminal app); with no selection, it must still
-    // reach the pty untouched so SIGINT keeps working. Returning `false`
-    // tells xterm to swallow the event instead of forwarding it via onData.
+    function readAsDataUrl(blob: Blob): Promise<string> {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function handlePastedImage(blob: Blob): Promise<void> {
+      try {
+        const dataUrl = await readAsDataUrl(blob);
+        const filePath = await window.claudeOrchestrator.saveClipboardImage(dataUrl);
+        const quotedPath = filePath.includes(' ') ? `"${filePath}"` : filePath;
+        window.claudeOrchestrator.sendPtyInput(taskId, quotedPath);
+      } catch (err) {
+        terminal.write(`\r\n[Failed to paste image: ${toErrorMessage(err)}]\r\n`);
+      }
+    }
+
+    // Reading the clipboard directly (rather than relying on the native
+    // 'paste' DOM event) sidesteps a real Electron/Chromium quirk: xterm's
+    // own internal paste handler stops the event from ever reaching a
+    // listener on an ancestor element, and even routing around that via a
+    // capture-phase listener still saw an empty clipboardData.items — the
+    // browser doesn't populate it for capture-phase listeners on ancestors.
+    // Actively reading via the Async Clipboard API has neither problem.
+    async function pasteFromClipboard(): Promise<void> {
+      try {
+        const clipboardItems = await navigator.clipboard.read();
+        for (const clipboardItem of clipboardItems) {
+          const imageType = clipboardItem.types.find((type) => SUPPORTED_IMAGE_TYPES.includes(type));
+          if (imageType) {
+            const blob = await clipboardItem.getType(imageType);
+            await handlePastedImage(blob);
+            return;
+          }
+        }
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          window.claudeOrchestrator.sendPtyInput(taskId, text);
+        }
+      } catch (err) {
+        terminal.write(`\r\n[Failed to paste: ${toErrorMessage(err)}]\r\n`);
+      }
+    }
+
     terminal.attachCustomKeyEventHandler((event) => {
-      // event.key is 'c' with no Shift held and 'C' with Shift held (Shift
-      // changes the reported character) — accept either so Ctrl+C and
-      // Ctrl+Shift+C both copy.
-      if (event.type === 'keydown' && event.ctrlKey && event.key.toLowerCase() === 'c' && terminal.hasSelection()) {
+      if (event.type !== 'keydown' || !event.ctrlKey) {
+        return true;
+      }
+      const key = event.key.toLowerCase();
+      // Ctrl+C is ambiguous in a terminal: with a selection, it should copy
+      // (matching every other terminal app); with no selection, it must
+      // still reach the pty untouched so SIGINT keeps working. event.key is
+      // 'c' with no Shift held and 'C' with Shift held (Shift changes the
+      // reported character) — accept either so Ctrl+C and Ctrl+Shift+C both
+      // copy. Returning `false` tells xterm to swallow the event instead of
+      // forwarding it via onData.
+      if (key === 'c' && terminal.hasSelection()) {
         void navigator.clipboard.writeText(terminal.getSelection());
+        return false;
+      }
+      // Ctrl+V always means paste here — we take over entirely (including
+      // plain-text paste) rather than letting xterm's own paste handling
+      // run at all, so there's exactly one paste code path to reason about.
+      if (key === 'v') {
+        void pasteFromClipboard();
         return false;
       }
       return true;
@@ -65,56 +123,6 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
       }
     });
 
-    function readAsDataUrl(file: File): Promise<string> {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(file);
-      });
-    }
-
-    async function handlePastedImage(file: File): Promise<void> {
-      try {
-        const dataUrl = await readAsDataUrl(file);
-        const filePath = await window.claudeOrchestrator.saveClipboardImage(dataUrl);
-        const quotedPath = filePath.includes(' ') ? `"${filePath}"` : filePath;
-        window.claudeOrchestrator.sendPtyInput(taskId, quotedPath);
-      } catch (err) {
-        terminal.write(`\r\n[Failed to paste image: ${toErrorMessage(err)}]\r\n`);
-      }
-    }
-
-    function handlePaste(event: ClipboardEvent): void {
-      const items = event.clipboardData?.items;
-      // TEMPORARY diagnostic — remove once the real clipboard item shape for
-      // a Windows screenshot paste is confirmed. Logs every paste this
-      // listener actually sees, and exactly what clipboardData contains.
-      console.log(
-        '[paste-debug] handlePaste fired. items:',
-        items ? Array.from(items).map((item) => ({ kind: item.kind, type: item.type })) : 'no clipboardData.items',
-      );
-      if (!items) {
-        return;
-      }
-      const imageItem = Array.from(items).find((item) => SUPPORTED_IMAGE_TYPES.includes(item.type));
-      if (!imageItem) {
-        return;
-      }
-      const file = imageItem.getAsFile();
-      if (!file) {
-        return;
-      }
-      event.preventDefault();
-      void handlePastedImage(file);
-    }
-
-    // xterm's own internal paste handler (on its hidden textarea, inside
-    // this container) calls stopPropagation() before our bubble-phase
-    // listener would ever see the event. Listening on the capture phase
-    // runs us first, before that internal handler gets a chance to stop it.
-    container.addEventListener('paste', handlePaste, { capture: true });
-
     const resizeObserver = new ResizeObserver(() => {
       if (container.clientWidth > 0 && container.clientHeight > 0) {
         fitAddon.fit();
@@ -125,7 +133,6 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
     return () => {
       resizeObserver.disconnect();
       unsubscribe();
-      container.removeEventListener('paste', handlePaste, { capture: true });
       terminal.dispose();
     };
   }, [taskId]);
