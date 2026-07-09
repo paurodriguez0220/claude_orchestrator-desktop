@@ -9,6 +9,7 @@ import type {
   TaskNotesSetRequest,
   TaskNotesGetResponse,
   PtyOutputEvent,
+  TaskFinishedStateChangedEvent,
   BranchOption,
 } from '../shared/ipc-channels';
 
@@ -29,6 +30,7 @@ export interface ClaudeOrchestratorApi {
   sendPtyInput(taskId: string, data: string): void;
   resizePty(taskId: string, cols: number, rows: number): void;
   onPtyOutput(listener: (event: PtyOutputEvent) => void): () => void;
+  onTaskFinishedStateChanged(listener: (event: TaskFinishedStateChangedEvent) => void): () => void;
   saveClipboardImage(dataUrl: string): Promise<string>;
 }
 
@@ -52,6 +54,12 @@ const api: ClaudeOrchestratorApi = {
     const handler = (_event: Electron.IpcRendererEvent, payload: PtyOutputEvent): void => listener(payload);
     ipcRenderer.on(IpcChannels.PtyOutput, handler);
     return () => ipcRenderer.removeListener(IpcChannels.PtyOutput, handler);
+  },
+  onTaskFinishedStateChanged: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: TaskFinishedStateChangedEvent): void =>
+      listener(payload);
+    ipcRenderer.on(IpcChannels.TaskFinishedStateChanged, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.TaskFinishedStateChanged, handler);
   },
   saveClipboardImage: (dataUrl) => ipcRenderer.invoke(IpcChannels.SaveClipboardImage, dataUrl),
 };

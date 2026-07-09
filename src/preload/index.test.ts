@@ -60,6 +60,34 @@ describe('preload', () => {
     expect(ipcRendererRemoveListener).toHaveBeenCalledWith('pty:output', registeredHandler);
   });
 
+  it('onTaskFinishedStateChanged registers a listener on the task:finished-state-changed channel', async () => {
+    await import('./index');
+    const call = exposeInMainWorld.mock.calls[0];
+    if (!call) throw new Error('exposeInMainWorld not called');
+    const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
+    const listener = vi.fn();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (api.onTaskFinishedStateChanged as any)(listener);
+    expect(ipcRendererOn).toHaveBeenCalledWith('task:finished-state-changed', expect.any(Function));
+  });
+
+  it('onTaskFinishedStateChanged returns an unsubscribe function that removes the same listener', async () => {
+    await import('./index');
+    const call = exposeInMainWorld.mock.calls[0];
+    if (!call) throw new Error('exposeInMainWorld not called');
+    const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
+    const listener = vi.fn();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const unsubscribe = (api.onTaskFinishedStateChanged as any)(listener) as () => void;
+    expect(typeof unsubscribe).toBe('function');
+
+    const registeredHandler = ipcRendererOn.mock.calls[ipcRendererOn.mock.calls.length - 1]?.[1];
+
+    unsubscribe();
+
+    expect(ipcRendererRemoveListener).toHaveBeenCalledWith('task:finished-state-changed', registeredHandler);
+  });
+
   it('selectFolder invokes the DialogSelectFolder channel', async () => {
     await import('./index');
     const call = exposeInMainWorld.mock.calls[0];

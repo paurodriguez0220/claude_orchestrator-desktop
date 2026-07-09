@@ -16,6 +16,7 @@ export const IpcChannels = {
   PtyInput: 'pty:input',
   PtyOutput: 'pty:output',
   PtyResize: 'pty:resize',
+  TaskFinishedStateChanged: 'task:finished-state-changed',
   DialogSelectFolder: 'dialog:select-folder',
   SaveClipboardImage: 'image:save-clipboard',
 } as const;
@@ -57,6 +58,11 @@ export interface PtyInputRequest {
 export interface PtyOutputEvent {
   taskId: string;
   data: string;
+}
+
+export interface TaskFinishedStateChangedEvent {
+  taskId: string;
+  finished: boolean;
 }
 
 export interface PtyResizeRequest {
