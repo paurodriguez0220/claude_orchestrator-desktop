@@ -33,6 +33,7 @@ import {
   parseTranscriptToMarkdown,
   exportTranscript,
   startTranscriptExportScheduler,
+  isTaskFinished,
 } from './transcript-service';
 
 describe('transcript-service', () => {
@@ -147,6 +148,88 @@ describe('transcript-service', () => {
       await exportTranscript('C:\\repo-worktrees\\slug', 'C:\\fake\\tasks\\abc.transcript.md');
       expect(mkdirMock).toHaveBeenCalled();
       expect(writeFileMock).toHaveBeenCalledWith('C:\\fake\\tasks\\abc.transcript.md', '### You\n\nhello\n\n', 'utf-8');
+    });
+  });
+
+  describe('isTaskFinished', () => {
+    it('returns false when no transcript file is found', async () => {
+      readdirMock.mockRejectedValueOnce(Object.assign(new Error('not found'), { code: 'ENOENT' }));
+      expect(await isTaskFinished('C:\\repo-worktrees\\slug')).toBe(false);
+    });
+
+    it('returns true when the last relevant entry is an assistant turn with stop_reason "end_turn"', async () => {
+      readdirMock.mockResolvedValueOnce(['session.jsonl']);
+      statMock.mockResolvedValueOnce({ mtimeMs: 1000 });
+      readFileMock.mockResolvedValueOnce(
+        [
+          JSON.stringify({ type: 'user', message: { role: 'user', content: 'can you check this branch' } }),
+          JSON.stringify({
+            type: 'assistant',
+            message: { role: 'assistant', stop_reason: 'end_turn', content: [{ type: 'text', text: 'Done.' }] },
+          }),
+        ].join('\n'),
+      );
+      expect(await isTaskFinished('C:\\repo-worktrees\\slug')).toBe(true);
+    });
+
+    it('returns false when the last relevant entry is an assistant turn still using a tool (stop_reason "tool_use")', async () => {
+      readdirMock.mockResolvedValueOnce(['session.jsonl']);
+      statMock.mockResolvedValueOnce({ mtimeMs: 1000 });
+      readFileMock.mockResolvedValueOnce(
+        JSON.stringify({
+          type: 'assistant',
+          message: {
+            role: 'assistant',
+            stop_reason: 'tool_use',
+            content: [{ type: 'tool_use', name: 'Read', input: {} }],
+          },
+        }),
+      );
+      expect(await isTaskFinished('C:\\repo-worktrees\\slug')).toBe(false);
+    });
+
+    it('returns false when the last relevant entry is a user turn (Claude has not responded yet)', async () => {
+      readdirMock.mockResolvedValueOnce(['session.jsonl']);
+      statMock.mockResolvedValueOnce({ mtimeMs: 1000 });
+      readFileMock.mockResolvedValueOnce(
+        [
+          JSON.stringify({
+            type: 'assistant',
+            message: { role: 'assistant', stop_reason: 'end_turn', content: [{ type: 'text', text: 'Done.' }] },
+          }),
+          JSON.stringify({ type: 'user', message: { role: 'user', content: 'one more thing' } }),
+        ].join('\n'),
+      );
+      expect(await isTaskFinished('C:\\repo-worktrees\\slug')).toBe(false);
+    });
+
+    it('ignores non-turn entries (e.g. "summary") when finding the last relevant turn', async () => {
+      readdirMock.mockResolvedValueOnce(['session.jsonl']);
+      statMock.mockResolvedValueOnce({ mtimeMs: 1000 });
+      readFileMock.mockResolvedValueOnce(
+        [
+          JSON.stringify({
+            type: 'assistant',
+            message: { role: 'assistant', stop_reason: 'end_turn', content: [{ type: 'text', text: 'Done.' }] },
+          }),
+          JSON.stringify({ type: 'summary', summary: 'Fixed the login bug' }),
+        ].join('\n'),
+      );
+      expect(await isTaskFinished('C:\\repo-worktrees\\slug')).toBe(true);
+    });
+
+    it('returns false without throwing when a line is not valid JSON', async () => {
+      readdirMock.mockResolvedValueOnce(['session.jsonl']);
+      statMock.mockResolvedValueOnce({ mtimeMs: 1000 });
+      readFileMock.mockResolvedValueOnce('not json at all');
+      expect(await isTaskFinished('C:\\repo-worktrees\\slug')).toBe(false);
+    });
+
+    it('returns false without throwing when reading the transcript file fails', async () => {
+      readdirMock.mockResolvedValueOnce(['session.jsonl']);
+      statMock.mockResolvedValueOnce({ mtimeMs: 1000 });
+      readFileMock.mockRejectedValueOnce(new Error('EBUSY: file locked'));
+      expect(await isTaskFinished('C:\\repo-worktrees\\slug')).toBe(false);
     });
   });
 

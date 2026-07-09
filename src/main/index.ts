@@ -4,11 +4,18 @@ import { registerRepoHandlers } from './ipc/repo-handlers';
 import { registerTaskHandlers } from './ipc/task-handlers';
 import { registerImageHandlers } from './ipc/image-handlers';
 import { startTranscriptExportScheduler } from './services/transcript-service';
+import { startFinishedStatePoller } from './services/finished-state-poller';
 import { IpcChannels } from '../shared/ipc-channels';
 
 function broadcastPtyData(taskId: string, data: string): void {
   for (const window of BrowserWindow.getAllWindows()) {
     window.webContents.send(IpcChannels.PtyOutput, { taskId, data });
+  }
+}
+
+function broadcastFinishedState(taskId: string, finished: boolean): void {
+  for (const window of BrowserWindow.getAllWindows()) {
+    window.webContents.send(IpcChannels.TaskFinishedStateChanged, { taskId, finished });
   }
 }
 
@@ -45,6 +52,7 @@ app.whenReady().then(() => {
   registerTaskHandlers(broadcastPtyData);
   registerImageHandlers();
   startTranscriptExportScheduler(5 * 60 * 1000);
+  startFinishedStatePoller(5000, broadcastFinishedState);
 
   ipcMain.on(IpcChannels.PtyInput, (_event, { taskId, data }: { taskId: string; data: string }) => {
     void import('./services/pty-manager').then(({ writeToSession }) => writeToSession(taskId, data));

@@ -27,6 +27,7 @@ export function App(): JSX.Element {
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [isSubmittingModal, setIsSubmittingModal] = useState(false);
   const [loadingTaskId, setLoadingTaskId] = useState<string | undefined>();
+  const [finishedTaskIds, setFinishedTaskIds] = useState<string[]>([]);
   // Mirrors newTaskRepoId so handleNewTaskClick's in-flight listBranches
   // callback can check, after the fact, whether its response is still
   // relevant — reading state directly from inside an already-started async
@@ -36,6 +37,17 @@ export function App(): JSX.Element {
   useEffect(() => {
     void window.claudeOrchestrator.listRepos().then(setRepos);
     void window.claudeOrchestrator.listTasks().then(setTasks);
+  }, []);
+
+  useEffect(() => {
+    return window.claudeOrchestrator.onTaskFinishedStateChanged(({ taskId, finished }) => {
+      setFinishedTaskIds((current) => {
+        if (finished) {
+          return current.includes(taskId) ? current : [...current, taskId];
+        }
+        return current.filter((id) => id !== taskId);
+      });
+    });
   }, []);
 
   useEffect(() => {
@@ -60,6 +72,7 @@ export function App(): JSX.Element {
         }
       }
       setActiveTaskId(taskId);
+      setFinishedTaskIds((current) => current.filter((id) => id !== taskId));
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
     }
@@ -249,6 +262,7 @@ export function App(): JSX.Element {
                 title: tasks.find((task) => task.id === id)?.title ?? '',
               }))}
               activeTaskId={activeTaskId}
+              finishedTaskIds={finishedTaskIds}
               onSelectTab={(taskId) => void handleSelectTask(taskId)}
               onCloseTab={(taskId) => void handleCloseTab(taskId)}
             />

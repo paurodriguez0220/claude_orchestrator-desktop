@@ -12,6 +12,7 @@ describe('TabBar', () => {
           { taskId: 'task-2', title: 'Add tests' },
         ]}
         activeTaskId="task-2"
+        finishedTaskIds={[]}
         onSelectTab={vi.fn()}
         onCloseTab={vi.fn()}
       />,
@@ -26,6 +27,7 @@ describe('TabBar', () => {
       <TabBar
         tabs={[{ taskId: 'task-1', title: 'Fix login bug' }]}
         activeTaskId={undefined}
+        finishedTaskIds={[]}
         onSelectTab={onSelectTab}
         onCloseTab={vi.fn()}
       />,
@@ -40,11 +42,42 @@ describe('TabBar', () => {
       <TabBar
         tabs={[{ taskId: 'task-1', title: 'Fix login bug' }]}
         activeTaskId="task-1"
+        finishedTaskIds={[]}
         onSelectTab={vi.fn()}
         onCloseTab={onCloseTab}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Close Fix login bug' }));
     expect(onCloseTab).toHaveBeenCalledWith('task-1');
+  });
+
+  it('shows a finished dot on a non-active tab whose taskId is in finishedTaskIds', () => {
+    render(
+      <TabBar
+        tabs={[
+          { taskId: 'task-1', title: 'Fix login bug' },
+          { taskId: 'task-2', title: 'Add tests' },
+        ]}
+        activeTaskId="task-2"
+        finishedTaskIds={['task-1']}
+        onSelectTab={vi.fn()}
+        onCloseTab={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('status', { name: 'Fix login bug finished' })).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Add tests finished' })).not.toBeInTheDocument();
+  });
+
+  it('does not show a finished dot on the active tab even if its taskId is in finishedTaskIds', () => {
+    render(
+      <TabBar
+        tabs={[{ taskId: 'task-1', title: 'Fix login bug' }]}
+        activeTaskId="task-1"
+        finishedTaskIds={['task-1']}
+        onSelectTab={vi.fn()}
+        onCloseTab={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('status', { name: 'Fix login bug finished' })).not.toBeInTheDocument();
   });
 });

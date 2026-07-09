@@ -5,7 +5,7 @@ import { TabBar } from './tab-bar';
 const meta: Meta<typeof TabBar> = {
   component: TabBar,
   title: 'Components/TabBar',
-  args: { onSelectTab: fn(), onCloseTab: fn() },
+  args: { finishedTaskIds: [], onSelectTab: fn(), onCloseTab: fn() },
 };
 
 export default meta;
@@ -22,5 +22,16 @@ export const MultipleTabs: Story = {
       { taskId: 'task-2', title: 'Add tests' },
     ],
     activeTaskId: 'task-2',
+  },
+};
+
+export const BackgroundTabFinished: Story = {
+  args: {
+    tabs: [
+      { taskId: 'task-1', title: 'Fix login bug' },
+      { taskId: 'task-2', title: 'Add tests' },
+    ],
+    activeTaskId: 'task-2',
+    finishedTaskIds: ['task-1'],
   },
 };

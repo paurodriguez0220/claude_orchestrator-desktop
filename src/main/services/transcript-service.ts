@@ -101,6 +101,52 @@ export async function exportTranscript(cwd: string, outputPath: string): Promise
   await writeFile(outputPath, markdown, 'utf-8');
 }
 
+interface TranscriptTurnEntry {
+  type: 'user' | 'assistant';
+  message: { stop_reason?: string };
+}
+
+function isTurnEntry(entry: unknown): entry is TranscriptTurnEntry {
+  if (typeof entry !== 'object' || entry === null) {
+    return false;
+  }
+  const candidate = entry as { type?: unknown; message?: unknown };
+  return (
+    (candidate.type === 'user' || candidate.type === 'assistant') &&
+    typeof candidate.message === 'object' &&
+    candidate.message !== null
+  );
+}
+
+export async function isTaskFinished(cwd: string): Promise<boolean> {
+  try {
+    const transcriptFile = await findLatestTranscriptFile(cwd);
+    if (transcriptFile === undefined) {
+      return false;
+    }
+    const raw = await readFile(transcriptFile, 'utf-8');
+    let lastTurn: TranscriptTurnEntry | undefined;
+    for (const line of raw.split('\n')) {
+      const trimmed = line.trim();
+      if (trimmed === '') {
+        continue;
+      }
+      let entry: unknown;
+      try {
+        entry = JSON.parse(trimmed);
+      } catch {
+        continue;
+      }
+      if (isTurnEntry(entry)) {
+        lastTurn = entry;
+      }
+    }
+    return lastTurn?.type === 'assistant' && lastTurn.message.stop_reason === 'end_turn';
+  } catch {
+    return false;
+  }
+}
+
 export function startTranscriptExportScheduler(intervalMs: number): void {
   setInterval(() => {
     for (const { taskId, cwd } of listAliveSessions()) {

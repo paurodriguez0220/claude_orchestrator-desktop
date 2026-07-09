@@ -94,6 +94,7 @@ beforeEach(() => {
     sendPtyInput: vi.fn(),
     resizePty: vi.fn(),
     onPtyOutput: vi.fn(() => vi.fn()),
+    onTaskFinishedStateChanged: vi.fn(() => vi.fn()),
   });
 });
 
@@ -429,5 +430,56 @@ describe('App', () => {
     expect(createTask).toHaveBeenCalledWith(
       expect.objectContaining({ repoId: 'repo-1', existingBranch: 'feature-x', kind: 'review' }),
     );
+  });
+
+  it('shows a finished dot on a background tab when the main process reports it finished, and clears it when that tab becomes active', async () => {
+    let finishedListener: ((event: { taskId: string; finished: boolean }) => void) | undefined;
+    const onTaskFinishedStateChanged = vi.fn(
+      (listener: (event: { taskId: string; finished: boolean }) => void) => {
+        finishedListener = listener;
+        return vi.fn();
+      },
+    );
+    vi.stubGlobal('claudeOrchestrator', {
+      listRepos,
+      listTasks,
+      createTask,
+      openTask,
+      closeTask,
+      removeTask,
+      selectFolder,
+      addRepo,
+      cloneRepo,
+      listBranches,
+      fetchRepo,
+      getTaskNotes,
+      setTaskNotes,
+      sendPtyInput: vi.fn(),
+      resizePty: vi.fn(),
+      onPtyOutput: vi.fn(() => vi.fn()),
+      onTaskFinishedStateChanged,
+    });
+
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Fix login bug' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Add tests' }));
+
+    expect(finishedListener).toBeDefined();
+    finishedListener?.({ taskId: 'task-1', finished: true });
+
+    expect(await screen.findByRole('status', { name: 'Fix login bug finished' })).toBeInTheDocument();
+
+    // Both tabs are now open, so the sidebar and the tab bar each render a
+    // "Fix login bug" button — mirrors the disambiguation already used
+    // elsewhere in this file (e.g. the "clicking an already-open task"
+    // test) rather than the plan's ambiguous getByRole, which would throw
+    // once a second tab is open.
+    const fixLoginBugButtons = screen.getAllByRole('button', { name: 'Fix login bug' });
+    const sidebarButton = fixLoginBugButtons[0];
+    if (!sidebarButton) {
+      throw new Error('Expected a "Fix login bug" button to be rendered');
+    }
+    await userEvent.click(sidebarButton);
+    expect(screen.queryByRole('status', { name: 'Fix login bug finished' })).not.toBeInTheDocument();
   });
 });
