@@ -116,4 +116,34 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
     const notes = await readTaskNotes(getTaskNotesPath(request.taskId));
     await writeTaskNotes(getTaskNotesPath(request.taskId), { ...notes, body: request.body });
   });
+
+  ipcMain.handle(IpcChannels.TaskSearch, async (_event, query: string): Promise<string[]> => {
+    const store = await readStore(getStorePath());
+    const needle = query.toLowerCase();
+    const inMemoryMatchIds = store.tasks
+      .filter(
+        (task) =>
+          task.title.toLowerCase().includes(needle) ||
+          task.branch.toLowerCase().includes(needle) ||
+          (task.adoId ?? '').toLowerCase().includes(needle),
+      )
+      .map((task) => task.id);
+    if (inMemoryMatchIds.length > 0) {
+      return inMemoryMatchIds;
+    }
+
+    const matchingIds: string[] = [];
+    for (const task of store.tasks) {
+      let body = '';
+      try {
+        body = (await readTaskNotes(getTaskNotesPath(task.id))).body;
+      } catch {
+        body = '';
+      }
+      if (body.toLowerCase().includes(needle)) {
+        matchingIds.push(task.id);
+      }
+    }
+    return matchingIds;
+  });
 }

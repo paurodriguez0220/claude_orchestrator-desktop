@@ -55,6 +55,7 @@ vi.mock('../paths', () => ({
 import { registerTaskHandlers } from './task-handlers';
 import { IpcChannels } from '../../shared/ipc-channels';
 import { addWorktree, addWorktreeForExistingBranch, removeWorktree } from '../services/git-service';
+import { readTaskNotes } from '../services/notes-service';
 
 describe('task-handlers', () => {
   const onPtyData = vi.fn();
@@ -71,6 +72,7 @@ describe('task-handlers', () => {
     vi.mocked(addWorktree).mockClear();
     vi.mocked(addWorktreeForExistingBranch).mockClear();
     vi.mocked(removeWorktree).mockClear();
+    vi.mocked(readTaskNotes).mockClear();
     registerTaskHandlers(onPtyData);
   });
 
@@ -206,5 +208,107 @@ describe('task-handlers', () => {
     expect(killSession).toHaveBeenCalledWith('task-1');
     expect(removeWorktree).toHaveBeenCalledWith('C:\\demo', 'C:\\demo-worktrees\\fix-login-bug');
     expect(store.tasks).toHaveLength(0);
+  });
+
+  it('TaskSearch matches by title, branch, and adoId case-insensitively, without reading any notes file', async () => {
+    store.tasks.push(
+      {
+        id: 'task-1',
+        repoId: 'repo-1',
+        title: 'Fix login bug',
+        adoId: 'ADO-42',
+        branch: 'task/fix-login-bug',
+        worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
+        status: 'todo',
+        kind: 'worktree',
+        createdAt: '2026-07-08T00:00:00.000Z',
+        updatedAt: '2026-07-08T00:00:00.000Z',
+      },
+      {
+        id: 'task-2',
+        repoId: 'repo-1',
+        title: 'Add tests',
+        branch: 'task/add-tests',
+        worktreePath: 'C:\\demo-worktrees\\add-tests',
+        status: 'todo',
+        kind: 'worktree',
+        createdAt: '2026-07-08T00:00:00.000Z',
+        updatedAt: '2026-07-08T00:00:00.000Z',
+      },
+    );
+    const handler = handlers.get(IpcChannels.TaskSearch);
+    expect(await handler?.({}, 'LOGIN')).toEqual(['task-1']);
+    expect(await handler?.({}, 'add-tests')).toEqual(['task-2']);
+    expect(await handler?.({}, 'ado-42')).toEqual(['task-1']);
+    expect(readTaskNotes).not.toHaveBeenCalled();
+  });
+
+  it('TaskSearch falls back to notes-body content when no in-memory field matches', async () => {
+    store.tasks.push(
+      {
+        id: 'task-1',
+        repoId: 'repo-1',
+        title: 'Fix login bug',
+        branch: 'task/fix-login-bug',
+        worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
+        status: 'todo',
+        kind: 'worktree',
+        createdAt: '2026-07-08T00:00:00.000Z',
+        updatedAt: '2026-07-08T00:00:00.000Z',
+      },
+      {
+        id: 'task-2',
+        repoId: 'repo-1',
+        title: 'Add tests',
+        branch: 'task/add-tests',
+        worktreePath: 'C:\\demo-worktrees\\add-tests',
+        status: 'todo',
+        kind: 'worktree',
+        createdAt: '2026-07-08T00:00:00.000Z',
+        updatedAt: '2026-07-08T00:00:00.000Z',
+      },
+    );
+    vi.mocked(readTaskNotes).mockImplementation(async (path: string) => ({
+      frontmatter: { title: 't', branch: 'b', worktreePath: 'C:\\w', status: 'todo' as const, kind: 'worktree' as const },
+      body: path.includes('task-1') ? 'Investigating the redirect loop' : '',
+    }));
+    const result = await handlers.get(IpcChannels.TaskSearch)?.({}, 'redirect');
+    expect(result).toEqual(['task-1']);
+    expect(readTaskNotes).toHaveBeenCalledTimes(2);
+  });
+
+  it('TaskSearch returns an empty array when nothing matches', async () => {
+    store.tasks.push({
+      id: 'task-1',
+      repoId: 'repo-1',
+      title: 'Fix login bug',
+      branch: 'task/fix-login-bug',
+      worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
+      status: 'todo',
+      kind: 'worktree',
+      createdAt: '2026-07-08T00:00:00.000Z',
+      updatedAt: '2026-07-08T00:00:00.000Z',
+    });
+    vi.mocked(readTaskNotes).mockResolvedValue({
+      frontmatter: { title: 't', branch: 'b', worktreePath: 'C:\\w', status: 'todo', kind: 'worktree' },
+      body: '',
+    });
+    expect(await handlers.get(IpcChannels.TaskSearch)?.({}, 'nonexistent')).toEqual([]);
+  });
+
+  it('TaskSearch skips a task whose notes file cannot be read instead of throwing', async () => {
+    store.tasks.push({
+      id: 'task-1',
+      repoId: 'repo-1',
+      title: 'Fix login bug',
+      branch: 'task/fix-login-bug',
+      worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
+      status: 'todo',
+      kind: 'worktree',
+      createdAt: '2026-07-08T00:00:00.000Z',
+      updatedAt: '2026-07-08T00:00:00.000Z',
+    });
+    vi.mocked(readTaskNotes).mockRejectedValue(Object.assign(new Error('not found'), { code: 'ENOENT' }));
+    await expect(handlers.get(IpcChannels.TaskSearch)?.({}, 'redirect')).resolves.toEqual([]);
   });
 });
