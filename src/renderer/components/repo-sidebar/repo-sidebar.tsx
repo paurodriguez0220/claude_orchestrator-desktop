@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Download, Eye, FolderOpen, GitPullRequest, Plus, Trash2 } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  Download,
+  Eye,
+  FolderOpen,
+  GitPullRequest,
+  MessageCirclePlus,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 import type { RepoRecord, TaskRecord } from '../../../shared/types';
 import { TaskSearchInput } from '../task-search-input/task-search-input';
 
@@ -199,10 +209,12 @@ export function RepoSidebar({
           <h2 className="text-sm font-semibold text-graphite-100">Quick Questions</h2>
           <button
             type="button"
+            aria-label="New Question"
+            title="New Question"
             onClick={onNewQuestionClick}
-            className="rounded-md bg-clay-600 px-2 py-1 text-xs font-medium text-graphite-100 hover:bg-clay-500"
+            className="flex items-center justify-center rounded-md bg-clay-600 p-1.5 text-graphite-100 hover:bg-clay-500"
           >
-            + New Question
+            <MessageCirclePlus aria-hidden="true" className="h-4 w-4" />
           </button>
         </div>
         <ul className="flex flex-col gap-1">

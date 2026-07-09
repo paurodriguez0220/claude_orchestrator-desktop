@@ -322,7 +322,7 @@ describe('RepoSidebar', () => {
     expect(onRemoveTaskClick).toHaveBeenCalledWith('task-4');
   });
 
-  it('calls onNewQuestionClick when "+ New Question" is clicked', async () => {
+  it('calls onNewQuestionClick when "New Question" is clicked', async () => {
     const onNewQuestionClick = vi.fn();
     render(
       <RepoSidebar
@@ -342,7 +342,7 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={onNewQuestionClick}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: '+ New Question' }));
+    await userEvent.click(screen.getByRole('button', { name: 'New Question' }));
     expect(onNewQuestionClick).toHaveBeenCalledOnce();
   });
 
