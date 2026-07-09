@@ -1,6 +1,6 @@
 # Task: DSU date selector, branch-scan source, and on-close auto-regenerate
 
-**Status:** Defined
+**Status:** Done
 
 ## Goal
 
