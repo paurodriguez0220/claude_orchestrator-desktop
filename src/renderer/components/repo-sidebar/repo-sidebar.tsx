@@ -3,6 +3,7 @@ import type { RepoRecord, TaskRecord } from '../../../shared/types';
 export interface RepoSidebarProps {
   repos: RepoRecord[];
   tasksByRepoId: Record<string, TaskRecord[]>;
+  scratchTasks: TaskRecord[];
   selectedTaskId: string | undefined;
   onSelectTask: (taskId: string) => void;
   onOpenRepoClick: () => void;
@@ -10,11 +11,13 @@ export interface RepoSidebarProps {
   onNewTaskClick: (repoId: string) => void;
   onRemoveTaskClick: (taskId: string) => void;
   onReviewCodeClick: (repoId: string) => void;
+  onNewQuestionClick: () => void;
 }
 
 export function RepoSidebar({
   repos,
   tasksByRepoId,
+  scratchTasks,
   selectedTaskId,
   onSelectTask,
   onOpenRepoClick,
@@ -22,6 +25,7 @@ export function RepoSidebar({
   onNewTaskClick,
   onRemoveTaskClick,
   onReviewCodeClick,
+  onNewQuestionClick,
 }: RepoSidebarProps): JSX.Element {
   return (
     <nav
@@ -99,6 +103,44 @@ export function RepoSidebar({
           </li>
         ))}
       </ul>
+      <div className="flex flex-col gap-2 border-t border-graphite-700 pt-4">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-graphite-100">Quick Questions</h2>
+          <button
+            type="button"
+            onClick={onNewQuestionClick}
+            className="rounded-md bg-clay-600 px-2 py-1 text-xs font-medium text-graphite-100 hover:bg-clay-500"
+          >
+            + New Question
+          </button>
+        </div>
+        <ul className="flex flex-col gap-1">
+          {scratchTasks.map((task) => (
+            <li key={task.id} className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                aria-pressed={task.id === selectedTaskId}
+                onClick={() => onSelectTask(task.id)}
+                className={
+                  task.id === selectedTaskId
+                    ? 'flex-1 truncate rounded-md bg-clay-600/20 px-2 py-1 text-left text-sm font-medium text-clay-400'
+                    : 'flex-1 truncate rounded-md px-2 py-1 text-left text-sm text-graphite-200 hover:bg-graphite-700'
+                }
+              >
+                {task.title}
+              </button>
+              <span className="shrink-0 text-xs text-graphite-400">{task.status}</span>
+              <button
+                type="button"
+                onClick={() => onRemoveTaskClick(task.id)}
+                className="shrink-0 rounded-md px-2 py-1 text-xs text-graphite-400 hover:text-danger-400"
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
     </nav>
   );
 }

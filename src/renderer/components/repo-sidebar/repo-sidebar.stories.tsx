@@ -12,6 +12,8 @@ const meta: Meta<typeof RepoSidebar> = {
     onNewTaskClick: fn(),
     onRemoveTaskClick: fn(),
     onReviewCodeClick: fn(),
+    onNewQuestionClick: fn(),
+    scratchTasks: [],
   },
 };
 
