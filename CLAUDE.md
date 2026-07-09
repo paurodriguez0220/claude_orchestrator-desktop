@@ -26,17 +26,22 @@ Runtime data (managed repos, worktrees, task notes) lives outside this repo, at 
 
 ## Commands
 
-**Daily use:** double-click `start.bat` (or the "Claude Orchestrator" Desktop shortcut) — runs `npm run dev`. This is a dev-mode launcher (hot-reload, visible console); packaging a proper installer is tracked in `docs/tasks/queue/package-as-windows-installer.md`.
+**Daily use:** launch the installed app from its Start Menu entry / Desktop icon (no console window, runs the production build). Install or reinstall via the NSIS installer produced by `npm run dist` (see below). During development, use `npm run dev` instead.
 
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | Start the Electron app in dev mode |
 | `npm run build` | Typecheck (main + renderer) and produce a production bundle |
 | `npm run typecheck` | Typecheck only, no bundling |
+| `npm run dist` | Build, then package a Windows NSIS installer via `electron-builder` into `dist/` |
 | `npm test` | Run both test suites (`test:main` + `test:renderer`) |
 | `npm run test:main -- <pattern>` | Run main-process tests matching `<pattern>` |
 | `npm run test:renderer -- <pattern>` | Run renderer tests matching `<pattern>` |
 | `npm run storybook` | Start Storybook for renderer components |
+
+### Packaging / release
+
+`npm run dist` runs `npm run build` then `electron-builder --win`, producing an unsigned NSIS installer (`dist/Claude Orchestrator Setup <version>.exe`). Config lives in `package.json`'s `build` block. Code-signing is intentionally skipped — this is a single-user personal tool, so the Windows SmartScreen "unknown publisher" warning on first run is expected and accepted (click "More info" → "Run anyway"). `node-pty`'s native binary is unpacked from the asar via `asarUnpack` so it can load correctly at runtime. After installing, point the Desktop shortcut / Start Menu entry at the installed app instead of `start.bat` (removed — dev-mode launcher is no longer needed).
 
 ## Conventions
 
@@ -50,5 +55,5 @@ Follow `C:\Users\paulo.rodriguez\Paulo\standards-docs\`: `code-style.md` (TypeSc
 - Never let `claude` be spawned outside a task's own worktree directory — that's the entire point of this app.
 
 ---
-*Maintained by paurodriguez0220 · Last updated: 2026-07-08*
+*Maintained by paurodriguez0220 · Last updated: 2026-07-09*
 *Standards: https://github.com/paurodriguez0220/standards-docs*
