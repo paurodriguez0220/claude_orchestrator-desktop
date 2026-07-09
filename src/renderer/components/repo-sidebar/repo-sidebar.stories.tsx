@@ -14,6 +14,8 @@ const meta: Meta<typeof RepoSidebar> = {
     onRemoveTaskClick: fn(),
     onReviewCodeClick: fn(),
     onNewQuestionClick: fn(),
+    onGenerateDsuClick: fn(),
+    isGeneratingDsu: false,
     scratchTasks: [],
   },
 };

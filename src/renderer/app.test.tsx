@@ -86,6 +86,10 @@ const cloneRepo = vi.fn(async () => repo);
 const listBranches = vi.fn(async () => [{ value: 'feature-x', label: 'feature-x', isRemote: false }]);
 const fetchRepo = vi.fn(async () => undefined);
 const taskSearch = vi.fn(async (): Promise<string[]> => []);
+const generateDsuSummary = vi.fn(async () => ({
+  markdown: '## Fix login bug\n\n- Fixed a null check.',
+  filePath: 'C:\\Users\\paulo.rodriguez\\claude-orchestrator\\dsu\\2026-07-09.md',
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -104,6 +108,7 @@ beforeEach(() => {
     taskSearch,
     getTaskNotes,
     setTaskNotes,
+    generateDsuSummary,
     sendPtyInput: vi.fn(),
     resizePty: vi.fn(),
     onPtyOutput: vi.fn(() => vi.fn()),
@@ -585,5 +590,20 @@ describe('App', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Archived (1)' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Ship release notes' }));
     expect(openTask).toHaveBeenCalledWith('task-3');
+  });
+
+  it('"Generate DSU" fetches the summary and shows it in a modal', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate DSU' }));
+    expect(generateDsuSummary).toHaveBeenCalledOnce();
+    expect(await screen.findByRole('dialog', { name: 'DSU Summary' })).toBeInTheDocument();
+    expect(screen.getByText(/Fixed a null check/)).toBeInTheDocument();
+  });
+
+  it('shows a visible error when generating the DSU summary fails, instead of failing silently', async () => {
+    generateDsuSummary.mockRejectedValueOnce(new Error('claude -p failed to generate the DSU summary'));
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate DSU' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('claude -p failed to generate the DSU summary');
   });
 });

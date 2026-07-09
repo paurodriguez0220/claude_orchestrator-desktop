@@ -36,6 +36,8 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     expect(screen.getByText('demo')).toBeInTheDocument();
@@ -60,6 +62,8 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Fix login bug' }));
@@ -84,6 +88,8 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Open Existing Repo' }));
@@ -108,6 +114,8 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Clone Repo' }));
@@ -132,6 +140,8 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={onRemoveTaskClick}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
@@ -156,6 +166,8 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={onReviewCodeClick}
         onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Review Code' }));
@@ -180,6 +192,8 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     expect(screen.getByText('Review', { selector: 'span' })).toBeInTheDocument();
@@ -203,6 +217,8 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search tasks' }), 'x');
@@ -227,6 +243,8 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     expect(screen.getByText('demo')).toBeInTheDocument();
@@ -251,6 +269,8 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     expect(screen.getByText('empty-repo')).toBeInTheDocument();
@@ -282,6 +302,8 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     expect(screen.getByText('Quick Questions')).toBeInTheDocument();
@@ -307,6 +329,8 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={onNewQuestionClick}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: '+ New Question' }));
@@ -330,6 +354,8 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     expect(screen.queryByRole('button', { name: /Archived/ })).not.toBeInTheDocument();
@@ -352,6 +378,8 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     expect(screen.getByRole('button', { name: 'Archived (1)' })).toHaveAttribute('aria-expanded', 'false');
@@ -375,6 +403,8 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Archived (1)' }));
@@ -400,6 +430,8 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Archived (1)' }));
@@ -425,6 +457,8 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={onRemoveTaskClick}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu={false}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Archived (1)' }));
@@ -435,5 +469,56 @@ describe('RepoSidebar', () => {
     }
     await userEvent.click(archivedRemoveButton);
     expect(onRemoveTaskClick).toHaveBeenCalledWith('task-3');
+  });
+
+  it('calls onGenerateDsuClick when "Generate DSU" is clicked', async () => {
+    const onGenerateDsuClick = vi.fn();
+    render(
+      <RepoSidebar
+        repos={[]}
+        activeTasksByRepoId={{}}
+        archivedTasksByRepoId={{}}
+        scratchTasks={[]}
+        selectedTaskId={undefined}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={onGenerateDsuClick}
+        isGeneratingDsu={false}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Generate DSU' }));
+    expect(onGenerateDsuClick).toHaveBeenCalledOnce();
+  });
+
+  it('disables the Generate DSU button and shows a spinner while isGeneratingDsu', () => {
+    render(
+      <RepoSidebar
+        repos={[]}
+        activeTasksByRepoId={{}}
+        archivedTasksByRepoId={{}}
+        scratchTasks={[]}
+        selectedTaskId={undefined}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
+        onGenerateDsuClick={vi.fn()}
+        isGeneratingDsu
+      />,
+    );
+    expect(screen.getByRole('button', { name: /Generating/ })).toBeDisabled();
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
   });
 });
