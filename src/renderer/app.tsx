@@ -173,11 +173,11 @@ export function App(): JSX.Element {
   }, {});
 
   return (
-    <div className="flex h-screen bg-graphite-900 text-graphite-100">
+    <div className="flex h-screen flex-col bg-graphite-900 text-graphite-100">
       {errorMessage !== undefined && (
         <div
           role="alert"
-          className="fixed inset-x-0 top-0 z-40 flex items-center justify-between bg-danger-500 px-4 py-2 text-sm font-medium text-graphite-100 shadow-lg"
+          className="z-40 flex items-center justify-between bg-danger-500 px-4 py-2 text-sm font-medium text-graphite-100 shadow-lg"
         >
           <span>{errorMessage}</span>
           <button
@@ -189,83 +189,85 @@ export function App(): JSX.Element {
           </button>
         </div>
       )}
-      <RepoSidebar
-        repos={repos}
-        tasksByRepoId={tasksByRepoId}
-        selectedTaskId={activeTaskId}
-        onSelectTask={(taskId) => void handleSelectTask(taskId)}
-        onOpenRepoClick={() => void handleOpenRepoClick()}
-        onCloneRepoClick={() => setIsCloneModalOpen(true)}
-        onNewTaskClick={(repoId) => void handleNewTaskClick(repoId)}
-        onRemoveTaskClick={(taskId) => void handleRemoveTask(taskId)}
-        onReviewCodeClick={(repoId) => void handleReviewCodeClick(repoId)}
-      />
-      <NewTaskModal
-        isOpen={newTaskRepoId !== undefined}
-        branches={branches}
-        isSubmitting={isSubmittingModal}
-        mode={newTaskMode}
-        onClose={() => setNewTaskRepoId(undefined)}
-        onSubmit={(fields) => void handleCreateTask(fields)}
-      />
-      <CloneRepoModal
-        isOpen={isCloneModalOpen}
-        isSubmitting={isSubmittingModal}
-        onClose={() => setIsCloneModalOpen(false)}
-        onSubmit={(fields) => void handleCloneRepo(fields)}
-      />
-      <main className="flex flex-1 flex-col overflow-hidden">
-        {openTaskIds.length > 0 && (
-          <TabBar
-            tabs={openTaskIds.map((id) => ({
-              taskId: id,
-              title: tasks.find((task) => task.id === id)?.title ?? '',
-            }))}
-            activeTaskId={activeTaskId}
-            onSelectTab={(taskId) => void handleSelectTask(taskId)}
-            onCloseTab={(taskId) => void handleCloseTab(taskId)}
-          />
-        )}
-        <div className="flex flex-1 overflow-hidden">
-          {openTaskIds.length > 0 || loadingTaskId !== undefined ? (
-            <>
-              <div className="relative flex-1 overflow-hidden">
-                {loadingTaskId !== undefined && (
-                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-graphite-900/80 text-sm text-graphite-100">
-                    <Spinner />
-                    <span>Starting session…</span>
+      <div className="flex flex-1 overflow-hidden">
+        <RepoSidebar
+          repos={repos}
+          tasksByRepoId={tasksByRepoId}
+          selectedTaskId={activeTaskId}
+          onSelectTask={(taskId) => void handleSelectTask(taskId)}
+          onOpenRepoClick={() => void handleOpenRepoClick()}
+          onCloneRepoClick={() => setIsCloneModalOpen(true)}
+          onNewTaskClick={(repoId) => void handleNewTaskClick(repoId)}
+          onRemoveTaskClick={(taskId) => void handleRemoveTask(taskId)}
+          onReviewCodeClick={(repoId) => void handleReviewCodeClick(repoId)}
+        />
+        <NewTaskModal
+          isOpen={newTaskRepoId !== undefined}
+          branches={branches}
+          isSubmitting={isSubmittingModal}
+          mode={newTaskMode}
+          onClose={() => setNewTaskRepoId(undefined)}
+          onSubmit={(fields) => void handleCreateTask(fields)}
+        />
+        <CloneRepoModal
+          isOpen={isCloneModalOpen}
+          isSubmitting={isSubmittingModal}
+          onClose={() => setIsCloneModalOpen(false)}
+          onSubmit={(fields) => void handleCloneRepo(fields)}
+        />
+        <main className="flex flex-1 flex-col overflow-hidden">
+          {openTaskIds.length > 0 && (
+            <TabBar
+              tabs={openTaskIds.map((id) => ({
+                taskId: id,
+                title: tasks.find((task) => task.id === id)?.title ?? '',
+              }))}
+              activeTaskId={activeTaskId}
+              onSelectTab={(taskId) => void handleSelectTask(taskId)}
+              onCloseTab={(taskId) => void handleCloseTab(taskId)}
+            />
+          )}
+          <div className="flex flex-1 overflow-hidden">
+            {openTaskIds.length > 0 || loadingTaskId !== undefined ? (
+              <>
+                <div className="relative flex-1 overflow-hidden">
+                  {loadingTaskId !== undefined && (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-graphite-900/80 text-sm text-graphite-100">
+                      <Spinner />
+                      <span>Starting session…</span>
+                    </div>
+                  )}
+                  {openTaskIds.map((id) => (
+                    <div key={id} className={id === activeTaskId ? 'h-full w-full' : 'hidden'}>
+                      <TerminalTab taskId={id} />
+                    </div>
+                  ))}
+                </div>
+                {activeTaskId !== undefined && (
+                  <div className="w-80 shrink-0 overflow-y-auto border-l border-graphite-700 bg-graphite-800">
+                    <TaskNotesPanel
+                      key={activeTaskId}
+                      body={notesByTaskId[activeTaskId]?.body ?? ''}
+                      status={notesByTaskId[activeTaskId]?.status ?? 'todo'}
+                      onSave={async (newBody) => {
+                        await window.claudeOrchestrator.setTaskNotes({ taskId: activeTaskId, body: newBody });
+                        setNotesByTaskId((current) => ({
+                          ...current,
+                          [activeTaskId]: { body: newBody, status: current[activeTaskId]?.status ?? 'todo' },
+                        }));
+                      }}
+                    />
                   </div>
                 )}
-                {openTaskIds.map((id) => (
-                  <div key={id} className={id === activeTaskId ? 'h-full w-full' : 'hidden'}>
-                    <TerminalTab taskId={id} />
-                  </div>
-                ))}
+              </>
+            ) : (
+              <div className="flex flex-1 items-center justify-center text-graphite-400">
+                Select or create a task to get started.
               </div>
-              {activeTaskId !== undefined && (
-                <div className="w-80 shrink-0 overflow-y-auto border-l border-graphite-700 bg-graphite-800">
-                  <TaskNotesPanel
-                    key={activeTaskId}
-                    body={notesByTaskId[activeTaskId]?.body ?? ''}
-                    status={notesByTaskId[activeTaskId]?.status ?? 'todo'}
-                    onSave={async (newBody) => {
-                      await window.claudeOrchestrator.setTaskNotes({ taskId: activeTaskId, body: newBody });
-                      setNotesByTaskId((current) => ({
-                        ...current,
-                        [activeTaskId]: { body: newBody, status: current[activeTaskId]?.status ?? 'todo' },
-                      }));
-                    }}
-                  />
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="flex flex-1 items-center justify-center text-graphite-400">
-              Select or create a task to get started.
-            </div>
-          )}
-        </div>
-      </main>
+            )}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

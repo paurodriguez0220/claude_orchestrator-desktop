@@ -61,7 +61,7 @@ export function TaskNotesPanel({ body, status, onSave }: TaskNotesPanelProps): J
       <textarea
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
-        className="flex-1 resize-none rounded-md border border-graphite-600 bg-graphite-900 p-3 text-sm text-graphite-100 focus:border-clay-500 focus:outline-none"
+        className="flex-1 resize-none rounded-md border border-graphite-600 bg-graphite-900 p-3 text-sm text-graphite-100 focus:outline-none focus:ring-2 focus:ring-clay-500"
       />
       <button
         type="button"

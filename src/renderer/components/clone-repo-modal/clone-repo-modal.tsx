@@ -15,7 +15,7 @@ export interface CloneRepoModalProps {
 }
 
 const fieldInputClasses =
-  'rounded-md border border-graphite-600 bg-graphite-900 px-3 py-2 text-graphite-100 focus:border-clay-500 focus:outline-none';
+  'rounded-md border border-graphite-600 bg-graphite-900 px-3 py-2 text-graphite-100 focus:outline-none focus:ring-2 focus:ring-clay-500';
 const fieldLabelClasses = 'text-sm font-medium text-graphite-400';
 
 export function CloneRepoModal({ isOpen, isSubmitting, onClose, onSubmit }: CloneRepoModalProps): JSX.Element | null {
