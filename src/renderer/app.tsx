@@ -243,20 +243,26 @@ export function App(): JSX.Element {
     }
   }
 
-  const tasksByRepoId = tasks.reduce<Record<string, TaskRecord[]>>((acc, task) => {
-    if (task.repoId === undefined) {
-      return acc;
+  const activeTasksByRepoId = tasks.reduce<Record<string, TaskRecord[]>>((acc, task) => {
+    if (task.repoId !== undefined && task.status !== 'done') {
+      (acc[task.repoId] ??= []).push(task);
     }
-    (acc[task.repoId] ??= []).push(task);
+    return acc;
+  }, {});
+
+  const archivedTasksByRepoId = tasks.reduce<Record<string, TaskRecord[]>>((acc, task) => {
+    if (task.repoId !== undefined && task.status === 'done') {
+      (acc[task.repoId] ??= []).push(task);
+    }
     return acc;
   }, {});
   const scratchTasks = tasks.filter((task) => task.kind === 'scratch');
 
-  const filteredTasksByRepoId =
+  const filteredActiveTasksByRepoId =
     matchingTaskIds === undefined
-      ? tasksByRepoId
+      ? activeTasksByRepoId
       : Object.fromEntries(
-          Object.entries(tasksByRepoId).map(([repoId, repoTasks]) => [
+          Object.entries(activeTasksByRepoId).map(([repoId, repoTasks]) => [
             repoId,
             repoTasks.filter((task) => matchingTaskIds.includes(task.id)),
           ]),
@@ -282,7 +288,8 @@ export function App(): JSX.Element {
       <div className="flex flex-1 overflow-hidden">
         <RepoSidebar
           repos={repos}
-          tasksByRepoId={filteredTasksByRepoId}
+          activeTasksByRepoId={filteredActiveTasksByRepoId}
+          archivedTasksByRepoId={archivedTasksByRepoId}
           scratchTasks={scratchTasks}
           selectedTaskId={activeTaskId}
           searchQuery={searchQuery}

@@ -22,13 +22,13 @@ export default meta;
 type Story = StoryObj<typeof RepoSidebar>;
 
 export const Empty: Story = {
-  args: { repos: [], tasksByRepoId: {}, selectedTaskId: undefined, searchQuery: '' },
+  args: { repos: [], activeTasksByRepoId: {}, archivedTasksByRepoId: {}, selectedTaskId: undefined, searchQuery: '' },
 };
 
 export const WithRepoAndTasks: Story = {
   args: {
     repos: [{ id: 'repo-1', name: 'demo', path: 'C:\\demo', createdAt: '2026-07-08T00:00:00.000Z' }],
-    tasksByRepoId: {
+    activeTasksByRepoId: {
       'repo-1': [
         {
           id: 'task-1',
@@ -37,6 +37,44 @@ export const WithRepoAndTasks: Story = {
           branch: 'task/fix-login-bug',
           worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
           status: 'todo',
+          kind: 'worktree',
+          createdAt: '2026-07-08T00:00:00.000Z',
+          updatedAt: '2026-07-08T00:00:00.000Z',
+        },
+      ],
+    },
+    archivedTasksByRepoId: {},
+    selectedTaskId: 'task-1',
+  },
+};
+
+export const WithArchivedTasks: Story = {
+  args: {
+    repos: [{ id: 'repo-1', name: 'demo', path: 'C:\\demo', createdAt: '2026-07-08T00:00:00.000Z' }],
+    activeTasksByRepoId: {
+      'repo-1': [
+        {
+          id: 'task-1',
+          repoId: 'repo-1',
+          title: 'Fix login bug',
+          branch: 'task/fix-login-bug',
+          worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
+          status: 'todo',
+          kind: 'worktree',
+          createdAt: '2026-07-08T00:00:00.000Z',
+          updatedAt: '2026-07-08T00:00:00.000Z',
+        },
+      ],
+    },
+    archivedTasksByRepoId: {
+      'repo-1': [
+        {
+          id: 'task-2',
+          repoId: 'repo-1',
+          title: 'Ship release notes',
+          branch: 'task/ship-release-notes',
+          worktreePath: 'C:\\demo-worktrees\\ship-release-notes',
+          status: 'done',
           kind: 'worktree',
           createdAt: '2026-07-08T00:00:00.000Z',
           updatedAt: '2026-07-08T00:00:00.000Z',
@@ -54,7 +92,7 @@ export const ActiveSearchWithNoMatchesInOneRepo: Story = {
       { id: 'repo-1', name: 'demo', path: 'C:\\demo', createdAt: '2026-07-08T00:00:00.000Z' },
       { id: 'repo-2', name: 'other-repo', path: 'C:\\other-repo', createdAt: '2026-07-08T00:00:00.000Z' },
     ],
-    tasksByRepoId: {
+    activeTasksByRepoId: {
       'repo-1': [
         {
           id: 'task-1',
@@ -70,6 +108,7 @@ export const ActiveSearchWithNoMatchesInOneRepo: Story = {
       ],
       'repo-2': [],
     },
+    archivedTasksByRepoId: {},
     selectedTaskId: undefined,
     searchQuery: 'login',
   },

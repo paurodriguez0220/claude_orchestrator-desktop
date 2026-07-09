@@ -60,6 +60,7 @@ const task2: TaskRecord = {
   createdAt: '2026-07-08T00:00:00.000Z',
   updatedAt: '2026-07-08T00:00:00.000Z',
 };
+const doneTask: TaskRecord = { ...task2, id: 'task-3', title: 'Ship release notes', status: 'done' };
 
 const scratchTask: TaskRecord = {
   id: 'task-3',
@@ -568,5 +569,21 @@ describe('App', () => {
     expect(confirmSpy).toHaveBeenCalledWith('Remove this question? This deletes its scratch folder.');
     expect(removeTask).toHaveBeenCalledWith('task-3');
     confirmSpy.mockRestore();
+  });
+
+  it('keeps a done task out of the active list and lists it under a collapsed Archived toggle', async () => {
+    listTasks.mockResolvedValueOnce([task, doneTask]);
+    render(<App />);
+    expect(await screen.findByRole('button', { name: 'Fix login bug' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ship release notes' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Archived (1)' })).toBeInTheDocument();
+  });
+
+  it('selecting an archived task after expanding the Archived section still opens its tab', async () => {
+    listTasks.mockResolvedValueOnce([task, doneTask]);
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Archived (1)' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Ship release notes' }));
+    expect(openTask).toHaveBeenCalledWith('task-3');
   });
 });

@@ -162,7 +162,7 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
       .filter(
         (task) =>
           task.title.toLowerCase().includes(needle) ||
-          task.branch.toLowerCase().includes(needle) ||
+          (task.branch ?? '').toLowerCase().includes(needle) ||
           (task.adoId ?? '').toLowerCase().includes(needle),
       )
       .map((task) => task.id);
