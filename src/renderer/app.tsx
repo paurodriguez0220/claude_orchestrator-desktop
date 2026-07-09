@@ -322,7 +322,6 @@ export function App(): JSX.Element {
           onNewQuestionClick={() => setIsNewQuestionModalOpen(true)}
           appVersion={appVersion}
           onGenerateDsuClick={() => setIsDsuModalOpen(true)}
-          isGeneratingDsu={isGeneratingDsu}
         />
         <NewTaskModal
           isOpen={newTaskRepoId !== undefined}
