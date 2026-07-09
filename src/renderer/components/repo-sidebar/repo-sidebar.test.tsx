@@ -327,6 +327,7 @@ describe('RepoSidebar', () => {
         onRemoveTaskClick={onRemoveTaskClick}
         onReviewCodeClick={vi.fn()}
         onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Remove question' }));
