@@ -162,10 +162,10 @@ describe('App', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<App />);
     await screen.findByText('Fix login bug');
-    const removeButtons = screen.getAllByRole('button', { name: 'Remove' });
+    const removeButtons = screen.getAllByRole('button', { name: 'Remove task' });
     const firstRemoveButton = removeButtons[0];
     if (!firstRemoveButton) {
-      throw new Error('Expected at least one "Remove" button to be rendered');
+      throw new Error('Expected at least one "Remove task" button to be rendered');
     }
     await userEvent.click(firstRemoveButton);
     expect(confirmSpy).toHaveBeenCalledOnce();
@@ -178,10 +178,10 @@ describe('App', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<App />);
     await screen.findByText('Fix login bug');
-    const removeButtons = screen.getAllByRole('button', { name: 'Remove' });
+    const removeButtons = screen.getAllByRole('button', { name: 'Remove task' });
     const firstRemoveButton = removeButtons[0];
     if (!firstRemoveButton) {
-      throw new Error('Expected at least one "Remove" button to be rendered');
+      throw new Error('Expected at least one "Remove task" button to be rendered');
     }
     await userEvent.click(firstRemoveButton);
     expect(confirmSpy).toHaveBeenCalledOnce();
@@ -551,10 +551,10 @@ describe('App', () => {
     expect(await screen.findByRole('button', { name: 'What does this error mean?' })).toBeInTheDocument();
   });
 
-  it('"+ New Question" creates a scratch task with no repoId and opens it', async () => {
+  it('"New Question" creates a scratch task with no repoId and opens it', async () => {
     createTask.mockResolvedValueOnce(scratchTask);
     render(<App />);
-    await userEvent.click(await screen.findByRole('button', { name: '+ New Question' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'New Question' }));
     await userEvent.type(screen.getByLabelText('Title'), 'What does this error mean?');
     await userEvent.click(screen.getByRole('button', { name: 'Create Question' }));
     expect(createTask).toHaveBeenCalledWith({ title: 'What does this error mean?', kind: 'scratch' });
@@ -566,10 +566,10 @@ describe('App', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<App />);
     await screen.findByText('What does this error mean?');
-    const removeButtons = screen.getAllByRole('button', { name: 'Remove' });
+    const removeButtons = screen.getAllByRole('button', { name: 'Remove question' });
     const scratchRemoveButton = removeButtons[removeButtons.length - 1];
     if (!scratchRemoveButton) {
-      throw new Error('Expected a "Remove" button for the scratch task to be rendered');
+      throw new Error('Expected a "Remove question" button for the scratch task to be rendered');
     }
     await userEvent.click(scratchRemoveButton);
     expect(confirmSpy).toHaveBeenCalledWith('Remove this question? This deletes its scratch folder.');

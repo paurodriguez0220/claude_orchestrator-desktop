@@ -1,4 +1,15 @@
 import { useState } from 'react';
+import {
+  ChevronDown,
+  ChevronRight,
+  Download,
+  Eye,
+  FolderOpen,
+  GitPullRequest,
+  MessageCirclePlus,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 import type { RepoRecord, TaskRecord } from '../../../shared/types';
 import { TaskSearchInput } from '../task-search-input/task-search-input';
 
@@ -43,16 +54,17 @@ function TaskRow({ task, selectedTaskId, onSelectTask, onRemoveTaskClick }: Task
         {task.title}
       </button>
       {task.kind === 'review' && (
-        <span className="shrink-0 rounded-full bg-clay-600/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-clay-400">
-          Review
+        <span className="shrink-0 rounded-full bg-clay-600/20 px-1.5 py-0.5 text-clay-400">
+          <GitPullRequest role="img" aria-label="Review" className="h-3 w-3" />
         </span>
       )}
       <button
         type="button"
+        aria-label="Remove task"
         onClick={() => onRemoveTaskClick(task.id)}
-        className="shrink-0 rounded-md px-2 py-1 text-xs text-graphite-400 hover:text-danger-400"
+        className="shrink-0 rounded-md px-2 py-1 text-graphite-400 hover:text-danger-400"
       >
-        Remove
+        <Trash2 aria-hidden="true" className="h-4 w-4" />
       </button>
     </li>
   );
@@ -102,17 +114,21 @@ export function RepoSidebar({
       <div className="flex gap-2">
         <button
           type="button"
+          aria-label="Open Existing Repo"
+          title="Open Existing Repo"
           onClick={onOpenRepoClick}
-          className="flex-1 rounded-md border border-graphite-600 px-3 py-2 text-sm font-medium text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+          className="flex flex-1 items-center justify-center rounded-md border border-graphite-600 px-3 py-2 text-graphite-100 hover:border-clay-500 hover:text-clay-400"
         >
-          Open Existing Repo
+          <FolderOpen aria-hidden="true" className="h-4 w-4" />
         </button>
         <button
           type="button"
+          aria-label="Clone Repo"
+          title="Clone Repo"
           onClick={onCloneRepoClick}
-          className="flex-1 rounded-md border border-graphite-600 px-3 py-2 text-sm font-medium text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+          className="flex flex-1 items-center justify-center rounded-md border border-graphite-600 px-3 py-2 text-graphite-100 hover:border-clay-500 hover:text-clay-400"
         >
-          Clone Repo
+          <Download aria-hidden="true" className="h-4 w-4" />
         </button>
       </div>
       <TaskSearchInput value={searchQuery} onChange={onSearchQueryChange} />
@@ -127,17 +143,21 @@ export function RepoSidebar({
                 <div className="flex shrink-0 gap-1">
                   <button
                     type="button"
+                    aria-label="Review Code"
+                    title="Review Code"
                     onClick={() => onReviewCodeClick(repo.id)}
-                    className="rounded-md border border-graphite-600 px-2 py-1 text-xs font-medium text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+                    className="flex items-center justify-center rounded-md border border-graphite-600 p-1.5 text-graphite-100 hover:border-clay-500 hover:text-clay-400"
                   >
-                    Review Code
+                    <Eye aria-hidden="true" className="h-4 w-4" />
                   </button>
                   <button
                     type="button"
+                    aria-label="New Task"
+                    title="New Task"
                     onClick={() => onNewTaskClick(repo.id)}
-                    className="rounded-md bg-clay-600 px-2 py-1 text-xs font-medium text-graphite-100 hover:bg-clay-500"
+                    className="flex items-center justify-center rounded-md bg-clay-600 p-1.5 text-graphite-100 hover:bg-clay-500"
                   >
-                    New Task
+                    <Plus aria-hidden="true" className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -160,7 +180,11 @@ export function RepoSidebar({
                     onClick={() => toggleArchived(repo.id)}
                     className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-graphite-400 hover:text-graphite-100"
                   >
-                    <span aria-hidden="true">{isExpanded ? '▾' : '▸'}</span>
+                    {isExpanded ? (
+                      <ChevronDown aria-hidden="true" className="h-3 w-3" />
+                    ) : (
+                      <ChevronRight aria-hidden="true" className="h-3 w-3" />
+                    )}
                     {`Archived (${archivedTasks.length})`}
                   </button>
                   {isExpanded && (
@@ -187,10 +211,12 @@ export function RepoSidebar({
           <h2 className="text-sm font-semibold text-graphite-100">Quick Questions</h2>
           <button
             type="button"
+            aria-label="New Question"
+            title="New Question"
             onClick={onNewQuestionClick}
-            className="rounded-md bg-clay-600 px-2 py-1 text-xs font-medium text-graphite-100 hover:bg-clay-500"
+            className="flex items-center justify-center rounded-md bg-clay-600 p-1.5 text-graphite-100 hover:bg-clay-500"
           >
-            + New Question
+            <MessageCirclePlus aria-hidden="true" className="h-4 w-4" />
           </button>
         </div>
         <ul className="flex flex-col gap-1">
@@ -211,10 +237,11 @@ export function RepoSidebar({
               <span className="shrink-0 text-xs text-graphite-400">{task.status}</span>
               <button
                 type="button"
+                aria-label="Remove question"
                 onClick={() => onRemoveTaskClick(task.id)}
-                className="shrink-0 rounded-md px-2 py-1 text-xs text-graphite-400 hover:text-danger-400"
+                className="shrink-0 rounded-md px-2 py-1 text-graphite-400 hover:text-danger-400"
               >
-                Remove
+                <Trash2 aria-hidden="true" className="h-4 w-4" />
               </button>
             </li>
           ))}

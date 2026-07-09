@@ -49,6 +49,41 @@ export const WithRepoAndTasks: Story = {
   },
 };
 
+export const WithReviewTask: Story = {
+  args: {
+    repos: [{ id: 'repo-1', name: 'demo', path: 'C:\\demo', createdAt: '2026-07-08T00:00:00.000Z' }],
+    activeTasksByRepoId: {
+      'repo-1': [
+        {
+          id: 'task-1',
+          repoId: 'repo-1',
+          title: 'Fix login bug',
+          branch: 'task/fix-login-bug',
+          worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
+          status: 'todo',
+          kind: 'worktree',
+          createdAt: '2026-07-08T00:00:00.000Z',
+          updatedAt: '2026-07-08T00:00:00.000Z',
+        },
+        {
+          id: 'task-2',
+          repoId: 'repo-1',
+          title: 'Review PR #42',
+          branch: 'review/pr-42',
+          worktreePath: 'C:\\demo-worktrees\\review-pr-42',
+          status: 'todo',
+          kind: 'review',
+          createdAt: '2026-07-08T00:00:00.000Z',
+          updatedAt: '2026-07-08T00:00:00.000Z',
+        },
+      ],
+    },
+    archivedTasksByRepoId: {},
+    selectedTaskId: 'task-1',
+    searchQuery: '',
+  },
+};
+
 export const WithArchivedTasks: Story = {
   args: {
     repos: [{ id: 'repo-1', name: 'demo', path: 'C:\\demo', createdAt: '2026-07-08T00:00:00.000Z' }],

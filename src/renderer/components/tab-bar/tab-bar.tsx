@@ -1,3 +1,5 @@
+import { X } from 'lucide-react';
+
 export interface TabBarTab {
   taskId: string;
   title: string;
@@ -44,7 +46,7 @@ export function TabBar({ tabs, activeTaskId, finishedTaskIds, onSelectTab, onClo
               aria-label={`Close ${tab.title}`}
               className="rounded px-1 text-xs text-graphite-400 hover:bg-graphite-700 hover:text-graphite-100"
             >
-              ×
+              <X aria-hidden="true" className="h-3 w-3" />
             </button>
           </div>
         );
