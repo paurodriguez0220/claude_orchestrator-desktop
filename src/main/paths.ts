@@ -28,3 +28,7 @@ export function getTaskTranscriptPath(taskId: string): string {
 export function getWorktreePath(repoPath: string, repoName: string, taskSlug: string): string {
   return join(repoPath, '..', `${repoName}-worktrees`, taskSlug);
 }
+
+export function getScratchPath(taskId: string): string {
+  return join(getRuntimeDataRoot(), 'scratch', taskId);
+}

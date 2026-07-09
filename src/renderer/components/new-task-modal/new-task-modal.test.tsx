@@ -30,7 +30,7 @@ describe('NewTaskModal', () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it('toggling to "Use existing branch" shows a select populated from the branches prop', async () => {
+  it('toggling to "Use existing branch" shows a branch picker populated from the branches prop', async () => {
     render(
       <NewTaskModal
         isOpen
@@ -46,7 +46,7 @@ describe('NewTaskModal', () => {
     );
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('combobox'));
     expect(screen.getByRole('option', { name: 'feature-x' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'origin/feature-y' })).toBeInTheDocument();
   });
@@ -65,7 +65,8 @@ describe('NewTaskModal', () => {
     );
     await userEvent.type(screen.getByLabelText('Title'), 'Resume feature work');
     await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
-    await userEvent.selectOptions(screen.getByRole('combobox'), 'feature-x');
+    await userEvent.click(screen.getByRole('combobox'));
+    await userEvent.click(screen.getByRole('option', { name: 'feature-x' }));
     await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
     expect(onSubmit).toHaveBeenCalledWith({
       title: 'Resume feature work',
@@ -82,7 +83,7 @@ describe('NewTaskModal', () => {
     expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
   });
 
-  it('review mode hides the branch-mode toggle and always shows the existing-branch select', () => {
+  it('review mode hides the branch-mode toggle and always shows the existing-branch picker', async () => {
     render(
       <NewTaskModal
         isOpen
@@ -96,6 +97,7 @@ describe('NewTaskModal', () => {
     expect(screen.queryByRole('radio', { name: 'New branch' })).not.toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: 'Use existing branch' })).not.toBeInTheDocument();
     expect(screen.getByRole('combobox')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('combobox'));
     expect(screen.getByRole('option', { name: 'feature-x' })).toBeInTheDocument();
   });
 
@@ -112,7 +114,8 @@ describe('NewTaskModal', () => {
       />,
     );
     await userEvent.type(screen.getByLabelText('Title'), 'Review PR #42');
-    await userEvent.selectOptions(screen.getByRole('combobox'), 'feature-x');
+    await userEvent.click(screen.getByRole('combobox'));
+    await userEvent.click(screen.getByRole('option', { name: 'feature-x' }));
     await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
     expect(onSubmit).toHaveBeenCalledWith({
       title: 'Review PR #42',
@@ -150,7 +153,8 @@ describe('NewTaskModal', () => {
       />,
     );
     await userEvent.type(screen.getByLabelText('Title'), 'Review PR #42');
-    await userEvent.selectOptions(screen.getByRole('combobox'), 'feature-x');
+    await userEvent.click(screen.getByRole('combobox'));
+    await userEvent.click(screen.getByRole('option', { name: 'feature-x' }));
     expect(screen.getByRole('button', { name: 'Create Task' })).not.toBeDisabled();
     await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
     expect(onSubmit).toHaveBeenCalledWith({
@@ -176,7 +180,8 @@ describe('NewTaskModal', () => {
     await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
     expect(screen.getByRole('button', { name: 'Create Task' })).toBeDisabled();
 
-    await userEvent.selectOptions(screen.getByRole('combobox'), 'feature-x');
+    await userEvent.click(screen.getByRole('combobox'));
+    await userEvent.click(screen.getByRole('option', { name: 'feature-x' }));
     expect(screen.getByRole('button', { name: 'Create Task' })).not.toBeDisabled();
   });
 });

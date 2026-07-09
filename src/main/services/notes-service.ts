@@ -7,7 +7,9 @@ export function serializeTaskNotes(notes: TaskNotes): string {
   if (notes.frontmatter.adoId) {
     lines.push(`adoId: ${notes.frontmatter.adoId}`);
   }
-  lines.push(`branch: ${notes.frontmatter.branch}`);
+  if (notes.frontmatter.branch !== undefined) {
+    lines.push(`branch: ${notes.frontmatter.branch}`);
+  }
   lines.push(`worktreePath: ${notes.frontmatter.worktreePath}`);
   lines.push(`status: ${notes.frontmatter.status}`);
   lines.push(`kind: ${notes.frontmatter.kind}`);
@@ -36,7 +38,7 @@ export function parseTaskNotes(raw: string): TaskNotes {
     frontmatter: {
       title: fields.title ?? '',
       adoId: fields.adoId,
-      branch: fields.branch ?? '',
+      branch: fields.branch,
       worktreePath: fields.worktreePath ?? '',
       status: (fields.status as TaskStatus) ?? 'todo',
       kind: (fields.kind as TaskKind) ?? 'worktree',

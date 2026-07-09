@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { RepoSidebar } from './components/repo-sidebar/repo-sidebar';
 import { NewTaskModal } from './components/new-task-modal/new-task-modal';
 import { CloneRepoModal } from './components/clone-repo-modal/clone-repo-modal';
+import { NewQuestionModal } from './components/new-question-modal/new-question-modal';
 import { TerminalTab } from './components/terminal-tab/terminal-tab';
 import { TaskNotesPanel } from './components/task-notes-panel/task-notes-panel';
 import { TabBar } from './components/tab-bar/tab-bar';
@@ -9,6 +10,7 @@ import { Spinner } from './components/spinner/spinner';
 import type { RepoRecord, TaskRecord, TaskStatus } from '../shared/types';
 import type { BranchOption } from '../shared/ipc-channels';
 import type { NewTaskFields } from './components/new-task-modal/new-task-modal';
+import type { NewQuestionFields } from './components/new-question-modal/new-question-modal';
 
 function toErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : 'Something went wrong';
@@ -24,6 +26,7 @@ export function App(): JSX.Element {
   const [newTaskMode, setNewTaskMode] = useState<'task' | 'review'>('task');
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [isCloneModalOpen, setIsCloneModalOpen] = useState(false);
+  const [isNewQuestionModalOpen, setIsNewQuestionModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [isSubmittingModal, setIsSubmittingModal] = useState(false);
   const [loadingTaskId, setLoadingTaskId] = useState<string | undefined>();
@@ -175,6 +178,21 @@ export function App(): JSX.Element {
     }
   }
 
+  async function handleCreateQuestion(fields: NewQuestionFields): Promise<void> {
+    setErrorMessage(undefined);
+    setIsSubmittingModal(true);
+    try {
+      const task = await window.claudeOrchestrator.createTask({ title: fields.title, kind: 'scratch' });
+      setTasks((current) => [...current, task]);
+      await handleSelectTask(task.id);
+      setIsNewQuestionModalOpen(false);
+    } catch (err) {
+      setErrorMessage(toErrorMessage(err));
+    } finally {
+      setIsSubmittingModal(false);
+    }
+  }
+
   async function handleOpenRepoClick(): Promise<void> {
     setErrorMessage(undefined);
     try {
@@ -204,7 +222,12 @@ export function App(): JSX.Element {
   }
 
   async function handleRemoveTask(taskId: string): Promise<void> {
-    if (!window.confirm('Remove this task? This deletes its git worktree.')) {
+    const task = tasks.find((candidate) => candidate.id === taskId);
+    const confirmMessage =
+      task?.kind === 'scratch'
+        ? 'Remove this question? This deletes its scratch folder.'
+        : 'Remove this task? This deletes its git worktree.';
+    if (!window.confirm(confirmMessage)) {
       return;
     }
     setErrorMessage(undefined);
@@ -221,9 +244,13 @@ export function App(): JSX.Element {
   }
 
   const tasksByRepoId = tasks.reduce<Record<string, TaskRecord[]>>((acc, task) => {
+    if (task.repoId === undefined) {
+      return acc;
+    }
     (acc[task.repoId] ??= []).push(task);
     return acc;
   }, {});
+  const scratchTasks = tasks.filter((task) => task.kind === 'scratch');
 
   const filteredTasksByRepoId =
     matchingTaskIds === undefined
@@ -256,6 +283,7 @@ export function App(): JSX.Element {
         <RepoSidebar
           repos={repos}
           tasksByRepoId={filteredTasksByRepoId}
+          scratchTasks={scratchTasks}
           selectedTaskId={activeTaskId}
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
@@ -265,6 +293,7 @@ export function App(): JSX.Element {
           onNewTaskClick={(repoId) => void handleNewTaskClick(repoId)}
           onRemoveTaskClick={(taskId) => void handleRemoveTask(taskId)}
           onReviewCodeClick={(repoId) => void handleReviewCodeClick(repoId)}
+          onNewQuestionClick={() => setIsNewQuestionModalOpen(true)}
         />
         <NewTaskModal
           isOpen={newTaskRepoId !== undefined}
@@ -282,6 +311,12 @@ export function App(): JSX.Element {
           isSubmitting={isSubmittingModal}
           onClose={() => setIsCloneModalOpen(false)}
           onSubmit={(fields) => void handleCloneRepo(fields)}
+        />
+        <NewQuestionModal
+          isOpen={isNewQuestionModalOpen}
+          isSubmitting={isSubmittingModal}
+          onClose={() => setIsNewQuestionModalOpen(false)}
+          onSubmit={(fields) => void handleCreateQuestion(fields)}
         />
         <main className="flex flex-1 flex-col overflow-hidden">
           {openTaskIds.length > 0 && (

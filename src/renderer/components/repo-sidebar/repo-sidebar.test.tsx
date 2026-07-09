@@ -23,6 +23,7 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[repo]}
         tasksByRepoId={{ 'repo-1': [task] }}
+        scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
@@ -32,6 +33,7 @@ describe('RepoSidebar', () => {
         onNewTaskClick={vi.fn()}
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
       />,
     );
     expect(screen.getByText('demo')).toBeInTheDocument();
@@ -44,6 +46,7 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[repo]}
         tasksByRepoId={{ 'repo-1': [task] }}
+        scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
@@ -53,6 +56,7 @@ describe('RepoSidebar', () => {
         onNewTaskClick={vi.fn()}
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Fix login bug' }));
@@ -65,6 +69,7 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[]}
         tasksByRepoId={{}}
+        scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
@@ -74,6 +79,7 @@ describe('RepoSidebar', () => {
         onNewTaskClick={vi.fn()}
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Open Existing Repo' }));
@@ -86,6 +92,7 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[]}
         tasksByRepoId={{}}
+        scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
@@ -95,6 +102,7 @@ describe('RepoSidebar', () => {
         onNewTaskClick={vi.fn()}
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Clone Repo' }));
@@ -107,6 +115,7 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[repo]}
         tasksByRepoId={{ 'repo-1': [task] }}
+        scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
@@ -116,6 +125,7 @@ describe('RepoSidebar', () => {
         onNewTaskClick={vi.fn()}
         onRemoveTaskClick={onRemoveTaskClick}
         onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Remove' }));
@@ -128,6 +138,7 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[repo]}
         tasksByRepoId={{ 'repo-1': [task] }}
+        scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
@@ -137,6 +148,7 @@ describe('RepoSidebar', () => {
         onNewTaskClick={vi.fn()}
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={onReviewCodeClick}
+        onNewQuestionClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Review Code' }));
@@ -149,6 +161,7 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[repo]}
         tasksByRepoId={{ 'repo-1': [task, reviewTask] }}
+        scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
@@ -158,6 +171,7 @@ describe('RepoSidebar', () => {
         onNewTaskClick={vi.fn()}
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
       />,
     );
     expect(screen.getByText('Review', { selector: 'span' })).toBeInTheDocument();
@@ -169,6 +183,7 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[repo]}
         tasksByRepoId={{ 'repo-1': [task] }}
+        scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
         onSearchQueryChange={onSearchQueryChange}
@@ -178,6 +193,7 @@ describe('RepoSidebar', () => {
         onNewTaskClick={vi.fn()}
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
       />,
     );
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search tasks' }), 'x');
@@ -190,6 +206,7 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[repo, otherRepo]}
         tasksByRepoId={{ 'repo-1': [task], 'repo-2': [] }}
+        scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery="login"
         onSearchQueryChange={vi.fn()}
@@ -199,6 +216,7 @@ describe('RepoSidebar', () => {
         onNewTaskClick={vi.fn()}
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
       />,
     );
     expect(screen.getByText('demo')).toBeInTheDocument();
@@ -211,6 +229,7 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[emptyRepo]}
         tasksByRepoId={{}}
+        scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
@@ -220,8 +239,64 @@ describe('RepoSidebar', () => {
         onNewTaskClick={vi.fn()}
         onRemoveTaskClick={vi.fn()}
         onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
       />,
     );
     expect(screen.getByText('empty-repo')).toBeInTheDocument();
+  });
+
+  it('renders scratch tasks in a Quick Questions section, showing only title and status', () => {
+    const scratchTask: TaskRecord = {
+      id: 'task-3',
+      title: 'What does this error mean?',
+      worktreePath: 'C:\\scratch\\task-3',
+      status: 'in-progress',
+      kind: 'scratch',
+      createdAt: '2026-07-08T00:00:00.000Z',
+      updatedAt: '2026-07-08T00:00:00.000Z',
+    };
+    render(
+      <RepoSidebar
+        repos={[repo]}
+        tasksByRepoId={{ 'repo-1': [task] }}
+        scratchTasks={[scratchTask]}
+        selectedTaskId={undefined}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('Quick Questions')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'What does this error mean?' })).toBeInTheDocument();
+    expect(screen.getByText('in-progress')).toBeInTheDocument();
+  });
+
+  it('calls onNewQuestionClick when "+ New Question" is clicked', async () => {
+    const onNewQuestionClick = vi.fn();
+    render(
+      <RepoSidebar
+        repos={[]}
+        tasksByRepoId={{}}
+        scratchTasks={[]}
+        selectedTaskId={undefined}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={onNewQuestionClick}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: '+ New Question' }));
+    expect(onNewQuestionClick).toHaveBeenCalledOnce();
   });
 });

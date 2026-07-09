@@ -61,6 +61,16 @@ const task2: TaskRecord = {
   updatedAt: '2026-07-08T00:00:00.000Z',
 };
 
+const scratchTask: TaskRecord = {
+  id: 'task-3',
+  title: 'What does this error mean?',
+  worktreePath: 'C:\\scratch\\task-3',
+  status: 'todo',
+  kind: 'scratch',
+  createdAt: '2026-07-08T00:00:00.000Z',
+  updatedAt: '2026-07-08T00:00:00.000Z',
+};
+
 const listRepos = vi.fn(async () => [repo]);
 const listTasks = vi.fn(async () => [task, task2]);
 const createTask = vi.fn(async () => task);
@@ -184,6 +194,7 @@ describe('App', () => {
     await userEvent.click(firstNewTaskButton);
     expect(listBranches).toHaveBeenCalledWith('repo-1');
     await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
+    await userEvent.click(await screen.findByRole('combobox'));
     expect(await screen.findByRole('option', { name: 'feature-x' })).toBeInTheDocument();
   });
 
@@ -211,6 +222,7 @@ describe('App', () => {
     // result must not clobber what's shown for B.
     branchesB.resolve([{ value: 'feature-b', label: 'feature-b', isRemote: false }]);
     await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
+    await userEvent.click(await screen.findByRole('combobox'));
     expect(await screen.findByRole('option', { name: 'feature-b' })).toBeInTheDocument();
 
     branchesA.resolve([{ value: 'feature-a', label: 'feature-a', isRemote: false }]);
@@ -231,12 +243,14 @@ describe('App', () => {
     }
     await userEvent.click(firstNewTaskButton);
     await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
+    await userEvent.click(await screen.findByRole('combobox'));
     expect(await screen.findByRole('option', { name: 'feature-x' })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     await userEvent.click(firstNewTaskButton);
     await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
-    // The reopen's listBranches call hasn't resolved yet — the select must
+    await userEvent.click(await screen.findByRole('combobox'));
+    // The reopen's listBranches call hasn't resolved yet — the picker must
     // not still be showing the previous, now-stale branch list.
     expect(screen.queryByRole('option', { name: 'feature-x' })).not.toBeInTheDocument();
 
@@ -254,7 +268,8 @@ describe('App', () => {
     await userEvent.click(firstNewTaskButton);
     await userEvent.type(screen.getByLabelText('Title'), 'Resume feature work');
     await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
-    await userEvent.selectOptions(await screen.findByRole('combobox'), 'feature-x');
+    await userEvent.click(await screen.findByRole('combobox'));
+    await userEvent.click(screen.getByRole('option', { name: 'feature-x' }));
     await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
     expect(createTask).toHaveBeenCalledWith(
       expect.objectContaining({ repoId: 'repo-1', existingBranch: 'feature-x' }),
@@ -427,7 +442,8 @@ describe('App', () => {
     render(<App />);
     await userEvent.click(await screen.findByRole('button', { name: 'Review Code' }));
     await userEvent.type(screen.getByLabelText('Title'), 'Review PR #42');
-    await userEvent.selectOptions(await screen.findByRole('combobox'), 'feature-x');
+    await userEvent.click(await screen.findByRole('combobox'));
+    await userEvent.click(screen.getByRole('option', { name: 'feature-x' }));
     await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
     expect(createTask).toHaveBeenCalledWith(
       expect.objectContaining({ repoId: 'repo-1', existingBranch: 'feature-x', kind: 'review' }),
@@ -519,5 +535,38 @@ describe('App', () => {
     expect(await screen.findByText('Fix login bug')).toBeInTheDocument();
     expect(screen.getByText('Add tests')).toBeInTheDocument();
     expect(taskSearch).not.toHaveBeenCalled();
+  });
+
+  it('renders the Quick Questions section with scratch tasks, separate from the per-repo tree', async () => {
+    listTasks.mockResolvedValueOnce([task, task2, scratchTask]);
+    render(<App />);
+    expect(await screen.findByText('Quick Questions')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'What does this error mean?' })).toBeInTheDocument();
+  });
+
+  it('"+ New Question" creates a scratch task with no repoId and opens it', async () => {
+    createTask.mockResolvedValueOnce(scratchTask);
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: '+ New Question' }));
+    await userEvent.type(screen.getByLabelText('Title'), 'What does this error mean?');
+    await userEvent.click(screen.getByRole('button', { name: 'Create Question' }));
+    expect(createTask).toHaveBeenCalledWith({ title: 'What does this error mean?', kind: 'scratch' });
+    expect(openTask).toHaveBeenCalledWith('task-3');
+  });
+
+  it('removing a scratch task shows a scratch-specific confirmation and calls removeTask', async () => {
+    listTasks.mockResolvedValueOnce([task, task2, scratchTask]);
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<App />);
+    await screen.findByText('What does this error mean?');
+    const removeButtons = screen.getAllByRole('button', { name: 'Remove' });
+    const scratchRemoveButton = removeButtons[removeButtons.length - 1];
+    if (!scratchRemoveButton) {
+      throw new Error('Expected a "Remove" button for the scratch task to be rendered');
+    }
+    await userEvent.click(scratchRemoveButton);
+    expect(confirmSpy).toHaveBeenCalledWith('Remove this question? This deletes its scratch folder.');
+    expect(removeTask).toHaveBeenCalledWith('task-3');
+    confirmSpy.mockRestore();
   });
 });

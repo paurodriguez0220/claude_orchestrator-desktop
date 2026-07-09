@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron';
 import { randomUUID } from 'node:crypto';
+import { mkdir, rm } from 'node:fs/promises';
 import { IpcChannels } from '../../shared/ipc-channels';
 import type { TaskCreateRequest, TaskNotesSetRequest, TaskNotesGetResponse } from '../../shared/ipc-channels';
 import type { TaskRecord } from '../../shared/types';
@@ -8,11 +9,44 @@ import { addWorktree, addWorktreeForExistingBranch, removeWorktree } from '../se
 import { slugify, assertSafeBranchName } from '../services/slug';
 import { readTaskNotes, writeTaskNotes, archiveTaskNotes } from '../services/notes-service';
 import { spawnClaudeSession, isSessionAlive, killSession } from '../services/pty-manager';
-import { getStorePath, getTaskNotesPath, getWorktreePath } from '../paths';
+import { getStorePath, getTaskNotesPath, getWorktreePath, getScratchPath } from '../paths';
 
 export function registerTaskHandlers(onPtyData: (taskId: string, data: string) => void): void {
   ipcMain.handle(IpcChannels.TaskCreate, async (_event, request: TaskCreateRequest): Promise<TaskRecord> => {
     const store = await readStore(getStorePath());
+
+    if (request.kind === 'scratch') {
+      const taskId = randomUUID();
+      const worktreePath = getScratchPath(taskId);
+      await mkdir(worktreePath, { recursive: true });
+
+      const now = new Date().toISOString();
+      const task: TaskRecord = {
+        id: taskId,
+        title: request.title,
+        adoId: request.adoId,
+        worktreePath,
+        status: 'todo',
+        kind: 'scratch',
+        createdAt: now,
+        updatedAt: now,
+      };
+      store.tasks.push(task);
+      await writeStore(getStorePath(), store);
+      await writeTaskNotes(getTaskNotesPath(task.id), {
+        frontmatter: {
+          title: task.title,
+          adoId: task.adoId,
+          worktreePath: task.worktreePath,
+          status: task.status,
+          kind: task.kind,
+        },
+        body: '',
+      });
+      spawnClaudeSession(task.id, task.worktreePath, false, onPtyData);
+      return task;
+    }
+
     const repo = store.repos.find((candidate) => candidate.id === request.repoId);
     if (!repo) {
       throw new Error(`Unknown repo: ${request.repoId}`);
@@ -96,12 +130,16 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
     if (!task) {
       throw new Error(`Unknown task: ${taskId}`);
     }
-    const repo = store.repos.find((candidate) => candidate.id === task.repoId);
-    if (!repo) {
-      throw new Error(`Unknown repo: ${task.repoId}`);
-    }
     killSession(taskId);
-    await removeWorktree(repo.path, task.worktreePath);
+    if (task.kind === 'scratch') {
+      await rm(task.worktreePath, { recursive: true, force: true });
+    } else {
+      const repo = store.repos.find((candidate) => candidate.id === task.repoId);
+      if (!repo) {
+        throw new Error(`Unknown repo: ${task.repoId}`);
+      }
+      await removeWorktree(repo.path, task.worktreePath);
+    }
     store.tasks = store.tasks.filter((candidate) => candidate.id !== taskId);
     await writeStore(getStorePath(), store);
     await archiveTaskNotes(getTaskNotesPath(taskId));

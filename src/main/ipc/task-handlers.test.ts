@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { StoreData } from '../../shared/types';
+import type { StoreData, TaskRecord } from '../../shared/types';
 
 const handlers = new Map<string, (...args: unknown[]) => unknown>();
 
@@ -9,6 +9,11 @@ vi.mock('electron', () => ({
       handlers.set(channel, listener);
     },
   },
+}));
+
+vi.mock('node:fs/promises', () => ({
+  mkdir: vi.fn(async () => undefined),
+  rm: vi.fn(async () => undefined),
 }));
 
 let store: StoreData = { repos: [], tasks: [] };
@@ -50,12 +55,14 @@ vi.mock('../paths', () => ({
   getTaskNotesPath: (taskId: string) => `C:\\fake\\tasks\\${taskId}.md`,
   getWorktreePath: (repoPath: string, repoName: string, slug: string) =>
     `${repoPath}\\..\\${repoName}-worktrees\\${slug}`,
+  getScratchPath: (taskId: string) => `C:\\fake\\scratch\\${taskId}`,
 }));
 
 import { registerTaskHandlers } from './task-handlers';
 import { IpcChannels } from '../../shared/ipc-channels';
 import { addWorktree, addWorktreeForExistingBranch, removeWorktree } from '../services/git-service';
 import { readTaskNotes } from '../services/notes-service';
+import { mkdir, rm } from 'node:fs/promises';
 
 describe('task-handlers', () => {
   const onPtyData = vi.fn();
@@ -73,6 +80,8 @@ describe('task-handlers', () => {
     vi.mocked(addWorktreeForExistingBranch).mockClear();
     vi.mocked(removeWorktree).mockClear();
     vi.mocked(readTaskNotes).mockClear();
+    vi.mocked(mkdir).mockClear();
+    vi.mocked(rm).mockClear();
     registerTaskHandlers(onPtyData);
   });
 
@@ -310,5 +319,34 @@ describe('task-handlers', () => {
     });
     vi.mocked(readTaskNotes).mockRejectedValue(Object.assign(new Error('not found'), { code: 'ENOENT' }));
     await expect(handlers.get(IpcChannels.TaskSearch)?.({}, 'redirect')).resolves.toEqual([]);
+  });
+
+  it('TaskCreate creates an empty scratch directory and stores a task with no repoId/branch, without calling git', async () => {
+    const handler = handlers.get(IpcChannels.TaskCreate);
+    const task = await handler?.({}, { title: 'What does this error mean?', kind: 'scratch' });
+    expect(mkdir).toHaveBeenCalledWith('C:\\fake\\scratch\\' + (task as TaskRecord).id, { recursive: true });
+    expect(task).toMatchObject({ title: 'What does this error mean?', kind: 'scratch', status: 'todo' });
+    expect((task as TaskRecord).repoId).toBeUndefined();
+    expect((task as TaskRecord).branch).toBeUndefined();
+    expect(addWorktree).not.toHaveBeenCalled();
+    expect(addWorktreeForExistingBranch).not.toHaveBeenCalled();
+    expect(store.tasks).toHaveLength(1);
+  });
+
+  it('TaskRemove deletes the scratch directory recursively instead of calling removeWorktree, for a scratch task', async () => {
+    store.tasks.push({
+      id: 'task-2',
+      title: 'What does this error mean?',
+      worktreePath: 'C:\\fake\\scratch\\task-2',
+      status: 'todo',
+      kind: 'scratch',
+      createdAt: '2026-07-08T00:00:00.000Z',
+      updatedAt: '2026-07-08T00:00:00.000Z',
+    });
+    const handler = handlers.get(IpcChannels.TaskRemove);
+    await handler?.({}, 'task-2');
+    expect(rm).toHaveBeenCalledWith('C:\\fake\\scratch\\task-2', { recursive: true, force: true });
+    expect(removeWorktree).not.toHaveBeenCalled();
+    expect(store.tasks).toHaveLength(0);
   });
 });
