@@ -190,8 +190,17 @@ export function App(): JSX.Element {
     }
   }
 
-  const tasksByRepoId = tasks.reduce<Record<string, TaskRecord[]>>((acc, task) => {
-    (acc[task.repoId] ??= []).push(task);
+  const activeTasksByRepoId = tasks.reduce<Record<string, TaskRecord[]>>((acc, task) => {
+    if (task.status !== 'done') {
+      (acc[task.repoId] ??= []).push(task);
+    }
+    return acc;
+  }, {});
+
+  const archivedTasksByRepoId = tasks.reduce<Record<string, TaskRecord[]>>((acc, task) => {
+    if (task.status === 'done') {
+      (acc[task.repoId] ??= []).push(task);
+    }
     return acc;
   }, {});
 
@@ -215,7 +224,8 @@ export function App(): JSX.Element {
       <div className="flex flex-1 overflow-hidden">
         <RepoSidebar
           repos={repos}
-          tasksByRepoId={tasksByRepoId}
+          activeTasksByRepoId={activeTasksByRepoId}
+          archivedTasksByRepoId={archivedTasksByRepoId}
           selectedTaskId={activeTaskId}
           onSelectTask={(taskId) => void handleSelectTask(taskId)}
           onOpenRepoClick={() => void handleOpenRepoClick()}
