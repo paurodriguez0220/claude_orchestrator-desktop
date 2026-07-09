@@ -20,7 +20,7 @@ vi.mock('node:child_process', () => ({
   },
 }));
 
-import { cloneRepo, addWorktree, addWorktreeForExistingBranch, removeWorktree, listBranches, fetchRepo, getLastWorkingDayCutoff, getCommitSubjectsSince, GitCommandError } from './git-service';
+import { cloneRepo, addWorktree, addWorktreeForExistingBranch, removeWorktree, listBranches, fetchRepo, getLastWorkingDayCutoff, getCommitSubjectsSince, getBranchCommitsInRange, GitCommandError } from './git-service';
 
 describe('git-service', () => {
   beforeEach(() => {
@@ -133,6 +133,41 @@ describe('git-service', () => {
     it('returns an empty array when there are no commits since the cutoff', async () => {
       execFileMock.mockImplementation(() => ({ stdout: '', stderr: '' }));
       const result = await getCommitSubjectsSince('C:\\repo-worktrees\\slug', new Date(2024, 0, 9));
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getBranchCommitsInRange', () => {
+    it('runs git log <branch> --since --until in the repo and parses hash/subject pairs', async () => {
+      execFileMock.mockImplementation(() => ({
+        stdout: 'abc123\tfix: handle empty input\ndef456\tfeat: add DSU button\n\n',
+        stderr: '',
+      }));
+      const from = new Date(2026, 6, 9, 0, 0, 0, 0);
+      const to = new Date(2026, 6, 10, 0, 0, 0, 0);
+      const result = await getBranchCommitsInRange('C:\\repo', 'feature-x', from, to);
+      expect(execFileMock).toHaveBeenCalledWith(
+        'git',
+        [
+          '-c',
+          'core.longpaths=true',
+          'log',
+          'feature-x',
+          `--since=${from.toISOString()}`,
+          `--until=${to.toISOString()}`,
+          '--pretty=%H%x09%s',
+        ],
+        { cwd: 'C:\\repo' },
+      );
+      expect(result).toEqual([
+        { hash: 'abc123', subject: 'fix: handle empty input' },
+        { hash: 'def456', subject: 'feat: add DSU button' },
+      ]);
+    });
+
+    it('returns an empty array when there are no commits in range', async () => {
+      execFileMock.mockImplementation(() => ({ stdout: '', stderr: '' }));
+      const result = await getBranchCommitsInRange('C:\\repo', 'master', new Date(2026, 6, 9), new Date(2026, 6, 10));
       expect(result).toEqual([]);
     });
   });

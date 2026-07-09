@@ -96,3 +96,28 @@ export async function getCommitSubjectsSince(worktreePath: string, cutoff: Date)
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
 }
+
+export interface BranchCommit {
+  hash: string;
+  subject: string;
+}
+
+export async function getBranchCommitsInRange(
+  repoPath: string,
+  branch: string,
+  from: Date,
+  to: Date,
+): Promise<BranchCommit[]> {
+  const output = await runGitCapture(
+    ['log', branch, `--since=${from.toISOString()}`, `--until=${to.toISOString()}`, '--pretty=%H%x09%s'],
+    repoPath,
+  );
+  return output
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const tabIndex = line.indexOf('\t');
+      return { hash: line.slice(0, tabIndex), subject: line.slice(tabIndex + 1) };
+    });
+}
