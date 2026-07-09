@@ -1,36 +1,46 @@
-# Task: Icon-based declutter for repeated row actions
+# Task: Icon-based declutter across the sidebar
 
 **Status:** Defined
 
 ## Goal
 
-Replace the noisiest repeated text (per-task "Remove" buttons, the "Review" badge, the archived-section disclosure triangle) with small icons, so the sidebar reads cleanly as it accumulates search/archive/Quick-Questions sections on top of the per-repo tree.
+Replace wordy repeated text — per-task "Remove" buttons, the "Review" badge, the archived-section disclosure triangle — **and** the top-level action buttons ("Open Existing Repo", "Clone Repo", "New Task", "Review Code", "+ New Question") with small icons, so the sidebar reads cleanly as it accumulates search/archive/Quick-Questions sections on top of the per-repo tree.
 
 ## Context
 
-Every task row today repeats the word "Remove" as a text button, every `'review'`-kind task repeats the word "Review" in a badge, and the archived-section toggle uses a plain `▾`/`▸` text character. As more sections stack up in the sidebar (search, per-repo Archived toggles, Quick Questions), this repeated text is the most avoidable source of visual noise. No icon library is currently installed in this repo.
+Every task row today repeats the word "Remove" as a text button, every `'review'`-kind task repeats the word "Review" in a badge, and the archived-section toggle uses a plain `▾`/`▸` text character. Every repo section also carries full-word buttons ("Open Existing Repo", "Clone Repo", "New Task", "Review Code") plus a "+ New Question" button below the tree. As more sections stack up in the sidebar (search, per-repo Archived toggles, Quick Questions), this text is the dominant source of visual noise. No icon library is currently installed in this repo.
+
+**Scope correction (2026-07-09):** an earlier pass at this task deliberately scoped out the top-level buttons, defaulting to "row actions only" when a scope-clarifying question went unanswered. Explicit user feedback: that default was wrong — this user wants icons over wordy text by default, including these top-level buttons. Treat "prefer icons over text labels" as this app's standing default going forward, not a one-off.
 
 ## Proposed Design
 
 ### Library
 
-Add `lucide-react` as a dependency — tree-shakeable, plays cleanly with React + Tailwind, widely used, avoids hand-maintaining SVG paths.
+`lucide-react` — tree-shakeable, plays cleanly with React + Tailwind, widely used, avoids hand-maintaining SVG paths. (Already added as a dependency by the row-actions pass below.)
 
-### Scope (row actions only, not top-level buttons)
+### Scope
 
-- **Remove button** (`TaskRow` in `repo-sidebar.tsx`, and the scratch-task row) — replace the "Remove" text with a `Trash2` icon button. Keep an accessible name via `aria-label="Remove task"` (or `"Remove question"` for scratch tasks) so screen readers and existing `getByRole('button', { name: 'Remove' })`-style test queries have an equivalent accessible-name update path.
-- **"Review" badge** (`TaskRow`) — replace the text badge with a small `GitPullRequest` icon inside the same badge pill, keeping `aria-label="Review"` (or visually-hidden text) so the existing "shows a Review badge" test still has something to assert against.
-- **Archived toggle disclosure** (`RepoSidebar`) — replace the `▾`/`▸` characters with `ChevronDown`/`ChevronRight` icons (already `aria-hidden`, no accessible-name impact — the button's own `Archived (N)` text stays as-is, only the decorative glyph changes).
-- **Tab close button** (`TabBar`) — replace the `×` character with an `X` icon, for visual consistency with the new icon set (same accessible name, no behavior change).
+**Row actions** (already implemented in a prior pass on branch `worktree-agent-afa024b0e81a9af72`, not yet merged to master):
+- **Remove button** (`TaskRow` in `repo-sidebar.tsx`, and the scratch-task row) — `Trash2` icon, `aria-label="Remove task"`/`"Remove question"`.
+- **"Review" badge** (`TaskRow`) — `GitPullRequest` icon inside the badge pill, `aria-label="Review"`.
+- **Archived toggle disclosure** (`RepoSidebar`) — `ChevronDown`/`ChevronRight` icons replacing `▾`/`▸` (decorative, `aria-hidden`).
+- **Tab close button** (`TabBar`) — `X` icon replacing `×`.
 
-Top-level text buttons ("Open Existing Repo", "Clone Repo", "New Task", "Review Code", "+ New Question") are explicitly out of scope for this pass — they're one-per-section, not repeated per row, so they're not contributing to the noise this task is solving.
+**Top-level buttons** (new scope, this revision):
+- **"Open Existing Repo"** (`RepoSidebar`) — `FolderOpen` icon, `aria-label="Open Existing Repo"`.
+- **"Clone Repo"** (`RepoSidebar`) — `Download` icon, `aria-label="Clone Repo"`.
+- **"New Task"** (`RepoSidebar`, per-repo) — `Plus` icon, `aria-label="New Task"`.
+- **"Review Code"** (`RepoSidebar`, per-repo) — `Eye` icon, `aria-label="Review Code"` (deliberately distinct from the Review badge's `GitPullRequest` icon, since they mean different things — one starts a review, the other marks a task as a review).
+- **"+ New Question"** (`RepoSidebar`) — `MessageCirclePlus` icon, `aria-label="New Question"`.
+
+Every icon-only button keeps its original text as an `aria-label` (screen readers, and existing `getByRole('button', { name: '...' })` test queries keep working unchanged against the same accessible name) plus a native `title` attribute so a mouse-hover tooltip still shows the action name — icon-only isn't icon-only-with-no-way-to-tell-what-it-does.
 
 ## Non-Goals
 
-- No icon+label conversion of the top-level per-repo/section action buttons (see Scope).
 - No user-configurable icon set or theming — one fixed icon per element.
 - No new custom SVG components — `lucide-react`'s existing icons only, no hand-drawn icons for v1.
-- No changes to any click/remove/select behavior — this is a purely visual swap of text/characters for icons on already-existing interactive elements.
+- No changes to any click/remove/select/create behavior — this is a purely visual swap of text for icons on already-existing interactive elements.
+- No icon-only conversion of task *titles* themselves, or of section headings ("Quick Questions") — only actionable buttons/badges/toggles are in scope.
 
 ## Implementation Plan
 
@@ -333,6 +343,267 @@ Expected: PASS (all 5 existing tests, no changes needed)
 ```bash
 git add src/renderer/components/tab-bar/tab-bar.tsx
 git commit -m "feat: replace tab close character with lucide-react X icon"
+```
+
+---
+
+## Revision 2: Top-level button icons (2026-07-09 scope correction)
+
+Tasks 1–3 above (already implemented) cover row actions only. This revision adds the top-level buttons per the corrected Scope above. Same `Global Constraints` apply, plus: every button converted below keeps its exact prior visible text as both its `aria-label` and a native `title` attribute (hover tooltip for mouse users), with one exception — `"+ New Question"` becomes `aria-label="New Question"` / `title="New Question"` (the `+` was a text affordance for "add", now redundant with the icon itself), which is the only one of the five that changes an existing test query.
+
+### Task 4: Icon-ify the top action bar ("Open Existing Repo", "Clone Repo")
+
+**Files:**
+- Modify: `src/renderer/components/repo-sidebar/repo-sidebar.tsx`
+
+**Interfaces:**
+- No prop or exported-interface changes.
+- Consumes: `FolderOpen`, `Download` from `lucide-react`.
+- No accessible-name change: `aria-label="Open Existing Repo"`/`aria-label="Clone Repo"` exactly match the current visible text, so `repo-sidebar.test.tsx`'s existing `getByRole('button', { name: 'Open Existing Repo' })`/`'Clone Repo'` queries and `app.test.tsx`'s matching queries are untouched by this task.
+
+- [ ] **Step 1: Confirm the regression baseline before editing**
+
+Run: `npm run test:renderer -- repo-sidebar app`
+Expected: PASS (all existing tests) — baseline these must still pass after the swap, since the accessible name is unchanged and no new test is needed.
+
+- [ ] **Step 2: Implement**
+
+In `src/renderer/components/repo-sidebar/repo-sidebar.tsx`, update the import:
+
+```tsx
+import { ChevronDown, ChevronRight, Download, FolderOpen, GitPullRequest, Trash2 } from 'lucide-react';
+```
+
+Replace the top action-bar block:
+
+```tsx
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={onOpenRepoClick}
+          className="flex-1 rounded-md border border-graphite-600 px-3 py-2 text-sm font-medium text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+        >
+          Open Existing Repo
+        </button>
+        <button
+          type="button"
+          onClick={onCloneRepoClick}
+          className="flex-1 rounded-md border border-graphite-600 px-3 py-2 text-sm font-medium text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+        >
+          Clone Repo
+        </button>
+      </div>
+```
+
+with:
+
+```tsx
+      <div className="flex gap-2">
+        <button
+          type="button"
+          aria-label="Open Existing Repo"
+          title="Open Existing Repo"
+          onClick={onOpenRepoClick}
+          className="flex flex-1 items-center justify-center rounded-md border border-graphite-600 px-3 py-2 text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+        >
+          <FolderOpen aria-hidden="true" className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          aria-label="Clone Repo"
+          title="Clone Repo"
+          onClick={onCloneRepoClick}
+          className="flex flex-1 items-center justify-center rounded-md border border-graphite-600 px-3 py-2 text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+        >
+          <Download aria-hidden="true" className="h-4 w-4" />
+        </button>
+      </div>
+```
+
+- [ ] **Step 3: Run tests to verify still green**
+
+Run: `npm run test:renderer -- repo-sidebar app`
+Expected: PASS (no test changes, no regressions)
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/renderer/components/repo-sidebar/repo-sidebar.tsx
+git commit -m "feat: replace top action bar text with lucide-react icons"
+```
+
+---
+
+### Task 5: Icon-ify the per-repo buttons ("Review Code", "New Task")
+
+**Files:**
+- Modify: `src/renderer/components/repo-sidebar/repo-sidebar.tsx`
+
+**Interfaces:**
+- No prop or exported-interface changes.
+- Consumes: `Eye`, `Plus` from `lucide-react`.
+- No accessible-name change: `aria-label="Review Code"`/`aria-label="New Task"` exactly match the current visible text, so `repo-sidebar.test.tsx`'s and `app.test.tsx`'s existing `getByRole`/`findAllByRole` queries for `'Review Code'` and `'New Task'` are untouched by this task. `Eye` is deliberately different from the Review badge's `GitPullRequest` icon (Task 1) — one starts a review, the other marks a task as one.
+
+- [ ] **Step 1: Confirm the regression baseline before editing**
+
+Run: `npm run test:renderer -- repo-sidebar app`
+Expected: PASS (all existing tests) — baseline these must still pass after the swap, since the accessible name is unchanged and no new test is needed.
+
+- [ ] **Step 2: Implement**
+
+In `src/renderer/components/repo-sidebar/repo-sidebar.tsx`, update the import:
+
+```tsx
+import { ChevronDown, ChevronRight, Download, Eye, FolderOpen, GitPullRequest, Plus, Trash2 } from 'lucide-react';
+```
+
+Replace the per-repo action buttons block:
+
+```tsx
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onReviewCodeClick(repo.id)}
+                    className="rounded-md border border-graphite-600 px-2 py-1 text-xs font-medium text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+                  >
+                    Review Code
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onNewTaskClick(repo.id)}
+                    className="rounded-md bg-clay-600 px-2 py-1 text-xs font-medium text-graphite-100 hover:bg-clay-500"
+                  >
+                    New Task
+                  </button>
+                </div>
+```
+
+with:
+
+```tsx
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    type="button"
+                    aria-label="Review Code"
+                    title="Review Code"
+                    onClick={() => onReviewCodeClick(repo.id)}
+                    className="flex items-center justify-center rounded-md border border-graphite-600 p-1.5 text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+                  >
+                    <Eye aria-hidden="true" className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="New Task"
+                    title="New Task"
+                    onClick={() => onNewTaskClick(repo.id)}
+                    className="flex items-center justify-center rounded-md bg-clay-600 p-1.5 text-graphite-100 hover:bg-clay-500"
+                  >
+                    <Plus aria-hidden="true" className="h-4 w-4" />
+                  </button>
+                </div>
+```
+
+- [ ] **Step 3: Run tests to verify still green**
+
+Run: `npm run test:renderer -- repo-sidebar app`
+Expected: PASS (no test changes, no regressions)
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/renderer/components/repo-sidebar/repo-sidebar.tsx
+git commit -m "feat: replace per-repo action button text with lucide-react icons"
+```
+
+---
+
+### Task 6: Icon-ify "+ New Question" to a `MessageCirclePlus` icon button named "New Question"
+
+**Files:**
+- Modify: `src/renderer/components/repo-sidebar/repo-sidebar.tsx`
+- Modify: `src/renderer/components/repo-sidebar/repo-sidebar.test.tsx`
+- Modify: `src/renderer/app.test.tsx`
+
+**Interfaces:**
+- No prop or exported-interface changes.
+- Consumes: `MessageCirclePlus` from `lucide-react`.
+- Accessible-name change: the button's accessible name changes from `'+ New Question'` to `'New Question'` (the `+` glyph is dropped since the icon itself now conveys "add"). Every test querying the old name is updated.
+
+- [ ] **Step 1: Update the existing tests that query the old "+ New Question" name**
+
+In `src/renderer/components/repo-sidebar/repo-sidebar.test.tsx`, rename the test and its query (currently titled `'calls onNewQuestionClick when "+ New Question" is clicked'`):
+
+```tsx
+  it('calls onNewQuestionClick when "New Question" is clicked', async () => {
+    // ...unchanged render(...) call...
+    await userEvent.click(screen.getByRole('button', { name: 'New Question' }));
+    expect(onNewQuestionClick).toHaveBeenCalledOnce();
+  });
+```
+
+In `src/renderer/app.test.tsx`, update the test titled `'"+ New Question" creates a scratch task with no repoId and opens it'`:
+
+```tsx
+  it('"New Question" creates a scratch task with no repoId and opens it', async () => {
+    createTask.mockResolvedValueOnce(scratchTask);
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'New Question' }));
+    await userEvent.type(screen.getByLabelText('Title'), 'What does this error mean?');
+    await userEvent.click(screen.getByRole('button', { name: 'Create Question' }));
+    expect(createTask).toHaveBeenCalledWith({ title: 'What does this error mean?', kind: 'scratch' });
+    expect(openTask).toHaveBeenCalledWith('task-3');
+  });
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `npm run test:renderer -- repo-sidebar app`
+Expected: the two renamed tests FAIL — no button is named `'New Question'` yet (it's still named `'+ New Question'`). All other tests still PASS.
+
+- [ ] **Step 3: Implement**
+
+In `src/renderer/components/repo-sidebar/repo-sidebar.tsx`, update the import:
+
+```tsx
+import { ChevronDown, ChevronRight, Download, Eye, FolderOpen, GitPullRequest, MessageCirclePlus, Plus, Trash2 } from 'lucide-react';
+```
+
+Replace the "+ New Question" button:
+
+```tsx
+          <button
+            type="button"
+            onClick={onNewQuestionClick}
+            className="rounded-md bg-clay-600 px-2 py-1 text-xs font-medium text-graphite-100 hover:bg-clay-500"
+          >
+            + New Question
+          </button>
+```
+
+with:
+
+```tsx
+          <button
+            type="button"
+            aria-label="New Question"
+            title="New Question"
+            onClick={onNewQuestionClick}
+            className="flex items-center justify-center rounded-md bg-clay-600 p-1.5 text-graphite-100 hover:bg-clay-500"
+          >
+            <MessageCirclePlus aria-hidden="true" className="h-4 w-4" />
+          </button>
+```
+
+- [ ] **Step 4: Run tests to verify all pass**
+
+Run: `npm run test:renderer -- repo-sidebar app`
+Expected: PASS (all tests, including the 2 renamed ones)
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/renderer/components/repo-sidebar/repo-sidebar.tsx src/renderer/components/repo-sidebar/repo-sidebar.test.tsx src/renderer/app.test.tsx
+git commit -m "feat: replace New Question text button with lucide-react icon"
 ```
 
 ---
