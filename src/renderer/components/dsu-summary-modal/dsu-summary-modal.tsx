@@ -36,8 +36,8 @@ export function DsuSummaryModal({
 
   return (
     <ModalOverlay>
-      <div role="dialog" aria-label="DSU Summary" className="flex max-h-[80vh] flex-col gap-4">
-        <h2 className="text-lg font-semibold text-graphite-100">DSU Summary</h2>
+      <div role="dialog" aria-label="Work Log" className="flex max-h-[80vh] flex-col gap-4">
+        <h2 className="text-lg font-semibold text-graphite-100">Work Log</h2>
         <div className="flex items-end gap-2">
           <label className="flex flex-1 flex-col gap-1 text-xs text-graphite-400">
             Day to summarize

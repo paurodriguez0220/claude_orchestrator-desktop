@@ -554,7 +554,7 @@ describe('RepoSidebar', () => {
     expect(screen.queryByText(/^v\d/)).not.toBeInTheDocument();
   });
 
-  it('calls onGenerateDsuClick when "Generate DSU" is clicked', async () => {
+  it('calls onGenerateDsuClick when "Generate work log" is clicked', async () => {
     const onGenerateDsuClick = vi.fn();
     render(
       <RepoSidebar
@@ -576,7 +576,7 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={onGenerateDsuClick}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Generate DSU' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Generate work log' }));
     expect(onGenerateDsuClick).toHaveBeenCalledOnce();
   });
 });

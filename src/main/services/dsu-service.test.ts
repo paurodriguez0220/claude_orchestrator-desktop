@@ -1,31 +1,40 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { EventEmitter } from 'node:events';
 
-let mockError: { stderr?: string } | null = null;
-
-const execFileMock = vi.fn();
+const spawnMock = vi.fn();
 
 vi.mock('node:child_process', () => ({
-  execFile: (...args: unknown[]) => {
-    const callback = args[args.length - 1] as (
-      err: { stderr?: string } | null,
-      result?: { stdout: string; stderr: string },
-    ) => void;
-    const result = execFileMock(...args.slice(0, -1));
-    if (mockError) {
-      callback(mockError);
-    } else {
-      callback(null, result ?? { stdout: '', stderr: '' });
-    }
-  },
+  spawn: (...args: unknown[]) => spawnMock(...args),
 }));
+
+interface FakeChild extends EventEmitter {
+  stdout: EventEmitter;
+  stderr: EventEmitter;
+  stdin: EventEmitter & { write: (chunk: string) => void; end: () => void };
+  stdinWrites: string[];
+}
+
+function makeFakeChild(): FakeChild {
+  const child = new EventEmitter() as FakeChild;
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  const stdinWrites: string[] = [];
+  const stdin = new EventEmitter() as FakeChild['stdin'];
+  stdin.write = (chunk: string) => {
+    stdinWrites.push(chunk.toString());
+  };
+  stdin.end = () => {};
+  child.stdin = stdin;
+  child.stdinWrites = stdinWrites;
+  return child;
+}
 
 import { buildDsuPrompt, generateDsuSummary, DsuCommandError } from './dsu-service';
 import type { BranchCommitSummary } from './dsu-service';
 
 describe('dsu-service', () => {
   beforeEach(() => {
-    execFileMock.mockReset();
-    mockError = null;
+    spawnMock.mockReset();
   });
 
   describe('buildDsuPrompt', () => {
@@ -44,31 +53,62 @@ describe('dsu-service', () => {
     it('returns a dated no-commits message without shelling out when there are no branch summaries', async () => {
       const result = await generateDsuSummary([], '2026-07-08');
       expect(result).toBe('No commits on 2026-07-08.');
-      expect(execFileMock).not.toHaveBeenCalled();
+      expect(spawnMock).not.toHaveBeenCalled();
     });
 
-    it('invokes claude -p non-interactively with the prompt as a discrete argument', async () => {
-      execFileMock.mockReturnValue({ stdout: '- Fixed the login bug\n', stderr: '' });
+    it('spawns claude with slash commands disabled and feeds the prompt over stdin, not the command line', async () => {
+      const child = makeFakeChild();
+      spawnMock.mockReturnValue(child);
       const branchSummaries: BranchCommitSummary[] = [
         { repoName: 'demo', branch: 'task/fix-login-bug', commitSubjects: ['fix: handle empty input'] },
       ];
-      const result = await generateDsuSummary(branchSummaries, '2026-07-08');
-      expect(execFileMock).toHaveBeenCalledWith(
+
+      const promise = generateDsuSummary(branchSummaries, '2026-07-08');
+      child.stdout.emit('data', Buffer.from('- Fixed the login bug\n'));
+      child.emit('close', 0);
+      const result = await promise;
+
+      expect(spawnMock).toHaveBeenCalledWith(
         'cmd.exe',
-        ['/c', 'claude', '-p', buildDsuPrompt(branchSummaries, '2026-07-08')],
-        undefined,
+        ['/c', 'claude', '-p', '--disable-slash-commands'],
+        { stdio: ['pipe', 'pipe', 'pipe'] },
       );
+      // The multi-line prompt must never be an argv entry (cmd.exe truncates it);
+      // it is written to stdin verbatim instead.
+      expect(spawnMock.mock.calls[0]?.[1]).not.toContain(buildDsuPrompt(branchSummaries, '2026-07-08'));
+      expect(child.stdinWrites.join('')).toBe(buildDsuPrompt(branchSummaries, '2026-07-08'));
       expect(result).toBe('- Fixed the login bug');
     });
 
-    it('wraps a failing claude invocation in DsuCommandError with the real stderr', async () => {
-      mockError = Object.assign(new Error('exit 1'), { stderr: 'claude: not logged in' });
-      const thrownError = await generateDsuSummary(
+    it('wraps a non-zero claude exit in DsuCommandError with the real stderr', async () => {
+      const child = makeFakeChild();
+      spawnMock.mockReturnValue(child);
+
+      const promise = generateDsuSummary(
         [{ repoName: 'demo', branch: 'task/x', commitSubjects: ['fix: y'] }],
         '2026-07-08',
-      ).catch((err) => err);
+      );
+      child.stderr.emit('data', Buffer.from('claude: not logged in'));
+      child.emit('close', 1);
+      const thrownError = await promise.catch((err) => err);
+
       expect(thrownError).toBeInstanceOf(DsuCommandError);
       expect(thrownError.stderr).toBe('claude: not logged in');
+    });
+
+    it('wraps a spawn failure in DsuCommandError', async () => {
+      const child = makeFakeChild();
+      spawnMock.mockReturnValue(child);
+
+      const promise = generateDsuSummary(
+        [{ repoName: 'demo', branch: 'task/x', commitSubjects: ['fix: y'] }],
+        '2026-07-08',
+      );
+      child.emit('error', new Error('spawn cmd.exe ENOENT'));
+      const thrownError = await promise.catch((err) => err);
+
+      expect(thrownError).toBeInstanceOf(DsuCommandError);
+      expect(thrownError.stderr).toBe('spawn cmd.exe ENOENT');
     });
   });
 });

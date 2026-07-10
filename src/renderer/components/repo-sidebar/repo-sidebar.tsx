@@ -135,8 +135,8 @@ export function RepoSidebar({
         </button>
         <button
           type="button"
-          aria-label="Generate DSU"
-          title="Generate DSU"
+          aria-label="Generate work log"
+          title="Generate work log"
           onClick={onGenerateDsuClick}
           className="flex flex-1 items-center justify-center rounded-md border border-graphite-600 px-3 py-2 text-graphite-100 hover:border-clay-500 hover:text-clay-400"
         >

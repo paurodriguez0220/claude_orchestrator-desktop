@@ -599,10 +599,10 @@ describe('App', () => {
     expect(openTask).toHaveBeenCalledWith('task-3');
   });
 
-  it('"Generate DSU" opens the modal, and Generate fetches the summary for the picked day', async () => {
+  it('"Generate work log" opens the modal, and Generate fetches the summary for the picked day', async () => {
     render(<App />);
-    await userEvent.click(await screen.findByRole('button', { name: 'Generate DSU' }));
-    const dialog = await screen.findByRole('dialog', { name: 'DSU Summary' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate work log' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Work Log' });
     expect(dialog).toBeInTheDocument();
     expect(generateDsuSummary).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', { name: 'Generate' }));
@@ -610,11 +610,11 @@ describe('App', () => {
     expect(await screen.findByText(/Fixed a null check/)).toBeInTheDocument();
   });
 
-  it('shows a visible error when generating the DSU summary fails, instead of failing silently', async () => {
-    generateDsuSummary.mockRejectedValueOnce(new Error('claude -p failed to generate the DSU summary'));
+  it('shows a visible error when generating the work log fails, instead of failing silently', async () => {
+    generateDsuSummary.mockRejectedValueOnce(new Error('claude -p failed to generate the work log'));
     render(<App />);
-    await userEvent.click(await screen.findByRole('button', { name: 'Generate DSU' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate work log' }));
     await userEvent.click(screen.getByRole('button', { name: 'Generate' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('claude -p failed to generate the DSU summary');
+    expect(await screen.findByRole('alert')).toHaveTextContent('claude -p failed to generate the work log');
   });
 });
