@@ -101,6 +101,16 @@ function getCustomKeyEventHandler(): (event: KeyboardEvent) => boolean {
   return handler;
 }
 
+// Paste is handled by a capture-phase 'paste' listener on the terminal
+// container (the [data-task-id] div), so tests drive it by dispatching a
+// cancelable paste event on that element rather than via the key handler.
+function dispatchPaste(container: HTMLElement): Event {
+  const terminalContainer = container.querySelector('[data-task-id]') as HTMLElement;
+  const event = new Event('paste', { bubbles: true, cancelable: true });
+  terminalContainer.dispatchEvent(event);
+  return event;
+}
+
 describe('TerminalTab', () => {
   it('opens a terminal and registers a pty output listener on mount', () => {
     render(<TerminalTab taskId="task-1" />);
@@ -222,7 +232,7 @@ describe('TerminalTab', () => {
     expect(result).toBe(true);
   });
 
-  it('takes over Ctrl+V entirely, always blocking xterm\'s own handling', () => {
+  it('swallows the Ctrl+V keydown so xterm never emits the raw ^V control byte', () => {
     render(<TerminalTab taskId="task-1" />);
 
     const result = getCustomKeyEventHandler()(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }));
@@ -230,12 +240,26 @@ describe('TerminalTab', () => {
     expect(result).toBe(false);
   });
 
-  it('reads an image off the clipboard on Ctrl+V, saves it via IPC, and types its path into the terminal', async () => {
+  it('suppresses xterm\'s built-in paste and pastes exactly once, so text is not doubled', async () => {
+    clipboardRead.mockResolvedValue([]);
+    clipboardReadText.mockResolvedValue('hello from clipboard');
+    const { container } = render(<TerminalTab taskId="task-1" />);
+
+    const event = dispatchPaste(container);
+
+    // preventDefault + stopImmediatePropagation stop xterm's own paste handler
+    // (the source of the second copy) from ever running.
+    expect(event.defaultPrevented).toBe(true);
+    await waitFor(() => expect(sendPtyInput).toHaveBeenCalledWith('task-1', 'hello from clipboard'));
+    expect(sendPtyInput).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads an image off the clipboard on paste, saves it via IPC, and types its path into the terminal', async () => {
     const fakeBlob = new Blob(['fake-image-bytes'], { type: 'image/png' });
     clipboardRead.mockResolvedValue([fakeClipboardItem('image/png', fakeBlob)]);
-    render(<TerminalTab taskId="task-1" />);
+    const { container } = render(<TerminalTab taskId="task-1" />);
 
-    getCustomKeyEventHandler()(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }));
+    dispatchPaste(container);
 
     await waitFor(() => expect(saveClipboardImage).toHaveBeenCalled());
     expect(sendPtyInput).toHaveBeenCalledWith(
@@ -249,9 +273,9 @@ describe('TerminalTab', () => {
     saveClipboardImage.mockResolvedValueOnce('C:\\Users\\John Smith\\claude-orchestrator\\pasted-images\\abc123.png');
     const fakeBlob = new Blob(['fake-image-bytes'], { type: 'image/png' });
     clipboardRead.mockResolvedValue([fakeClipboardItem('image/png', fakeBlob)]);
-    render(<TerminalTab taskId="task-1" />);
+    const { container } = render(<TerminalTab taskId="task-1" />);
 
-    getCustomKeyEventHandler()(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }));
+    dispatchPaste(container);
 
     await waitFor(() =>
       expect(sendPtyInput).toHaveBeenCalledWith(
@@ -261,12 +285,12 @@ describe('TerminalTab', () => {
     );
   });
 
-  it('falls back to plain-text paste on Ctrl+V when the clipboard has no supported image', async () => {
+  it('falls back to plain-text paste when the clipboard has no supported image', async () => {
     clipboardRead.mockResolvedValue([]);
     clipboardReadText.mockResolvedValue('hello from clipboard');
-    render(<TerminalTab taskId="task-1" />);
+    const { container } = render(<TerminalTab taskId="task-1" />);
 
-    getCustomKeyEventHandler()(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }));
+    dispatchPaste(container);
 
     await waitFor(() => expect(sendPtyInput).toHaveBeenCalledWith('task-1', 'hello from clipboard'));
     expect(saveClipboardImage).not.toHaveBeenCalled();
@@ -276,21 +300,22 @@ describe('TerminalTab', () => {
     const fakeBlob = new Blob(['fake-image-bytes'], { type: 'image/bmp' });
     clipboardRead.mockResolvedValue([fakeClipboardItem('image/bmp', fakeBlob)]);
     clipboardReadText.mockResolvedValue('fallback text');
-    render(<TerminalTab taskId="task-1" />);
+    const { container } = render(<TerminalTab taskId="task-1" />);
 
-    getCustomKeyEventHandler()(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }));
+    dispatchPaste(container);
 
     await waitFor(() => expect(sendPtyInput).toHaveBeenCalledWith('task-1', 'fallback text'));
     expect(saveClipboardImage).not.toHaveBeenCalled();
   });
 
-  it('does not paste anything when the clipboard has neither a supported image nor text', () => {
+  it('does not paste anything when the clipboard has neither a supported image nor text', async () => {
     clipboardRead.mockResolvedValue([]);
     clipboardReadText.mockResolvedValue('');
-    render(<TerminalTab taskId="task-1" />);
+    const { container } = render(<TerminalTab taskId="task-1" />);
 
-    getCustomKeyEventHandler()(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }));
+    dispatchPaste(container);
 
+    await waitFor(() => expect(clipboardReadText).toHaveBeenCalled());
     expect(sendPtyInput).not.toHaveBeenCalledWith('task-1', expect.anything());
   });
 
@@ -298,9 +323,9 @@ describe('TerminalTab', () => {
     saveClipboardImage.mockRejectedValueOnce(new Error('Unsupported image type: image/bmp'));
     const fakeBlob = new Blob(['fake-image-bytes'], { type: 'image/png' });
     clipboardRead.mockResolvedValue([fakeClipboardItem('image/png', fakeBlob)]);
-    render(<TerminalTab taskId="task-1" />);
+    const { container } = render(<TerminalTab taskId="task-1" />);
 
-    getCustomKeyEventHandler()(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }));
+    dispatchPaste(container);
 
     await waitFor(() =>
       expect(writeMock).toHaveBeenCalledWith(expect.stringContaining('Unsupported image type: image/bmp')),
@@ -309,9 +334,9 @@ describe('TerminalTab', () => {
 
   it('writes a visible error notice when reading the clipboard itself fails', async () => {
     clipboardRead.mockRejectedValue(new Error('clipboard-read is not allowed'));
-    render(<TerminalTab taskId="task-1" />);
+    const { container } = render(<TerminalTab taskId="task-1" />);
 
-    getCustomKeyEventHandler()(new KeyboardEvent('keydown', { key: 'v', ctrlKey: true }));
+    dispatchPaste(container);
 
     await waitFor(() =>
       expect(writeMock).toHaveBeenCalledWith(expect.stringContaining('clipboard-read is not allowed')),

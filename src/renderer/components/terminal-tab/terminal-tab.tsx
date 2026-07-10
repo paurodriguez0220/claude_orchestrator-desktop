@@ -107,15 +107,29 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
         void navigator.clipboard.writeText(terminal.getSelection());
         return false;
       }
-      // Ctrl+V always means paste here — we take over entirely (including
-      // plain-text paste) rather than letting xterm's own paste handling
-      // run at all, so there's exactly one paste code path to reason about.
+      // Swallow Ctrl+V so xterm doesn't emit the raw ^V (0x16) control byte to
+      // the pty. The actual paste is handled by the 'paste' listener below —
+      // pasting here too would send everything twice.
       if (key === 'v') {
-        void pasteFromClipboard();
         return false;
       }
       return true;
     });
+
+    // xterm attaches its own 'paste' handler to its helper <textarea>, which
+    // inserts the pasted text into the pty independently of ours — so relying
+    // on a Ctrl+V key handler *and* letting that native handler run pastes
+    // everything twice. Intercept 'paste' in the capture phase on the
+    // container (an ancestor of xterm's textarea) to stop the native handler
+    // from ever running, then do the single paste ourselves via the async
+    // clipboard API (which, unlike the paste event, also exposes images).
+    // This path also covers right-click / middle-click paste, not just Ctrl+V.
+    function handlePaste(event: Event): void {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      void pasteFromClipboard();
+    }
+    container.addEventListener('paste', handlePaste, true);
 
     const unsubscribe = window.claudeOrchestrator.onPtyOutput((event: PtyOutputEvent) => {
       if (event.taskId === taskId) {
@@ -131,6 +145,7 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
     resizeObserver.observe(container);
 
     return () => {
+      container.removeEventListener('paste', handlePaste, true);
       resizeObserver.disconnect();
       unsubscribe();
       terminal.dispose();
