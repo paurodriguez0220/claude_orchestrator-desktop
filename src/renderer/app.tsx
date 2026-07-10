@@ -8,6 +8,7 @@ import { TaskNotesPanel } from './components/task-notes-panel/task-notes-panel';
 import { TabBar } from './components/tab-bar/tab-bar';
 import { Spinner } from './components/spinner/spinner';
 import { DsuSummaryModal } from './components/dsu-summary-modal/dsu-summary-modal';
+import { ArchivedTasksModal } from './components/archived-tasks-modal/archived-tasks-modal';
 import type { RepoRecord, TaskRecord, TaskStatus } from '../shared/types';
 import type { BranchOption } from '../shared/ipc-channels';
 import type { NewTaskFields } from './components/new-task-modal/new-task-modal';
@@ -36,6 +37,7 @@ export function App(): JSX.Element {
   const [matchingTaskIds, setMatchingTaskIds] = useState<string[] | undefined>();
   const [appVersion, setAppVersion] = useState<string | undefined>();
   const [isDsuModalOpen, setIsDsuModalOpen] = useState(false);
+  const [isArchivedModalOpen, setIsArchivedModalOpen] = useState(false);
   const [dsuSummary, setDsuSummary] = useState<{ markdown: string; filePath: string } | undefined>();
   const [isGeneratingDsu, setIsGeneratingDsu] = useState(false);
   // Mirrors newTaskRepoId so handleNewTaskClick's in-flight listBranches
@@ -249,6 +251,26 @@ export function App(): JSX.Element {
     }
   }
 
+  async function handleArchiveTask(taskId: string): Promise<void> {
+    setErrorMessage(undefined);
+    try {
+      await window.claudeOrchestrator.setTaskStatus({ taskId, status: 'done' });
+      setTasks((current) => current.map((task) => (task.id === taskId ? { ...task, status: 'done' } : task)));
+    } catch (err) {
+      setErrorMessage(toErrorMessage(err));
+    }
+  }
+
+  async function handleUnarchiveTask(taskId: string): Promise<void> {
+    setErrorMessage(undefined);
+    try {
+      await window.claudeOrchestrator.setTaskStatus({ taskId, status: 'todo' });
+      setTasks((current) => current.map((task) => (task.id === taskId ? { ...task, status: 'todo' } : task)));
+    } catch (err) {
+      setErrorMessage(toErrorMessage(err));
+    }
+  }
+
   async function handleGenerateDsu(date: string): Promise<void> {
     setErrorMessage(undefined);
     setIsGeneratingDsu(true);
@@ -308,7 +330,6 @@ export function App(): JSX.Element {
         <RepoSidebar
           repos={repos}
           activeTasksByRepoId={filteredActiveTasksByRepoId}
-          archivedTasksByRepoId={archivedTasksByRepoId}
           scratchTasks={scratchTasks}
           selectedTaskId={activeTaskId}
           searchQuery={searchQuery}
@@ -322,6 +343,8 @@ export function App(): JSX.Element {
           onNewQuestionClick={() => setIsNewQuestionModalOpen(true)}
           appVersion={appVersion}
           onGenerateDsuClick={() => setIsDsuModalOpen(true)}
+          onArchiveTaskClick={(taskId) => void handleArchiveTask(taskId)}
+          onOpenArchivedClick={() => setIsArchivedModalOpen(true)}
         />
         <NewTaskModal
           isOpen={newTaskRepoId !== undefined}
@@ -353,6 +376,17 @@ export function App(): JSX.Element {
           isGenerating={isGeneratingDsu}
           onGenerate={(date) => void handleGenerateDsu(date)}
           onClose={() => setIsDsuModalOpen(false)}
+        />
+        <ArchivedTasksModal
+          isOpen={isArchivedModalOpen}
+          repos={repos}
+          archivedTasksByRepoId={archivedTasksByRepoId}
+          onSelectTask={(taskId) => {
+            void handleSelectTask(taskId);
+            setIsArchivedModalOpen(false);
+          }}
+          onUnarchive={(taskId) => void handleUnarchiveTask(taskId)}
+          onClose={() => setIsArchivedModalOpen(false)}
         />
         <main className="flex flex-1 flex-col overflow-hidden">
           {openTaskIds.length > 0 && (

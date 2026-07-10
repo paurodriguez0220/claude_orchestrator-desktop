@@ -15,6 +15,8 @@ const meta: Meta<typeof RepoSidebar> = {
     onReviewCodeClick: fn(),
     onNewQuestionClick: fn(),
     onGenerateDsuClick: fn(),
+    onArchiveTaskClick: fn(),
+    onOpenArchivedClick: fn(),
     scratchTasks: [],
     appVersion: '0.1.0',
   },
@@ -24,7 +26,7 @@ export default meta;
 type Story = StoryObj<typeof RepoSidebar>;
 
 export const Empty: Story = {
-  args: { repos: [], activeTasksByRepoId: {}, archivedTasksByRepoId: {}, selectedTaskId: undefined, searchQuery: '' },
+  args: { repos: [], activeTasksByRepoId: {}, selectedTaskId: undefined, searchQuery: '' },
 };
 
 export const WithRepoAndTasks: Story = {
@@ -45,7 +47,6 @@ export const WithRepoAndTasks: Story = {
         },
       ],
     },
-    archivedTasksByRepoId: {},
     selectedTaskId: 'task-1',
   },
 };
@@ -79,45 +80,6 @@ export const WithReviewTask: Story = {
         },
       ],
     },
-    archivedTasksByRepoId: {},
-    selectedTaskId: 'task-1',
-    searchQuery: '',
-  },
-};
-
-export const WithArchivedTasks: Story = {
-  args: {
-    repos: [{ id: 'repo-1', name: 'demo', path: 'C:\\demo', createdAt: '2026-07-08T00:00:00.000Z' }],
-    activeTasksByRepoId: {
-      'repo-1': [
-        {
-          id: 'task-1',
-          repoId: 'repo-1',
-          title: 'Fix login bug',
-          branch: 'task/fix-login-bug',
-          worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
-          status: 'todo',
-          kind: 'worktree',
-          createdAt: '2026-07-08T00:00:00.000Z',
-          updatedAt: '2026-07-08T00:00:00.000Z',
-        },
-      ],
-    },
-    archivedTasksByRepoId: {
-      'repo-1': [
-        {
-          id: 'task-2',
-          repoId: 'repo-1',
-          title: 'Ship release notes',
-          branch: 'task/ship-release-notes',
-          worktreePath: 'C:\\demo-worktrees\\ship-release-notes',
-          status: 'done',
-          kind: 'worktree',
-          createdAt: '2026-07-08T00:00:00.000Z',
-          updatedAt: '2026-07-08T00:00:00.000Z',
-        },
-      ],
-    },
     selectedTaskId: 'task-1',
     searchQuery: '',
   },
@@ -145,7 +107,6 @@ export const ActiveSearchWithNoMatchesInOneRepo: Story = {
       ],
       'repo-2': [],
     },
-    archivedTasksByRepoId: {},
     selectedTaskId: undefined,
     searchQuery: 'login',
   },

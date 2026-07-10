@@ -16,15 +16,12 @@ const task: TaskRecord = {
   createdAt: '2026-07-08T00:00:00.000Z',
   updatedAt: '2026-07-08T00:00:00.000Z',
 };
-const doneTask: TaskRecord = { ...task, id: 'task-3', title: 'Ship release notes', status: 'done' };
-
 describe('RepoSidebar', () => {
   it('renders each repo and its tasks', () => {
     render(
       <RepoSidebar
         repos={[repo]}
         activeTasksByRepoId={{ 'repo-1': [task] }}
-        archivedTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
@@ -38,6 +35,8 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
         appVersion={undefined}
         onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
       />,
     );
     expect(screen.getByText('demo')).toBeInTheDocument();
@@ -50,7 +49,6 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[repo]}
         activeTasksByRepoId={{ 'repo-1': [task] }}
-        archivedTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
@@ -64,6 +62,8 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
         appVersion={undefined}
         onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Fix login bug' }));
@@ -76,7 +76,6 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[]}
         activeTasksByRepoId={{}}
-        archivedTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
@@ -90,6 +89,8 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
         appVersion={undefined}
         onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Open Existing Repo' }));
@@ -102,7 +103,6 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[]}
         activeTasksByRepoId={{}}
-        archivedTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
@@ -116,6 +116,8 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
         appVersion={undefined}
         onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Clone Repo' }));
@@ -128,7 +130,6 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[repo]}
         activeTasksByRepoId={{ 'repo-1': [task] }}
-        archivedTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
@@ -142,6 +143,8 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
         appVersion={undefined}
         onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Remove task' }));
@@ -154,7 +157,6 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[repo]}
         activeTasksByRepoId={{ 'repo-1': [task] }}
-        archivedTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
@@ -168,6 +170,8 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
         appVersion={undefined}
         onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Review Code' }));
@@ -180,7 +184,6 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[repo]}
         activeTasksByRepoId={{ 'repo-1': [task, reviewTask] }}
-        archivedTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
@@ -194,6 +197,8 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
         appVersion={undefined}
         onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
       />,
     );
     expect(screen.getByRole('img', { name: 'Review' })).toBeInTheDocument();
@@ -205,7 +210,6 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[repo]}
         activeTasksByRepoId={{ 'repo-1': [task] }}
-        archivedTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
@@ -219,6 +223,8 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
         appVersion={undefined}
         onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
       />,
     );
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search tasks' }), 'x');
@@ -231,7 +237,6 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[repo, otherRepo]}
         activeTasksByRepoId={{ 'repo-1': [task], 'repo-2': [] }}
-        archivedTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery="login"
@@ -245,6 +250,8 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
         appVersion={undefined}
         onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
       />,
     );
     expect(screen.getByText('demo')).toBeInTheDocument();
@@ -257,7 +264,6 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[emptyRepo]}
         activeTasksByRepoId={{}}
-        archivedTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
@@ -271,6 +277,8 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
         appVersion={undefined}
         onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
       />,
     );
     expect(screen.getByText('empty-repo')).toBeInTheDocument();
@@ -290,7 +298,6 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[repo]}
         activeTasksByRepoId={{ 'repo-1': [task] }}
-        archivedTasksByRepoId={{}}
         scratchTasks={[scratchTask]}
         selectedTaskId={undefined}
         searchQuery=""
@@ -304,6 +311,8 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
         appVersion={undefined}
         onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
       />,
     );
     expect(screen.getByText('Quick Questions')).toBeInTheDocument();
@@ -326,7 +335,6 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[]}
         activeTasksByRepoId={{}}
-        archivedTasksByRepoId={{}}
         scratchTasks={[scratchTask]}
         selectedTaskId={undefined}
         searchQuery=""
@@ -340,6 +348,8 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
         appVersion={undefined}
         onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Remove question' }));
@@ -352,7 +362,6 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[]}
         activeTasksByRepoId={{}}
-        archivedTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
@@ -366,18 +375,20 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={onNewQuestionClick}
         appVersion={undefined}
         onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'New Question' }));
     expect(onNewQuestionClick).toHaveBeenCalledOnce();
   });
 
-  it('does not render an "Archived" toggle when a repo has no archived tasks', () => {
+  it('calls onArchiveTaskClick when a task row\'s archive button is clicked', async () => {
+    const onArchiveTaskClick = vi.fn();
     render(
       <RepoSidebar
         repos={[repo]}
         activeTasksByRepoId={{ 'repo-1': [task] }}
-        archivedTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
@@ -391,17 +402,20 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
         appVersion={undefined}
         onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={onArchiveTaskClick}
+        onOpenArchivedClick={vi.fn()}
       />,
     );
-    expect(screen.queryByRole('button', { name: /Archived/ })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Archive task' }));
+    expect(onArchiveTaskClick).toHaveBeenCalledWith('task-1');
   });
 
-  it('renders a collapsed "Archived (N)" toggle and hides archived tasks by default', () => {
+  it('calls onOpenArchivedClick when the Archived toolbar button is clicked', async () => {
+    const onOpenArchivedClick = vi.fn();
     render(
       <RepoSidebar
-        repos={[repo]}
-        activeTasksByRepoId={{ 'repo-1': [task] }}
-        archivedTasksByRepoId={{ 'repo-1': [doneTask] }}
+        repos={[]}
+        activeTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
@@ -415,95 +429,12 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
         appVersion={undefined}
         onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={onOpenArchivedClick}
       />,
     );
-    expect(screen.getByRole('button', { name: 'Archived (1)' })).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('button', { name: 'Ship release notes' })).not.toBeInTheDocument();
-  });
-
-  it('expands the archived list and shows the archived task when the toggle is clicked', async () => {
-    render(
-      <RepoSidebar
-        repos={[repo]}
-        activeTasksByRepoId={{ 'repo-1': [task] }}
-        archivedTasksByRepoId={{ 'repo-1': [doneTask] }}
-        scratchTasks={[]}
-        selectedTaskId={undefined}
-        searchQuery=""
-        onSearchQueryChange={vi.fn()}
-        onSelectTask={vi.fn()}
-        onOpenRepoClick={vi.fn()}
-        onCloneRepoClick={vi.fn()}
-        onNewTaskClick={vi.fn()}
-        onRemoveTaskClick={vi.fn()}
-        onReviewCodeClick={vi.fn()}
-        onNewQuestionClick={vi.fn()}
-        appVersion={undefined}
-        onGenerateDsuClick={vi.fn()}
-      />,
-    );
-    await userEvent.click(screen.getByRole('button', { name: 'Archived (1)' }));
-    expect(screen.getByRole('button', { name: 'Ship release notes' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Archived (1)' })).toHaveAttribute('aria-expanded', 'true');
-  });
-
-  it('calls onSelectTask with the archived task id when it is clicked after expanding', async () => {
-    const onSelectTask = vi.fn();
-    render(
-      <RepoSidebar
-        repos={[repo]}
-        activeTasksByRepoId={{ 'repo-1': [task] }}
-        archivedTasksByRepoId={{ 'repo-1': [doneTask] }}
-        scratchTasks={[]}
-        selectedTaskId={undefined}
-        searchQuery=""
-        onSearchQueryChange={vi.fn()}
-        onSelectTask={onSelectTask}
-        onOpenRepoClick={vi.fn()}
-        onCloneRepoClick={vi.fn()}
-        onNewTaskClick={vi.fn()}
-        onRemoveTaskClick={vi.fn()}
-        onReviewCodeClick={vi.fn()}
-        onNewQuestionClick={vi.fn()}
-        appVersion={undefined}
-        onGenerateDsuClick={vi.fn()}
-      />,
-    );
-    await userEvent.click(screen.getByRole('button', { name: 'Archived (1)' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Ship release notes' }));
-    expect(onSelectTask).toHaveBeenCalledWith('task-3');
-  });
-
-  it('calls onRemoveTaskClick with the archived task id when Remove is clicked after expanding', async () => {
-    const onRemoveTaskClick = vi.fn();
-    render(
-      <RepoSidebar
-        repos={[repo]}
-        activeTasksByRepoId={{ 'repo-1': [task] }}
-        archivedTasksByRepoId={{ 'repo-1': [doneTask] }}
-        scratchTasks={[]}
-        selectedTaskId={undefined}
-        searchQuery=""
-        onSearchQueryChange={vi.fn()}
-        onSelectTask={vi.fn()}
-        onOpenRepoClick={vi.fn()}
-        onCloneRepoClick={vi.fn()}
-        onNewTaskClick={vi.fn()}
-        onRemoveTaskClick={onRemoveTaskClick}
-        onReviewCodeClick={vi.fn()}
-        onNewQuestionClick={vi.fn()}
-        appVersion={undefined}
-        onGenerateDsuClick={vi.fn()}
-      />,
-    );
-    await userEvent.click(screen.getByRole('button', { name: 'Archived (1)' }));
-    const removeButtons = screen.getAllByRole('button', { name: 'Remove task' });
-    const archivedRemoveButton = removeButtons[removeButtons.length - 1];
-    if (!archivedRemoveButton) {
-      throw new Error('Expected an archived task Remove button to be rendered');
-    }
-    await userEvent.click(archivedRemoveButton);
-    expect(onRemoveTaskClick).toHaveBeenCalledWith('task-3');
+    await userEvent.click(screen.getByRole('button', { name: 'Archived tasks' }));
+    expect(onOpenArchivedClick).toHaveBeenCalledOnce();
   });
 
   it('shows the app version in the footer once it is known', () => {
@@ -511,7 +442,6 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[]}
         activeTasksByRepoId={{}}
-        archivedTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
@@ -525,6 +455,8 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
         appVersion="1.2.3"
         onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
       />,
     );
     expect(screen.getByText('v1.2.3')).toBeInTheDocument();
@@ -535,7 +467,6 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[]}
         activeTasksByRepoId={{}}
-        archivedTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
@@ -549,6 +480,8 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
         appVersion={undefined}
         onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
       />,
     );
     expect(screen.queryByText(/^v\d/)).not.toBeInTheDocument();
@@ -560,7 +493,6 @@ describe('RepoSidebar', () => {
       <RepoSidebar
         repos={[]}
         activeTasksByRepoId={{}}
-        archivedTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
         searchQuery=""
@@ -574,6 +506,8 @@ describe('RepoSidebar', () => {
         onNewQuestionClick={vi.fn()}
         appVersion={undefined}
         onGenerateDsuClick={onGenerateDsuClick}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Generate work log' }));
