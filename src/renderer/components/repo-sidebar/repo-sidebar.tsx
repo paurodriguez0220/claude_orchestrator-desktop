@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import {
+  Archive,
+  ArchiveRestore,
   CalendarClock,
-  ChevronDown,
-  ChevronRight,
   Download,
   Eye,
   FolderOpen,
@@ -17,7 +16,6 @@ import { TaskSearchInput } from '../task-search-input/task-search-input';
 export interface RepoSidebarProps {
   repos: RepoRecord[];
   activeTasksByRepoId: Record<string, TaskRecord[]>;
-  archivedTasksByRepoId: Record<string, TaskRecord[]>;
   scratchTasks: TaskRecord[];
   selectedTaskId: string | undefined;
   searchQuery: string;
@@ -31,16 +29,19 @@ export interface RepoSidebarProps {
   onNewQuestionClick: () => void;
   appVersion: string | undefined;
   onGenerateDsuClick: () => void;
+  onArchiveTaskClick: (taskId: string) => void;
+  onOpenArchivedClick: () => void;
 }
 
 interface TaskRowProps {
   task: TaskRecord;
   selectedTaskId: string | undefined;
   onSelectTask: (taskId: string) => void;
+  onArchiveTaskClick: (taskId: string) => void;
   onRemoveTaskClick: (taskId: string) => void;
 }
 
-function TaskRow({ task, selectedTaskId, onSelectTask, onRemoveTaskClick }: TaskRowProps): JSX.Element {
+function TaskRow({ task, selectedTaskId, onSelectTask, onArchiveTaskClick, onRemoveTaskClick }: TaskRowProps): JSX.Element {
   return (
     <li className="flex items-center justify-between gap-2">
       <button
@@ -62,6 +63,15 @@ function TaskRow({ task, selectedTaskId, onSelectTask, onRemoveTaskClick }: Task
       )}
       <button
         type="button"
+        aria-label="Archive task"
+        title="Archive task"
+        onClick={() => onArchiveTaskClick(task.id)}
+        className="shrink-0 rounded-md px-2 py-1 text-graphite-400 hover:text-clay-400"
+      >
+        <Archive aria-hidden="true" className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
         aria-label="Remove task"
         onClick={() => onRemoveTaskClick(task.id)}
         className="shrink-0 rounded-md px-2 py-1 text-graphite-400 hover:text-danger-400"
@@ -75,7 +85,6 @@ function TaskRow({ task, selectedTaskId, onSelectTask, onRemoveTaskClick }: Task
 export function RepoSidebar({
   repos,
   activeTasksByRepoId,
-  archivedTasksByRepoId,
   scratchTasks,
   selectedTaskId,
   searchQuery,
@@ -89,25 +98,13 @@ export function RepoSidebar({
   onNewQuestionClick,
   appVersion,
   onGenerateDsuClick,
+  onArchiveTaskClick,
+  onOpenArchivedClick,
 }: RepoSidebarProps): JSX.Element {
   const isSearchActive = searchQuery.trim() !== '';
   const visibleRepos = isSearchActive
     ? repos.filter((repo) => (activeTasksByRepoId[repo.id] ?? []).length > 0)
     : repos;
-
-  const [expandedRepoIds, setExpandedRepoIds] = useState<Set<string>>(new Set());
-
-  function toggleArchived(repoId: string): void {
-    setExpandedRepoIds((current) => {
-      const next = new Set(current);
-      if (next.has(repoId)) {
-        next.delete(repoId);
-      } else {
-        next.add(repoId);
-      }
-      return next;
-    });
-  }
 
   return (
     <nav
@@ -142,12 +139,19 @@ export function RepoSidebar({
         >
           <CalendarClock aria-hidden="true" className="h-4 w-4" />
         </button>
+        <button
+          type="button"
+          aria-label="Archived tasks"
+          title="Archived tasks"
+          onClick={onOpenArchivedClick}
+          className="flex flex-1 items-center justify-center rounded-md border border-graphite-600 px-3 py-2 text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+        >
+          <ArchiveRestore aria-hidden="true" className="h-4 w-4" />
+        </button>
       </div>
       <TaskSearchInput value={searchQuery} onChange={onSearchQueryChange} />
       <ul className="flex flex-col gap-3">
         {visibleRepos.map((repo) => {
-          const archivedTasks = archivedTasksByRepoId[repo.id] ?? [];
-          const isExpanded = expandedRepoIds.has(repo.id);
           return (
             <li key={repo.id} className="flex flex-col gap-1">
               <div className="flex items-center justify-between gap-2">
@@ -180,40 +184,11 @@ export function RepoSidebar({
                     task={task}
                     selectedTaskId={selectedTaskId}
                     onSelectTask={onSelectTask}
+                    onArchiveTaskClick={onArchiveTaskClick}
                     onRemoveTaskClick={onRemoveTaskClick}
                   />
                 ))}
               </ul>
-              {archivedTasks.length > 0 && (
-                <div className="pl-2">
-                  <button
-                    type="button"
-                    aria-expanded={isExpanded}
-                    onClick={() => toggleArchived(repo.id)}
-                    className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-graphite-400 hover:text-graphite-100"
-                  >
-                    {isExpanded ? (
-                      <ChevronDown aria-hidden="true" className="h-3 w-3" />
-                    ) : (
-                      <ChevronRight aria-hidden="true" className="h-3 w-3" />
-                    )}
-                    {`Archived (${archivedTasks.length})`}
-                  </button>
-                  {isExpanded && (
-                    <ul className="flex flex-col gap-1 pl-2">
-                      {archivedTasks.map((task) => (
-                        <TaskRow
-                          key={task.id}
-                          task={task}
-                          selectedTaskId={selectedTaskId}
-                          onSelectTask={onSelectTask}
-                          onRemoveTaskClick={onRemoveTaskClick}
-                        />
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
             </li>
           );
         })}

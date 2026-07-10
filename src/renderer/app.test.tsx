@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { RepoRecord, TaskRecord } from '../shared/types';
 import { getLastWorkingDayStamp } from '../shared/dates';
@@ -84,6 +84,7 @@ const removeTask = vi.fn(async () => undefined);
 const closeTask = vi.fn(async () => undefined);
 const getTaskNotes = vi.fn(async () => ({ body: 'notes', status: 'todo' as const }));
 const setTaskNotes = vi.fn(async () => undefined);
+const setTaskStatus = vi.fn(async () => undefined);
 const selectFolder = vi.fn(async (): Promise<string | undefined> => 'C:\\Users\\paulo.rodriguez\\Paulo\\demo-repo');
 const addRepo = vi.fn(async () => repo);
 const cloneRepo = vi.fn(async () => repo);
@@ -114,6 +115,7 @@ beforeEach(() => {
     getAppVersion,
     getTaskNotes,
     setTaskNotes,
+    setTaskStatus,
     generateDsuSummary,
     sendPtyInput: vi.fn(),
     resizePty: vi.fn(),
@@ -485,6 +487,7 @@ describe('App', () => {
       getAppVersion,
       getTaskNotes,
       setTaskNotes,
+      setTaskStatus,
       sendPtyInput: vi.fn(),
       resizePty: vi.fn(),
       onPtyOutput: vi.fn(() => vi.fn()),
@@ -583,20 +586,40 @@ describe('App', () => {
     confirmSpy.mockRestore();
   });
 
-  it('keeps a done task out of the active list and lists it under a collapsed Archived toggle', async () => {
+  it('keeps a done task out of the active sidebar list but shows it in the Archived modal', async () => {
     listTasks.mockResolvedValueOnce([task, doneTask]);
     render(<App />);
     expect(await screen.findByRole('button', { name: 'Fix login bug' })).toBeInTheDocument();
+    // The done task is not in the active sidebar list.
     expect(screen.queryByRole('button', { name: 'Ship release notes' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Archived (1)' })).toBeInTheDocument();
+    // But it appears in the Archived modal.
+    await userEvent.click(screen.getByRole('button', { name: 'Archived tasks' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Archived tasks' });
+    expect(within(dialog).getByRole('button', { name: 'Ship release notes' })).toBeInTheDocument();
   });
 
-  it('selecting an archived task after expanding the Archived section still opens its tab', async () => {
+  it('selecting an archived task from the modal opens its tab and closes the modal', async () => {
     listTasks.mockResolvedValueOnce([task, doneTask]);
     render(<App />);
-    await userEvent.click(await screen.findByRole('button', { name: 'Archived (1)' }));
-    await userEvent.click(await screen.findByRole('button', { name: 'Ship release notes' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Archived tasks' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Archived tasks' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Ship release notes' }));
     expect(openTask).toHaveBeenCalledWith('task-3');
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Archived tasks' })).not.toBeInTheDocument());
+  });
+
+  it('archiving a task hides it from the active list and shows it in the Archived modal', async () => {
+    render(<App />);
+    expect(await screen.findByRole('button', { name: 'Fix login bug' })).toBeInTheDocument();
+    const archiveButtons = screen.getAllByRole('button', { name: 'Archive task' });
+    await userEvent.click(archiveButtons[0]!);
+    expect(setTaskStatus).toHaveBeenCalledWith({ taskId: 'task-1', status: 'done' });
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Fix login bug' })).not.toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Archived tasks' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Archived tasks' });
+    expect(within(dialog).getByRole('button', { name: 'Fix login bug' })).toBeInTheDocument();
   });
 
   it('"Generate work log" opens the modal, and Generate fetches the summary for the picked day', async () => {

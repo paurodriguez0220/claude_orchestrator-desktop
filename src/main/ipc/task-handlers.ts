@@ -2,7 +2,12 @@ import { ipcMain } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { mkdir, rm } from 'node:fs/promises';
 import { IpcChannels } from '../../shared/ipc-channels';
-import type { TaskCreateRequest, TaskNotesSetRequest, TaskNotesGetResponse } from '../../shared/ipc-channels';
+import type {
+  TaskCreateRequest,
+  TaskNotesSetRequest,
+  TaskNotesGetResponse,
+  TaskSetStatusRequest,
+} from '../../shared/ipc-channels';
 import type { TaskRecord } from '../../shared/types';
 import { readStore, writeStore } from '../services/store';
 import { addWorktree, addWorktreeForExistingBranch, removeWorktree } from '../services/git-service';
@@ -163,6 +168,18 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
     const notes = await readTaskNotes(getTaskNotesPath(request.taskId));
     await writeTaskNotes(getTaskNotesPath(request.taskId), { ...notes, body: request.body });
   });
+
+  ipcMain.handle(
+    IpcChannels.TaskSetStatus,
+    async (_event, request: TaskSetStatusRequest): Promise<void> => {
+      const notesPath = getTaskNotesPath(request.taskId);
+      const notes = await readTaskNotes(notesPath);
+      await writeTaskNotes(notesPath, {
+        ...notes,
+        frontmatter: { ...notes.frontmatter, status: request.status },
+      });
+    },
+  );
 
   ipcMain.handle(IpcChannels.TaskSearch, async (_event, query: string): Promise<string[]> => {
     const store = await readStore(getStorePath());

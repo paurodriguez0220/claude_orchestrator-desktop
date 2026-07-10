@@ -13,6 +13,7 @@ export const IpcChannels = {
   TaskRemove: 'task:remove',
   TaskNotesGet: 'task:notes:get',
   TaskNotesSet: 'task:notes:set',
+  TaskSetStatus: 'task:set-status',
   TaskSearch: 'task:search',
   PtyInput: 'pty:input',
   PtyOutput: 'pty:output',
@@ -51,6 +52,11 @@ export interface TaskCreateRequest {
 export interface TaskNotesSetRequest {
   taskId: string;
   body: string;
+}
+
+export interface TaskSetStatusRequest {
+  taskId: string;
+  status: TaskStatus;
 }
 
 export interface PtyInputRequest {

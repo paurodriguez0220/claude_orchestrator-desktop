@@ -148,6 +148,16 @@ describe('preload', () => {
     expect(ipcRendererInvoke).toHaveBeenCalledWith('app:get-version');
   });
 
+  it('setTaskStatus invokes the TaskSetStatus channel with the request', async () => {
+    await import('./index');
+    const call = exposeInMainWorld.mock.calls[0];
+    if (!call) throw new Error('exposeInMainWorld not called');
+    const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (api.setTaskStatus as any)({ taskId: 'task-1', status: 'done' });
+    expect(ipcRendererInvoke).toHaveBeenCalledWith('task:set-status', { taskId: 'task-1', status: 'done' });
+  });
+
   it('taskSearch invokes the TaskSearch channel with the query string', async () => {
     await import('./index');
     const call = exposeInMainWorld.mock.calls[0];
