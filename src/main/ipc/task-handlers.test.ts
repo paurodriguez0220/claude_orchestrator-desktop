@@ -67,7 +67,7 @@ vi.mock('../services/dsu-orchestrator', () => ({
 import { registerTaskHandlers } from './task-handlers';
 import { IpcChannels } from '../../shared/ipc-channels';
 import { addWorktree, addWorktreeForExistingBranch, removeWorktree } from '../services/git-service';
-import { readTaskNotes } from '../services/notes-service';
+import { readTaskNotes, writeTaskNotes } from '../services/notes-service';
 import { mkdir, rm } from 'node:fs/promises';
 
 describe('task-handlers', () => {
@@ -326,6 +326,22 @@ describe('task-handlers', () => {
     });
     vi.mocked(readTaskNotes).mockRejectedValue(Object.assign(new Error('not found'), { code: 'ENOENT' }));
     await expect(handlers.get(IpcChannels.TaskSearch)?.({}, 'redirect')).resolves.toEqual([]);
+  });
+
+  it('TaskSetStatus rewrites the notes frontmatter status without touching the body', async () => {
+    vi.mocked(readTaskNotes).mockResolvedValueOnce({
+      frontmatter: { title: 't', branch: 'b', worktreePath: 'C:\\w', status: 'todo', kind: 'worktree' },
+      body: 'existing notes',
+    });
+    const handler = handlers.get(IpcChannels.TaskSetStatus);
+    await handler?.({}, { taskId: 'task-1', status: 'done' });
+    expect(vi.mocked(writeTaskNotes)).toHaveBeenCalledWith(
+      'C:\\fake\\tasks\\task-1.md',
+      expect.objectContaining({
+        body: 'existing notes',
+        frontmatter: expect.objectContaining({ status: 'done', title: 't' }),
+      }),
+    );
   });
 
   it('TaskCreate creates an empty scratch directory and stores a task with no repoId/branch, without calling git', async () => {
