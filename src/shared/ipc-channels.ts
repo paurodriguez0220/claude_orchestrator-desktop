@@ -21,6 +21,7 @@ export const IpcChannels = {
   TaskFinishedStateChanged: 'task:finished-state-changed',
   DialogSelectFolder: 'dialog:select-folder',
   SaveClipboardImage: 'image:save-clipboard',
+  ReadClipboardImage: 'image:read-clipboard',
   GetAppVersion: 'app:get-version',
   GenerateDsuSummary: 'dsu:generate',
 } as const;
