@@ -59,7 +59,7 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
     }
     const existingBranch = request.existingBranch;
     const slug = existingBranch !== undefined ? slugify(existingBranch) : slugify(request.title);
-    const branch = existingBranch !== undefined ? existingBranch : (request.branch ?? `task/${slug}`);
+    const branch = existingBranch !== undefined ? existingBranch : (request.branch ?? `${request.branchPrefix ?? 'feature/'}${slug}`);
     assertSafeBranchName(branch);
 
     const duplicateTask = store.tasks.find(
