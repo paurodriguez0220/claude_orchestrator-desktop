@@ -36,6 +36,7 @@ export interface ClaudeOrchestratorApi {
   onPtyOutput(listener: (event: PtyOutputEvent) => void): () => void;
   onTaskFinishedStateChanged(listener: (event: TaskFinishedStateChangedEvent) => void): () => void;
   saveClipboardImage(dataUrl: string): Promise<string>;
+  readClipboardImage(): Promise<string | undefined>;
   getAppVersion(): Promise<string>;
   generateDsuSummary(date: string): Promise<DsuGenerateResponse>;
 }
@@ -70,6 +71,7 @@ const api: ClaudeOrchestratorApi = {
     return () => ipcRenderer.removeListener(IpcChannels.TaskFinishedStateChanged, handler);
   },
   saveClipboardImage: (dataUrl) => ipcRenderer.invoke(IpcChannels.SaveClipboardImage, dataUrl),
+  readClipboardImage: () => ipcRenderer.invoke(IpcChannels.ReadClipboardImage),
   getAppVersion: () => ipcRenderer.invoke(IpcChannels.GetAppVersion),
   generateDsuSummary: (date) => ipcRenderer.invoke(IpcChannels.GenerateDsuSummary, date),
 };
