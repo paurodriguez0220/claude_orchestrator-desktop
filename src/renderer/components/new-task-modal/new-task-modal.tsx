@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { BranchOption } from '../../../shared/ipc-channels';
+import { slugify } from '../../../shared/slug';
 import { ModalOverlay } from '../modal-overlay/modal-overlay';
 import { Spinner } from '../spinner/spinner';
 import { BranchPicker } from '../branch-picker/branch-picker';
@@ -8,6 +9,7 @@ export interface NewTaskFields {
   title: string;
   adoId: string | undefined;
   branch: string | undefined;
+  branchPrefix: string | undefined;
   existingBranch: string | undefined;
 }
 
@@ -24,6 +26,9 @@ const fieldInputClasses =
   'rounded-md border border-graphite-600 bg-graphite-900 px-3 py-2 text-graphite-100 focus:outline-none focus:ring-2 focus:ring-clay-500';
 const fieldLabelClasses = 'text-sm font-medium text-graphite-400';
 
+const BRANCH_PREFIXES = ['feature/', 'fix/', 'chore/', 'refactor/'] as const;
+const CUSTOM_PREFIX = 'custom';
+
 export function NewTaskModal({
   isOpen,
   branches,
@@ -37,18 +42,21 @@ export function NewTaskModal({
   const [branch, setBranch] = useState('');
   const [useExistingBranch, setUseExistingBranch] = useState(false);
   const [selectedExistingBranch, setSelectedExistingBranch] = useState('');
+  const [prefixChoice, setPrefixChoice] = useState<string>('feature/');
 
   if (!isOpen) {
     return null;
   }
 
   const usingExistingBranch = mode === 'review' || useExistingBranch;
+  const isCustomBranch = prefixChoice === CUSTOM_PREFIX;
 
   function handleSubmit(): void {
     onSubmit({
       title,
       adoId: adoId || undefined,
-      branch: usingExistingBranch ? undefined : branch || undefined,
+      branch: usingExistingBranch ? undefined : isCustomBranch ? branch || undefined : undefined,
+      branchPrefix: usingExistingBranch || isCustomBranch ? undefined : prefixChoice,
       existingBranch: usingExistingBranch ? selectedExistingBranch || undefined : undefined,
     });
   }
@@ -117,16 +125,42 @@ export function NewTaskModal({
             onChange={setSelectedExistingBranch}
           />
         ) : (
-          <div className="flex flex-col gap-1">
-            <label htmlFor="new-task-branch" className={fieldLabelClasses}>
-              Branch (optional)
-            </label>
-            <input
-              id="new-task-branch"
-              value={branch}
-              onChange={(event) => setBranch(event.target.value)}
-              className={fieldInputClasses}
-            />
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="new-task-branch-prefix" className={fieldLabelClasses}>
+                Branch folder
+              </label>
+              <select
+                id="new-task-branch-prefix"
+                value={prefixChoice}
+                onChange={(event) => setPrefixChoice(event.target.value)}
+                className={fieldInputClasses}
+              >
+                {BRANCH_PREFIXES.map((prefix) => (
+                  <option key={prefix} value={prefix}>
+                    {prefix}
+                  </option>
+                ))}
+                <option value={CUSTOM_PREFIX}>Custom…</option>
+              </select>
+            </div>
+            {isCustomBranch ? (
+              <div className="flex flex-col gap-1">
+                <label htmlFor="new-task-branch" className={fieldLabelClasses}>
+                  Branch (optional)
+                </label>
+                <input
+                  id="new-task-branch"
+                  value={branch}
+                  onChange={(event) => setBranch(event.target.value)}
+                  className={fieldInputClasses}
+                />
+              </div>
+            ) : (
+              <p className="text-sm text-graphite-400" data-testid="branch-preview">
+                Branch: <span className="text-graphite-100">{`${prefixChoice}${slugify(title)}`}</span>
+              </p>
+            )}
           </div>
         )}
 
