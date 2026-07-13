@@ -112,6 +112,10 @@ const adoItem = {
 };
 const listAdoTasks = vi.fn(async () => [adoItem]);
 const getAdoConfig = vi.fn(async () => ({ organization: 'https://dev.azure.com/myorg', project: 'MyProject' }));
+const createAdoWorkItem = vi.fn(async () => ({
+  id: 501,
+  url: 'https://dev.azure.com/myorg/MyProject/_workitems/edit/501',
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -135,6 +139,7 @@ beforeEach(() => {
     generateDsuSummary,
     listAdoTasks,
     getAdoConfig,
+    createAdoWorkItem,
     sendPtyInput: vi.fn(),
     resizePty: vi.fn(),
     onPtyOutput: vi.fn(() => vi.fn()),
@@ -846,6 +851,47 @@ describe('App', () => {
     expect(within(newTaskDialog).getByLabelText('Title')).toHaveValue('Fix login');
     expect(within(newTaskDialog).getByLabelText('ADO Task ID (optional)')).toHaveValue('101');
     expect(listBranches).toHaveBeenCalledWith('repo-1');
+  });
+
+  it('"New ADO item" opens the create modal without calling createAdoWorkItem merely on open', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'New ADO item' }));
+    await screen.findByRole('dialog', { name: 'New ADO work item' });
+    expect(createAdoWorkItem).not.toHaveBeenCalled();
+  });
+
+  it('submitting the New ADO work item form forwards the request and shows the created id/link on success', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'New ADO item' }));
+    const dialog = await screen.findByRole('dialog', { name: 'New ADO work item' });
+    await userEvent.type(within(dialog).getByLabelText('Title'), 'Fix login bug');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
+
+    expect(createAdoWorkItem).toHaveBeenCalledWith({
+      type: 'Task',
+      title: 'Fix login bug',
+      description: undefined,
+      parentId: undefined,
+      assignee: undefined,
+    });
+    expect(await within(dialog).findByText(/Created #501/)).toBeInTheDocument();
+  });
+
+  it('shows a submitting spinner in the New ADO work item modal while the create call is pending', async () => {
+    const adoCreateDeferred = createDeferred<{ id: number; url: string }>();
+    createAdoWorkItem.mockReturnValueOnce(adoCreateDeferred.promise);
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'New ADO item' }));
+    const dialog = await screen.findByRole('dialog', { name: 'New ADO work item' });
+    await userEvent.type(within(dialog).getByLabelText('Title'), 'Fix login bug');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
+
+    expect(within(dialog).getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+
+    adoCreateDeferred.resolve({ id: 501, url: 'https://dev.azure.com/myorg/MyProject/_workitems/edit/501' });
+    await waitFor(() =>
+      expect(within(dialog).queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument(),
+    );
   });
 
   it('loads branches for the target repo when creating a worktree from an ADO item', async () => {

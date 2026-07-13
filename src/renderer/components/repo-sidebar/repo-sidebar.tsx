@@ -4,6 +4,7 @@ import {
   CalendarClock,
   Download,
   Eye,
+  FilePlus2,
   FolderOpen,
   GitPullRequest,
   ListChecks,
@@ -36,6 +37,7 @@ export interface RepoSidebarProps {
   onArchiveTaskClick: (taskId: string) => void;
   onOpenArchivedClick: () => void;
   onOpenAdoClick: () => void;
+  onNewAdoItemClick: () => void;
 }
 
 interface TaskRowProps {
@@ -119,6 +121,7 @@ export function RepoSidebar({
   onArchiveTaskClick,
   onOpenArchivedClick,
   onOpenAdoClick,
+  onNewAdoItemClick,
 }: RepoSidebarProps): JSX.Element {
   const isSearchActive = searchQuery.trim() !== '';
   const visibleRepos = isSearchActive
@@ -176,6 +179,15 @@ export function RepoSidebar({
           className="flex flex-1 items-center justify-center rounded-md border border-graphite-600 px-3 py-2 text-graphite-100 hover:border-clay-500 hover:text-clay-400"
         >
           <ListChecks aria-hidden="true" className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          aria-label="New ADO item"
+          title="New ADO item"
+          onClick={onNewAdoItemClick}
+          className="flex flex-1 items-center justify-center rounded-md border border-graphite-600 px-3 py-2 text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+        >
+          <FilePlus2 aria-hidden="true" className="h-4 w-4" />
         </button>
       </div>
       <TaskSearchInput value={searchQuery} onChange={onSearchQueryChange} />

@@ -10,8 +10,9 @@ import { Spinner } from './components/spinner/spinner';
 import { DsuSummaryModal } from './components/dsu-summary-modal/dsu-summary-modal';
 import { ArchivedTasksModal } from './components/archived-tasks-modal/archived-tasks-modal';
 import { AdoTasksModal } from './components/ado-tasks-modal/ado-tasks-modal';
+import { CreateAdoWorkItemModal } from './components/create-ado-work-item-modal/create-ado-work-item-modal';
 import type { RepoRecord, TaskRecord, TaskStatus } from '../shared/types';
-import type { AdoWorkItem, BranchOption } from '../shared/ipc-channels';
+import type { AdoWorkItem, AdoCreateWorkItemRequest, AdoCreateWorkItemResult, BranchOption } from '../shared/ipc-channels';
 import type { NewTaskFields } from './components/new-task-modal/new-task-modal';
 import type { NewQuestionFields } from './components/new-question-modal/new-question-modal';
 
@@ -40,6 +41,8 @@ export function App(): JSX.Element {
   const [isDsuModalOpen, setIsDsuModalOpen] = useState(false);
   const [isArchivedModalOpen, setIsArchivedModalOpen] = useState(false);
   const [isAdoModalOpen, setIsAdoModalOpen] = useState(false);
+  const [isCreateAdoOpen, setIsCreateAdoOpen] = useState(false);
+  const [adoCreateResult, setAdoCreateResult] = useState<AdoCreateWorkItemResult | undefined>();
   const [adoTasks, setAdoTasks] = useState<AdoWorkItem[]>([]);
   const [isLoadingAdo, setIsLoadingAdo] = useState(false);
   const [adoOrgUrlBase, setAdoOrgUrlBase] = useState('');
@@ -339,6 +342,19 @@ export function App(): JSX.Element {
     }
   }
 
+  async function handleCreateAdoWorkItem(request: AdoCreateWorkItemRequest): Promise<void> {
+    setErrorMessage(undefined);
+    setIsSubmittingModal(true);
+    try {
+      const result = await window.claudeOrchestrator.createAdoWorkItem(request);
+      setAdoCreateResult(result);
+    } catch (err) {
+      setErrorMessage(toErrorMessage(err));
+    } finally {
+      setIsSubmittingModal(false);
+    }
+  }
+
   // V1 limitation: creating a worktree from an ADO item always targets
   // repos[0] — the New Task modal has no repo picker yet, so with multiple
   // repos there is no way to ask the user which one to use. A repo picker
@@ -421,6 +437,10 @@ export function App(): JSX.Element {
           onArchiveTaskClick={(taskId) => void handleArchiveTask(taskId)}
           onOpenArchivedClick={() => setIsArchivedModalOpen(true)}
           onOpenAdoClick={() => void handleOpenAdo()}
+          onNewAdoItemClick={() => {
+            setAdoCreateResult(undefined);
+            setIsCreateAdoOpen(true);
+          }}
         />
         <NewTaskModal
           key={prefillTask ? `${prefillTask.title}-${prefillTask.adoId}` : 'blank'}
@@ -476,6 +496,13 @@ export function App(): JSX.Element {
           orgUrlBase={adoOrgUrlBase}
           onCreateWorktree={(item) => void handleCreateWorktreeFromAdoItem(item)}
           onClose={() => setIsAdoModalOpen(false)}
+        />
+        <CreateAdoWorkItemModal
+          isOpen={isCreateAdoOpen}
+          isSubmitting={isSubmittingModal}
+          result={adoCreateResult}
+          onSubmit={(req) => void handleCreateAdoWorkItem(req)}
+          onClose={() => setIsCreateAdoOpen(false)}
         />
         <main className="flex flex-1 flex-col overflow-hidden">
           {openTaskIds.length > 0 && (
