@@ -17,6 +17,7 @@ export interface NewTaskModalProps {
   isOpen: boolean;
   branches: BranchOption[];
   isSubmitting: boolean;
+  isLoadingBranches: boolean;
   mode: 'task' | 'review';
   onClose: () => void;
   onSubmit: (fields: NewTaskFields) => void;
@@ -33,6 +34,7 @@ export function NewTaskModal({
   isOpen,
   branches,
   isSubmitting,
+  isLoadingBranches,
   mode,
   onClose,
   onSubmit,
@@ -116,6 +118,13 @@ export function NewTaskModal({
           </fieldset>
         )}
 
+        {isLoadingBranches && (
+          <div className="flex items-center gap-2 text-sm text-graphite-400">
+            <Spinner className="h-3 w-3" />
+            <span>Loading branches…</span>
+          </div>
+        )}
+
         {mode === 'review' || useExistingBranch ? (
           <BranchPicker
             id="new-task-existing-branch"
@@ -176,7 +185,9 @@ export function NewTaskModal({
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting || (usingExistingBranch && selectedExistingBranch === '')}
+            disabled={
+              isSubmitting || (usingExistingBranch && (isLoadingBranches || selectedExistingBranch === ''))
+            }
             className="flex items-center gap-2 rounded-md bg-clay-600 px-4 py-2 text-sm font-medium text-graphite-100 hover:bg-clay-500 disabled:opacity-50"
           >
             {isSubmitting && <Spinner />}
