@@ -53,12 +53,22 @@ describe('ado-service', () => {
       const callArgs = execFileMock.mock.calls[0] as unknown[];
       expect(callArgs[0]).toBe('az');
       const args = callArgs[1] as string[];
-      expect(args.slice(0, 4)).toEqual(['boards', 'query', '--wiql', args[3]]);
-      expect(args.slice(4)).toEqual(['-o', 'json']);
+      const wiql = args[3];
+      expect(wiql).toContain("[System.AssignedTo] = 'paulo.rodriguez@fefundinfo.com'");
+      expect(wiql).toContain("[System.State] NOT IN ('Closed', 'Resolved', 'Done', 'Removed')");
+      expect(args).toEqual(['boards', 'query', '--wiql', wiql, '-o', 'json']);
     });
 
     it('rejects with an AdoCommandError mentioning invalid email, without calling execFile', async () => {
       await expect(listMyAssignedTasks('bad email!')).rejects.toMatchObject({
+        name: 'AdoCommandError',
+        message: expect.stringContaining('Invalid'),
+      });
+      expect(execFileMock).not.toHaveBeenCalled();
+    });
+
+    it('rejects an email containing a single quote (WIQL injection guard), without calling execFile', async () => {
+      await expect(listMyAssignedTasks("x'y@z.com")).rejects.toMatchObject({
         name: 'AdoCommandError',
         message: expect.stringContaining('Invalid'),
       });
