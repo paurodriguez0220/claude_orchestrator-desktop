@@ -8,8 +8,6 @@ export interface TerminalTabProps {
   taskId: string;
 }
 
-const SUPPORTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
-
 function toErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : 'Something went wrong';
 }
@@ -44,43 +42,21 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
       window.claudeOrchestrator.sendPtyInput(taskId, data);
     });
 
-    function readAsDataUrl(blob: Blob): Promise<string> {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(blob);
-      });
-    }
-
-    async function handlePastedImage(blob: Blob): Promise<void> {
-      try {
-        const dataUrl = await readAsDataUrl(blob);
-        const filePath = await window.claudeOrchestrator.saveClipboardImage(dataUrl);
-        const quotedPath = filePath.includes(' ') ? `"${filePath}"` : filePath;
-        window.claudeOrchestrator.sendPtyInput(taskId, quotedPath);
-      } catch (err) {
-        terminal.write(`\r\n[Failed to paste image: ${toErrorMessage(err)}]\r\n`);
-      }
-    }
-
-    // Reading the clipboard directly (rather than relying on the native
-    // 'paste' DOM event) sidesteps a real Electron/Chromium quirk: xterm's
-    // own internal paste handler stops the event from ever reaching a
-    // listener on an ancestor element, and even routing around that via a
-    // capture-phase listener still saw an empty clipboardData.items — the
-    // browser doesn't populate it for capture-phase listeners on ancestors.
-    // Actively reading via the Async Clipboard API has neither problem.
+    // Detecting the clipboard image via the renderer's Async Clipboard API
+    // (navigator.clipboard.read()) doesn't reliably expose it in this
+    // Electron build, so the image branch never fired. Reading it in the
+    // main process via Electron's clipboard.readImage() is reliable on
+    // Windows and aligns with the repo rule that main owns all system
+    // access. Text still falls back to navigator.clipboard.readText(),
+    // which has always worked.
     async function pasteFromClipboard(): Promise<void> {
       try {
-        const clipboardItems = await navigator.clipboard.read();
-        for (const clipboardItem of clipboardItems) {
-          const imageType = clipboardItem.types.find((type) => SUPPORTED_IMAGE_TYPES.includes(type));
-          if (imageType) {
-            const blob = await clipboardItem.getType(imageType);
-            await handlePastedImage(blob);
-            return;
-          }
+        const imageDataUrl = await window.claudeOrchestrator.readClipboardImage();
+        if (imageDataUrl) {
+          const filePath = await window.claudeOrchestrator.saveClipboardImage(imageDataUrl);
+          const quotedPath = filePath.includes(' ') ? `"${filePath}"` : filePath;
+          window.claudeOrchestrator.sendPtyInput(taskId, quotedPath);
+          return;
         }
         const text = await navigator.clipboard.readText();
         if (text) {
