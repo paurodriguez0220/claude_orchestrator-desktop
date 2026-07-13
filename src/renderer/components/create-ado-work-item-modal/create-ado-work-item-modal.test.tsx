@@ -60,7 +60,7 @@ describe('CreateAdoWorkItemModal', () => {
     expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
   });
 
-  it('submits trimmed required fields with optional fields omitted when left blank', async () => {
+  it('submits trimmed required fields with optional fields omitted when left blank, defaulting the assignee', async () => {
     const onSubmit = vi.fn();
     render(
       <CreateAdoWorkItemModal
@@ -78,8 +78,40 @@ describe('CreateAdoWorkItemModal', () => {
       title: 'Fix login bug',
       description: undefined,
       parentId: undefined,
-      assignee: undefined,
+      assignee: 'paulo.rodriguez@fefundinfo.com',
     });
+  });
+
+  it('defaults the assignee field to the default ADO email on open', () => {
+    render(
+      <CreateAdoWorkItemModal
+        isOpen
+        isSubmitting={false}
+        result={undefined}
+        onSubmit={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('Assignee (optional)')).toHaveValue('paulo.rodriguez@fefundinfo.com');
+  });
+
+  it('omits parentId when the value does not parse to a positive integer', async () => {
+    const onSubmit = vi.fn();
+    render(
+      <CreateAdoWorkItemModal
+        isOpen
+        isSubmitting={false}
+        result={undefined}
+        onSubmit={onSubmit}
+        onClose={vi.fn()}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText('Title'), 'Fix login bug');
+    await userEvent.type(screen.getByLabelText('Parent ID (optional)'), 'not-a-number');
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ parentId: undefined }),
+    );
   });
 
   it('submits description, parentId (parsed to a number), and assignee when provided', async () => {
@@ -96,14 +128,15 @@ describe('CreateAdoWorkItemModal', () => {
     await userEvent.type(screen.getByLabelText('Title'), 'Fix login bug');
     await userEvent.type(screen.getByLabelText('Description (optional)'), 'Some details');
     await userEvent.type(screen.getByLabelText('Parent ID (optional)'), '999');
-    await userEvent.type(screen.getByLabelText('Assignee (optional)'), 'paulo.rodriguez@fefundinfo.com');
+    await userEvent.clear(screen.getByLabelText('Assignee (optional)'));
+    await userEvent.type(screen.getByLabelText('Assignee (optional)'), 'someone-else@fefundinfo.com');
     await userEvent.click(screen.getByRole('button', { name: 'Create' }));
     expect(onSubmit).toHaveBeenCalledWith({
       type: 'Task',
       title: 'Fix login bug',
       description: 'Some details',
       parentId: 999,
-      assignee: 'paulo.rodriguez@fefundinfo.com',
+      assignee: 'someone-else@fefundinfo.com',
     });
   });
 

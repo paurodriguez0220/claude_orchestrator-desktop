@@ -872,9 +872,22 @@ describe('App', () => {
       title: 'Fix login bug',
       description: undefined,
       parentId: undefined,
-      assignee: undefined,
+      assignee: 'paulo.rodriguez@fefundinfo.com',
     });
     expect(await within(dialog).findByText(/Created #501/)).toBeInTheDocument();
+  });
+
+  it('shows a blank New ADO work item form when reopened after being closed with stale input', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'New ADO item' }));
+    let dialog = await screen.findByRole('dialog', { name: 'New ADO work item' });
+    await userEvent.type(within(dialog).getByLabelText('Title'), 'Fix login bug');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog', { name: 'New ADO work item' })).not.toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'New ADO item' }));
+    dialog = await screen.findByRole('dialog', { name: 'New ADO work item' });
+    expect(within(dialog).getByLabelText('Title')).toHaveValue('');
   });
 
   it('shows a submitting spinner in the New ADO work item modal while the create call is pending', async () => {

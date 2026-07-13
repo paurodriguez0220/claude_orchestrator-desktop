@@ -116,6 +116,11 @@ export async function createWorkItem(request: AdoCreateWorkItemRequest): Promise
   if (request.parentId !== undefined) {
     const parent = await showWorkItem(request.parentId);
     for (const field of PARENT_COPY_FIELDS) {
+      // An explicit --assigned-to must win over whatever the parent is
+      // assigned to — never let the parent-field-copy overwrite it.
+      if (field === 'System.AssignedTo' && request.assignee) {
+        continue;
+      }
       const value = parent.fields[field];
       if (value !== undefined && value !== null && String(value) !== '') {
         await runAz([
@@ -155,8 +160,16 @@ export async function createWorkItem(request: AdoCreateWorkItemRequest): Promise
   if (request.description && String(check.fields['System.Description'] ?? '') === '') {
     throw new AdoCommandError(`Work item ${id} created but description did not persist — verify in ADO.`, '');
   }
-  if (request.assignee && !check.fields['System.AssignedTo']) {
-    throw new AdoCommandError(`Work item ${id} created but assignee did not persist — verify in ADO.`, '');
+  if (request.assignee) {
+    const shownAssignee = check.fields['System.AssignedTo']
+      ? fieldValueToString(check.fields['System.AssignedTo'])
+      : '';
+    if (!shownAssignee.toLowerCase().includes(request.assignee.toLowerCase())) {
+      throw new AdoCommandError(
+        `Work item ${id} created but the requested assignee (${request.assignee}) did not persist — verify in ADO.`,
+        '',
+      );
+    }
   }
 
   return { id, url: `https://dev.azure.com/${organization}/${project}/_workitems/edit/${id}` };

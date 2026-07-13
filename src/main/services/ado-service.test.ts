@@ -295,5 +295,73 @@ describe('ado-service', () => {
       expect(createArgs).toContain('--assigned-to');
       expect(createArgs[createArgs.indexOf('--assigned-to') + 1]).toBe('x@y.com');
     });
+
+    it('does not let a copied parent assignee clobber an explicit assignee, and verifies the requested one persisted', async () => {
+      execFileMock
+        .mockReturnValueOnce(CONFIG_RESULT)
+        .mockReturnValueOnce(jsonResult({ id: 507 }))
+        .mockReturnValueOnce(
+          jsonResult({
+            fields: {
+              'System.AssignedTo': { uniqueName: 'parent@y.com' },
+              'Microsoft.VSTS.Common.Priority': 2,
+              'Custom.EffortType': 'Story',
+              'System.AreaPath': 'Proj\\Team',
+              'System.IterationPath': 'Proj\\Sprint 1',
+            },
+          }),
+        )
+        .mockReturnValueOnce({ stdout: '', stderr: '' }) // Priority
+        .mockReturnValueOnce({ stdout: '', stderr: '' }) // Custom.EffortType
+        .mockReturnValueOnce({ stdout: '', stderr: '' }) // AreaPath
+        .mockReturnValueOnce({ stdout: '', stderr: '' }) // IterationPath
+        .mockReturnValueOnce({ stdout: '', stderr: '' }) // relation add
+        .mockReturnValueOnce(jsonResult({ fields: { 'System.AssignedTo': { uniqueName: 'explicit@y.com' } } }));
+
+      const result = await createWorkItem({
+        type: 'Task',
+        title: 'Child',
+        parentId: 999,
+        assignee: 'explicit@y.com',
+      });
+
+      expect(result.id).toBe(507);
+
+      const allArgs = execFileMock.mock.calls.map((call) => (call as unknown[])[1] as string[]);
+      const updateCalls = allArgs.filter((args) => args[2] === 'update');
+      expect(updateCalls).not.toContainEqual(
+        expect.arrayContaining([expect.stringContaining('System.AssignedTo=')]),
+      );
+      expect(updateCalls).toContainEqual([
+        'boards', 'work-item', 'update', '--id', '507', '--fields', 'Microsoft.VSTS.Common.Priority=2',
+      ]);
+      expect(updateCalls).toContainEqual([
+        'boards', 'work-item', 'update', '--id', '507', '--fields', 'Custom.EffortType=Story',
+      ]);
+      expect(updateCalls).toContainEqual([
+        'boards', 'work-item', 'update', '--id', '507', '--fields', 'System.AreaPath=Proj\\Team',
+      ]);
+      expect(updateCalls).toContainEqual([
+        'boards', 'work-item', 'update', '--id', '507', '--fields', 'System.IterationPath=Proj\\Sprint 1',
+      ]);
+
+      const createCall = execFileMock.mock.calls[1] as unknown[];
+      const createArgs = createCall[1] as string[];
+      expect(createArgs[createArgs.indexOf('--assigned-to') + 1]).toBe('explicit@y.com');
+    });
+
+    it('rejects with an AdoCommandError when the persisted assignee is a different user than requested', async () => {
+      execFileMock
+        .mockReturnValueOnce(CONFIG_RESULT)
+        .mockReturnValueOnce(jsonResult({ id: 508 }))
+        .mockReturnValueOnce(jsonResult({ fields: { 'System.AssignedTo': { uniqueName: 'someone-else@y.com' } } }));
+
+      await expect(
+        createWorkItem({ type: 'Task', title: 'T', assignee: 'x@y.com' }),
+      ).rejects.toMatchObject({
+        name: 'AdoCommandError',
+        message: expect.stringContaining('assignee'),
+      });
+    });
   });
 });

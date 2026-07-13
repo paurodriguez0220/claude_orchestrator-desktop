@@ -15,6 +15,10 @@ const fieldInputClasses =
   'rounded-md border border-graphite-600 bg-graphite-900 px-3 py-2 text-graphite-100 focus:outline-none focus:ring-2 focus:ring-clay-500';
 const fieldLabelClasses = 'text-sm font-medium text-graphite-400';
 
+// The app's default ADO assignee — pre-filled so the common case (assigning
+// to yourself) needs no typing, while still being editable per item.
+const DEFAULT_ASSIGNEE = 'paulo.rodriguez@fefundinfo.com';
+
 export function CreateAdoWorkItemModal({
   isOpen,
   isSubmitting,
@@ -26,7 +30,7 @@ export function CreateAdoWorkItemModal({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [parentId, setParentId] = useState('');
-  const [assignee, setAssignee] = useState('');
+  const [assignee, setAssignee] = useState(DEFAULT_ASSIGNEE);
 
   if (!isOpen) {
     return null;
@@ -35,11 +39,15 @@ export function CreateAdoWorkItemModal({
   const canSubmit = type.trim() !== '' && title.trim() !== '';
 
   function handleSubmit(): void {
+    const trimmedParentId = parentId.trim();
+    const parsedParentId = Number(trimmedParentId);
+    const parentIdIsValid = trimmedParentId !== '' && Number.isInteger(parsedParentId) && parsedParentId > 0;
+
     onSubmit({
       type: type.trim(),
       title: title.trim(),
       description: description.trim() || undefined,
-      parentId: parentId.trim() ? Number(parentId.trim()) : undefined,
+      parentId: parentIdIsValid ? parsedParentId : undefined,
       assignee: assignee.trim() || undefined,
     });
   }

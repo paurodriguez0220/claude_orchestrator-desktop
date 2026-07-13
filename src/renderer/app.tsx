@@ -498,6 +498,7 @@ export function App(): JSX.Element {
           onClose={() => setIsAdoModalOpen(false)}
         />
         <CreateAdoWorkItemModal
+          key={isCreateAdoOpen ? 'ado-create-open' : 'ado-create-closed'}
           isOpen={isCreateAdoOpen}
           isSubmitting={isSubmittingModal}
           result={adoCreateResult}
