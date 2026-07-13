@@ -41,6 +41,7 @@ const resizePty = vi.fn();
 const unsubscribePtyOutput = vi.fn();
 const onPtyOutput = vi.fn((_listener: (event: { taskId: string; data: string }) => void) => unsubscribePtyOutput);
 const saveClipboardImage = vi.fn(async () => 'C:\\Users\\paulo.rodriguez\\claude-orchestrator\\pasted-images\\abc123.png');
+const readClipboardImage = vi.fn(async (): Promise<string | undefined> => undefined);
 
 const resizeObserverDisconnectMock = vi.fn();
 const resizeObserverObserveMock = vi.fn();
@@ -56,20 +57,7 @@ class ResizeObserverMock {
 }
 
 const clipboardWriteText = vi.fn(async () => undefined);
-const clipboardRead = vi.fn(async (): Promise<{ types: string[]; getType: (type: string) => Promise<Blob> }[]> => []);
 const clipboardReadText = vi.fn(async () => '');
-
-function fakeClipboardItem(type: string, blob: Blob): { types: string[]; getType: (type: string) => Promise<Blob> } {
-  return {
-    types: [type],
-    getType: async (requestedType: string) => {
-      if (requestedType !== type) {
-        throw new Error(`Unexpected type requested: ${requestedType}`);
-      }
-      return blob;
-    },
-  };
-}
 
 beforeEach(() => {
   fitMock.mockClear();
@@ -77,6 +65,7 @@ beforeEach(() => {
   resizeObserverObserveMock.mockClear();
   resizeObserverCallback = undefined;
   saveClipboardImage.mockClear();
+  readClipboardImage.mockReset().mockResolvedValue(undefined);
   sendPtyInput.mockClear();
   pasteMock.mockClear();
   writeMock.mockClear();
@@ -84,12 +73,11 @@ beforeEach(() => {
   hasSelectionMock.mockReset().mockReturnValue(false);
   getSelectionMock.mockReset().mockReturnValue('');
   clipboardWriteText.mockClear();
-  clipboardRead.mockReset().mockResolvedValue([]);
   clipboardReadText.mockReset().mockResolvedValue('');
-  vi.stubGlobal('claudeOrchestrator', { sendPtyInput, resizePty, onPtyOutput, saveClipboardImage });
+  vi.stubGlobal('claudeOrchestrator', { sendPtyInput, resizePty, onPtyOutput, saveClipboardImage, readClipboardImage });
   vi.stubGlobal('ResizeObserver', ResizeObserverMock);
   Object.defineProperty(navigator, 'clipboard', {
-    value: { writeText: clipboardWriteText, read: clipboardRead, readText: clipboardReadText },
+    value: { writeText: clipboardWriteText, readText: clipboardReadText },
     configurable: true,
   });
 });
@@ -244,7 +232,7 @@ describe('TerminalTab', () => {
   });
 
   it('suppresses xterm\'s built-in paste and pastes exactly once, so text is not doubled', async () => {
-    clipboardRead.mockResolvedValue([]);
+    readClipboardImage.mockResolvedValue(undefined);
     clipboardReadText.mockResolvedValue('hello from clipboard');
     const { container } = render(<TerminalTab taskId="task-1" />);
 
@@ -259,7 +247,7 @@ describe('TerminalTab', () => {
 
   it('routes pasted text through xterm\'s paste pipeline so multi-line text is bracketed and newline-normalized, not sent raw to the pty', async () => {
     const multiLine = 'first line\r\nsecond line\r\nthird line';
-    clipboardRead.mockResolvedValue([]);
+    readClipboardImage.mockResolvedValue(undefined);
     clipboardReadText.mockResolvedValue(multiLine);
     const { container } = render(<TerminalTab taskId="task-1" />);
 
@@ -273,14 +261,13 @@ describe('TerminalTab', () => {
     expect(sendPtyInput).not.toHaveBeenCalledWith('task-1', multiLine);
   });
 
-  it('reads an image off the clipboard on paste, saves it via IPC, and types its path into the terminal', async () => {
-    const fakeBlob = new Blob(['fake-image-bytes'], { type: 'image/png' });
-    clipboardRead.mockResolvedValue([fakeClipboardItem('image/png', fakeBlob)]);
+  it('reads an image from main on paste, saves it via IPC, and types its path into the terminal', async () => {
+    readClipboardImage.mockResolvedValue('data:image/png;base64,aGVsbG8=');
     const { container } = render(<TerminalTab taskId="task-1" />);
 
     dispatchPaste(container);
 
-    await waitFor(() => expect(saveClipboardImage).toHaveBeenCalled());
+    await waitFor(() => expect(saveClipboardImage).toHaveBeenCalledWith('data:image/png;base64,aGVsbG8='));
     expect(sendPtyInput).toHaveBeenCalledWith(
       'task-1',
       'C:\\Users\\paulo.rodriguez\\claude-orchestrator\\pasted-images\\abc123.png',
@@ -289,9 +276,8 @@ describe('TerminalTab', () => {
   });
 
   it('quotes the pasted image path when it contains a space', async () => {
+    readClipboardImage.mockResolvedValue('data:image/png;base64,aGVsbG8=');
     saveClipboardImage.mockResolvedValueOnce('C:\\Users\\John Smith\\claude-orchestrator\\pasted-images\\abc123.png');
-    const fakeBlob = new Blob(['fake-image-bytes'], { type: 'image/png' });
-    clipboardRead.mockResolvedValue([fakeClipboardItem('image/png', fakeBlob)]);
     const { container } = render(<TerminalTab taskId="task-1" />);
 
     dispatchPaste(container);
@@ -304,8 +290,8 @@ describe('TerminalTab', () => {
     );
   });
 
-  it('falls back to plain-text paste when the clipboard has no supported image', async () => {
-    clipboardRead.mockResolvedValue([]);
+  it('falls back to plain-text paste when main reports no clipboard image', async () => {
+    readClipboardImage.mockResolvedValue(undefined);
     clipboardReadText.mockResolvedValue('hello from clipboard');
     const { container } = render(<TerminalTab taskId="task-1" />);
 
@@ -315,20 +301,8 @@ describe('TerminalTab', () => {
     expect(saveClipboardImage).not.toHaveBeenCalled();
   });
 
-  it('ignores an unsupported image type on the clipboard and falls back to text', async () => {
-    const fakeBlob = new Blob(['fake-image-bytes'], { type: 'image/bmp' });
-    clipboardRead.mockResolvedValue([fakeClipboardItem('image/bmp', fakeBlob)]);
-    clipboardReadText.mockResolvedValue('fallback text');
-    const { container } = render(<TerminalTab taskId="task-1" />);
-
-    dispatchPaste(container);
-
-    await waitFor(() => expect(pasteMock).toHaveBeenCalledWith('fallback text'));
-    expect(saveClipboardImage).not.toHaveBeenCalled();
-  });
-
-  it('does not paste anything when the clipboard has neither a supported image nor text', async () => {
-    clipboardRead.mockResolvedValue([]);
+  it('does not paste anything when the clipboard has neither an image nor text', async () => {
+    readClipboardImage.mockResolvedValue(undefined);
     clipboardReadText.mockResolvedValue('');
     const { container } = render(<TerminalTab taskId="task-1" />);
 
@@ -339,9 +313,8 @@ describe('TerminalTab', () => {
   });
 
   it('writes a visible error notice into the terminal when saving the pasted image fails', async () => {
+    readClipboardImage.mockResolvedValue('data:image/png;base64,aGVsbG8=');
     saveClipboardImage.mockRejectedValueOnce(new Error('Unsupported image type: image/bmp'));
-    const fakeBlob = new Blob(['fake-image-bytes'], { type: 'image/png' });
-    clipboardRead.mockResolvedValue([fakeClipboardItem('image/png', fakeBlob)]);
     const { container } = render(<TerminalTab taskId="task-1" />);
 
     dispatchPaste(container);
@@ -351,8 +324,8 @@ describe('TerminalTab', () => {
     );
   });
 
-  it('writes a visible error notice when reading the clipboard itself fails', async () => {
-    clipboardRead.mockRejectedValue(new Error('clipboard-read is not allowed'));
+  it('writes a visible error notice when reading the clipboard image from main fails', async () => {
+    readClipboardImage.mockRejectedValue(new Error('clipboard-read is not allowed'));
     const { container } = render(<TerminalTab taskId="task-1" />);
 
     dispatchPaste(container);

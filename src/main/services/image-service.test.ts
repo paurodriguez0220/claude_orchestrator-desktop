@@ -8,7 +8,7 @@ vi.mock('node:fs/promises', () => ({
   writeFile: (...args: unknown[]) => writeFileMock(...args),
 }));
 
-import { saveClipboardImage } from './image-service';
+import { saveClipboardImage, readClipboardImageDataUrl } from './image-service';
 
 describe('saveClipboardImage', () => {
   beforeEach(() => {
@@ -48,5 +48,21 @@ describe('saveClipboardImage', () => {
       'Invalid image data URL',
     );
     expect(writeFileMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('readClipboardImageDataUrl', () => {
+  it('returns undefined when the clipboard has no image', () => {
+    const fakeClipboard = { readImage: () => ({ isEmpty: () => true }) } as Parameters<
+      typeof readClipboardImageDataUrl
+    >[0];
+    expect(readClipboardImageDataUrl(fakeClipboard)).toBeUndefined();
+  });
+
+  it('returns the PNG data URL when the clipboard has an image', () => {
+    const fakeClipboard = {
+      readImage: () => ({ isEmpty: () => false, toDataURL: () => 'data:image/png;base64,AAAA' }),
+    } as Parameters<typeof readClipboardImageDataUrl>[0];
+    expect(readClipboardImageDataUrl(fakeClipboard)).toBe('data:image/png;base64,AAAA');
   });
 });
