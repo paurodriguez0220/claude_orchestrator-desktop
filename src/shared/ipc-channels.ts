@@ -91,3 +91,12 @@ export interface DsuGenerateResponse {
   markdown: string;
   filePath: string;
 }
+
+export interface AdoWorkItem {
+  id: number;
+  title: string;
+  type: string;
+  state: string;
+  areaPath: string;
+  storyPoints: number | undefined;
+}
