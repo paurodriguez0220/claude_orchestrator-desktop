@@ -91,4 +91,14 @@ describe('ArchivedTasksModal', () => {
     await userEvent.type(screen.getByRole('searchbox', { name: 'Filter archived tasks' }), 'zzz');
     expect(screen.getByText('No archived tasks match.')).toBeInTheDocument();
   });
+
+  it('does not set a fixed width on the root panel, so it fills the shared overlay instead of overflowing it', () => {
+    renderModal();
+    expect(screen.getByRole('dialog', { name: 'Archived tasks' })).not.toHaveClass('w-[28rem]');
+  });
+
+  it('carries the full task title as a native title attribute for hover tooltips', () => {
+    renderModal();
+    expect(screen.getByRole('button', { name: 'Fix login bug' })).toHaveAttribute('title', 'Fix login bug');
+  });
 });
