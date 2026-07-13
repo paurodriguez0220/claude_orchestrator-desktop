@@ -4,6 +4,7 @@ import { Terminal } from '@xterm/xterm';
 
 const writeMock = vi.fn();
 const openMock = vi.fn();
+const pasteMock = vi.fn();
 const onDataMock = vi.fn();
 const onResizeMock = vi.fn();
 const loadAddonMock = vi.fn();
@@ -17,6 +18,7 @@ vi.mock('@xterm/xterm', () => ({
     return {
       open: openMock,
       write: writeMock,
+      paste: pasteMock,
       onData: onDataMock,
       onResize: onResizeMock,
       loadAddon: loadAddonMock,
@@ -76,6 +78,7 @@ beforeEach(() => {
   resizeObserverCallback = undefined;
   saveClipboardImage.mockClear();
   sendPtyInput.mockClear();
+  pasteMock.mockClear();
   writeMock.mockClear();
   attachCustomKeyEventHandlerMock.mockClear();
   hasSelectionMock.mockReset().mockReturnValue(false);
@@ -250,8 +253,24 @@ describe('TerminalTab', () => {
     // preventDefault + stopImmediatePropagation stop xterm's own paste handler
     // (the source of the second copy) from ever running.
     expect(event.defaultPrevented).toBe(true);
-    await waitFor(() => expect(sendPtyInput).toHaveBeenCalledWith('task-1', 'hello from clipboard'));
-    expect(sendPtyInput).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(pasteMock).toHaveBeenCalledWith('hello from clipboard'));
+    expect(pasteMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('routes pasted text through xterm\'s paste pipeline so multi-line text is bracketed and newline-normalized, not sent raw to the pty', async () => {
+    const multiLine = 'first line\r\nsecond line\r\nthird line';
+    clipboardRead.mockResolvedValue([]);
+    clipboardReadText.mockResolvedValue(multiLine);
+    const { container } = render(<TerminalTab taskId="task-1" />);
+
+    dispatchPaste(container);
+
+    // terminal.paste() applies bracketed-paste markers (when the running app
+    // enabled the mode) and normalizes \r\n/\n line endings before emitting via
+    // onData. Sending the raw string straight to the pty skips both, which
+    // collapses a multi-line paste down to just its last line.
+    await waitFor(() => expect(pasteMock).toHaveBeenCalledWith(multiLine));
+    expect(sendPtyInput).not.toHaveBeenCalledWith('task-1', multiLine);
   });
 
   it('reads an image off the clipboard on paste, saves it via IPC, and types its path into the terminal', async () => {
@@ -292,7 +311,7 @@ describe('TerminalTab', () => {
 
     dispatchPaste(container);
 
-    await waitFor(() => expect(sendPtyInput).toHaveBeenCalledWith('task-1', 'hello from clipboard'));
+    await waitFor(() => expect(pasteMock).toHaveBeenCalledWith('hello from clipboard'));
     expect(saveClipboardImage).not.toHaveBeenCalled();
   });
 
@@ -304,7 +323,7 @@ describe('TerminalTab', () => {
 
     dispatchPaste(container);
 
-    await waitFor(() => expect(sendPtyInput).toHaveBeenCalledWith('task-1', 'fallback text'));
+    await waitFor(() => expect(pasteMock).toHaveBeenCalledWith('fallback text'));
     expect(saveClipboardImage).not.toHaveBeenCalled();
   });
 
