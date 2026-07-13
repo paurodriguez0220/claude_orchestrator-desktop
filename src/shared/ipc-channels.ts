@@ -24,6 +24,8 @@ export const IpcChannels = {
   ReadClipboardImage: 'image:read-clipboard',
   GetAppVersion: 'app:get-version',
   GenerateDsuSummary: 'dsu:generate',
+  AdoListMyTasks: 'ado:list-my-tasks',
+  AdoConfig: 'ado:config',
 } as const;
 
 export interface RepoAddRequest {

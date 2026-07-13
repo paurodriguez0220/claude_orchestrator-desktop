@@ -13,6 +13,7 @@ import type {
   TaskFinishedStateChangedEvent,
   BranchOption,
   DsuGenerateResponse,
+  AdoWorkItem,
 } from '../shared/ipc-channels';
 
 export interface ClaudeOrchestratorApi {
@@ -39,6 +40,8 @@ export interface ClaudeOrchestratorApi {
   readClipboardImage(): Promise<string | undefined>;
   getAppVersion(): Promise<string>;
   generateDsuSummary(date: string): Promise<DsuGenerateResponse>;
+  listAdoTasks(email?: string): Promise<AdoWorkItem[]>;
+  getAdoConfig(): Promise<{ organization: string; project: string }>;
 }
 
 const api: ClaudeOrchestratorApi = {
@@ -74,6 +77,8 @@ const api: ClaudeOrchestratorApi = {
   readClipboardImage: () => ipcRenderer.invoke(IpcChannels.ReadClipboardImage),
   getAppVersion: () => ipcRenderer.invoke(IpcChannels.GetAppVersion),
   generateDsuSummary: (date) => ipcRenderer.invoke(IpcChannels.GenerateDsuSummary, date),
+  listAdoTasks: (email) => ipcRenderer.invoke(IpcChannels.AdoListMyTasks, email),
+  getAdoConfig: () => ipcRenderer.invoke(IpcChannels.AdoConfig),
 };
 
 contextBridge.exposeInMainWorld('claudeOrchestrator', api);
