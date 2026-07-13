@@ -12,12 +12,15 @@ import {
 } from 'lucide-react';
 import type { RepoRecord, TaskRecord } from '../../../shared/types';
 import { TaskSearchInput } from '../task-search-input/task-search-input';
+import { Spinner } from '../spinner/spinner';
 
 export interface RepoSidebarProps {
   repos: RepoRecord[];
   activeTasksByRepoId: Record<string, TaskRecord[]>;
   scratchTasks: TaskRecord[];
   selectedTaskId: string | undefined;
+  removingTaskIds: string[];
+  isAddingRepo: boolean;
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
   onSelectTask: (taskId: string) => void;
@@ -36,18 +39,27 @@ export interface RepoSidebarProps {
 interface TaskRowProps {
   task: TaskRecord;
   selectedTaskId: string | undefined;
+  isRemoving: boolean;
   onSelectTask: (taskId: string) => void;
   onArchiveTaskClick: (taskId: string) => void;
   onRemoveTaskClick: (taskId: string) => void;
 }
 
-function TaskRow({ task, selectedTaskId, onSelectTask, onArchiveTaskClick, onRemoveTaskClick }: TaskRowProps): JSX.Element {
+function TaskRow({
+  task,
+  selectedTaskId,
+  isRemoving,
+  onSelectTask,
+  onArchiveTaskClick,
+  onRemoveTaskClick,
+}: TaskRowProps): JSX.Element {
   return (
     <li className="flex items-center justify-between gap-2">
       <button
         type="button"
         aria-pressed={task.id === selectedTaskId}
         onClick={() => onSelectTask(task.id)}
+        title={task.title}
         className={
           task.id === selectedTaskId
             ? 'flex-1 truncate rounded-md bg-clay-600/20 px-2 py-1 text-left text-sm font-medium text-clay-400'
@@ -66,7 +78,8 @@ function TaskRow({ task, selectedTaskId, onSelectTask, onArchiveTaskClick, onRem
         aria-label="Archive task"
         title="Archive task"
         onClick={() => onArchiveTaskClick(task.id)}
-        className="shrink-0 rounded-md px-2 py-1 text-graphite-400 hover:text-clay-400"
+        disabled={isRemoving}
+        className="shrink-0 rounded-md px-2 py-1 text-graphite-400 hover:text-clay-400 disabled:opacity-50"
       >
         <Archive aria-hidden="true" className="h-4 w-4" />
       </button>
@@ -74,9 +87,10 @@ function TaskRow({ task, selectedTaskId, onSelectTask, onArchiveTaskClick, onRem
         type="button"
         aria-label="Remove task"
         onClick={() => onRemoveTaskClick(task.id)}
-        className="shrink-0 rounded-md px-2 py-1 text-graphite-400 hover:text-danger-400"
+        disabled={isRemoving}
+        className="shrink-0 rounded-md px-2 py-1 text-graphite-400 hover:text-danger-400 disabled:opacity-50"
       >
-        <Trash2 aria-hidden="true" className="h-4 w-4" />
+        {isRemoving ? <Spinner className="h-4 w-4" /> : <Trash2 aria-hidden="true" className="h-4 w-4" />}
       </button>
     </li>
   );
@@ -87,6 +101,8 @@ export function RepoSidebar({
   activeTasksByRepoId,
   scratchTasks,
   selectedTaskId,
+  removingTaskIds,
+  isAddingRepo,
   searchQuery,
   onSearchQueryChange,
   onSelectTask,
@@ -117,9 +133,10 @@ export function RepoSidebar({
           aria-label="Open Existing Repo"
           title="Open Existing Repo"
           onClick={onOpenRepoClick}
-          className="flex flex-1 items-center justify-center rounded-md border border-graphite-600 px-3 py-2 text-graphite-100 hover:border-clay-500 hover:text-clay-400"
+          disabled={isAddingRepo}
+          className="flex flex-1 items-center justify-center rounded-md border border-graphite-600 px-3 py-2 text-graphite-100 hover:border-clay-500 hover:text-clay-400 disabled:opacity-50"
         >
-          <FolderOpen aria-hidden="true" className="h-4 w-4" />
+          {isAddingRepo ? <Spinner className="h-4 w-4" /> : <FolderOpen aria-hidden="true" className="h-4 w-4" />}
         </button>
         <button
           type="button"
@@ -155,7 +172,9 @@ export function RepoSidebar({
           return (
             <li key={repo.id} className="flex flex-col gap-1">
               <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-sm font-semibold text-graphite-100">{repo.name}</span>
+                <span className="truncate text-sm font-semibold text-graphite-100" title={repo.name}>
+                  {repo.name}
+                </span>
                 <div className="flex shrink-0 gap-1">
                   <button
                     type="button"
@@ -183,6 +202,7 @@ export function RepoSidebar({
                     key={task.id}
                     task={task}
                     selectedTaskId={selectedTaskId}
+                    isRemoving={removingTaskIds.includes(task.id)}
                     onSelectTask={onSelectTask}
                     onArchiveTaskClick={onArchiveTaskClick}
                     onRemoveTaskClick={onRemoveTaskClick}
@@ -207,31 +227,36 @@ export function RepoSidebar({
           </button>
         </div>
         <ul className="flex flex-col gap-1">
-          {scratchTasks.map((task) => (
-            <li key={task.id} className="flex items-center justify-between gap-2">
-              <button
-                type="button"
-                aria-pressed={task.id === selectedTaskId}
-                onClick={() => onSelectTask(task.id)}
-                className={
-                  task.id === selectedTaskId
-                    ? 'flex-1 truncate rounded-md bg-clay-600/20 px-2 py-1 text-left text-sm font-medium text-clay-400'
-                    : 'flex-1 truncate rounded-md px-2 py-1 text-left text-sm text-graphite-200 hover:bg-graphite-700'
-                }
-              >
-                {task.title}
-              </button>
-              <span className="shrink-0 text-xs text-graphite-400">{task.status}</span>
-              <button
-                type="button"
-                aria-label="Remove question"
-                onClick={() => onRemoveTaskClick(task.id)}
-                className="shrink-0 rounded-md px-2 py-1 text-graphite-400 hover:text-danger-400"
-              >
-                <Trash2 aria-hidden="true" className="h-4 w-4" />
-              </button>
-            </li>
-          ))}
+          {scratchTasks.map((task) => {
+            const isRemoving = removingTaskIds.includes(task.id);
+            return (
+              <li key={task.id} className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  aria-pressed={task.id === selectedTaskId}
+                  onClick={() => onSelectTask(task.id)}
+                  title={task.title}
+                  className={
+                    task.id === selectedTaskId
+                      ? 'flex-1 truncate rounded-md bg-clay-600/20 px-2 py-1 text-left text-sm font-medium text-clay-400'
+                      : 'flex-1 truncate rounded-md px-2 py-1 text-left text-sm text-graphite-200 hover:bg-graphite-700'
+                  }
+                >
+                  {task.title}
+                </button>
+                <span className="shrink-0 text-xs text-graphite-400">{task.status}</span>
+                <button
+                  type="button"
+                  aria-label="Remove question"
+                  onClick={() => onRemoveTaskClick(task.id)}
+                  disabled={isRemoving}
+                  className="shrink-0 rounded-md px-2 py-1 text-graphite-400 hover:text-danger-400 disabled:opacity-50"
+                >
+                  {isRemoving ? <Spinner className="h-4 w-4" /> : <Trash2 aria-hidden="true" className="h-4 w-4" />}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </div>
       {appVersion !== undefined && (

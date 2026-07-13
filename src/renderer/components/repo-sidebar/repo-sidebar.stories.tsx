@@ -19,6 +19,8 @@ const meta: Meta<typeof RepoSidebar> = {
     onOpenArchivedClick: fn(),
     scratchTasks: [],
     appVersion: '0.1.0',
+    removingTaskIds: [],
+    isAddingRepo: false,
   },
 };
 
