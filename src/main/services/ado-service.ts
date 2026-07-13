@@ -5,7 +5,11 @@ import type { AdoWorkItem } from '../../shared/ipc-channels';
 const execFileAsync = promisify(execFile);
 
 const DEFAULT_ADO_EMAIL = 'paulo.rodriguez@fefundinfo.com';
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Deliberately stricter than a general-purpose email validator: this value is
+// interpolated into a WIQL string literal (`[System.AssignedTo] = '<email>'`),
+// so any character that could break out of that literal — notably a single
+// quote — must be rejected rather than merely escaped.
+const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
 export class AdoCommandError extends Error {
   public readonly stderr: string;
