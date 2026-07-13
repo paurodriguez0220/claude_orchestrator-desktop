@@ -54,7 +54,7 @@ export function ArchivedTasksModal({
 
   return (
     <ModalOverlay>
-      <div role="dialog" aria-label="Archived tasks" className="flex max-h-[80vh] w-[28rem] flex-col gap-4">
+      <div role="dialog" aria-label="Archived tasks" className="flex max-h-[80vh] flex-col gap-4">
         <h2 className="text-lg font-semibold text-graphite-100">Archived tasks</h2>
         <input
           type="search"
@@ -80,6 +80,7 @@ export function ArchivedTasksModal({
                         <button
                           type="button"
                           onClick={() => onSelectTask(task.id)}
+                          title={task.title}
                           className="flex-1 truncate rounded-md px-2 py-1 text-left text-sm text-graphite-200 hover:bg-graphite-700"
                         >
                           {task.title}

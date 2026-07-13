@@ -24,6 +24,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{ 'repo-1': [task] }}
         scratchTasks={[]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
@@ -51,6 +53,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{ 'repo-1': [task] }}
         scratchTasks={[]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
         onSelectTask={onSelectTask}
@@ -78,6 +82,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
@@ -105,6 +111,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
@@ -132,6 +140,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{ 'repo-1': [task] }}
         scratchTasks={[]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
@@ -159,6 +169,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{ 'repo-1': [task] }}
         scratchTasks={[]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
@@ -186,6 +198,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{ 'repo-1': [task, reviewTask] }}
         scratchTasks={[]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
@@ -212,6 +226,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{ 'repo-1': [task] }}
         scratchTasks={[]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery=""
         onSearchQueryChange={onSearchQueryChange}
         onSelectTask={vi.fn()}
@@ -239,6 +255,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{ 'repo-1': [task], 'repo-2': [] }}
         scratchTasks={[]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery="login"
         onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
@@ -266,6 +284,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
@@ -300,6 +320,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{ 'repo-1': [task] }}
         scratchTasks={[scratchTask]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
@@ -337,6 +359,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{}}
         scratchTasks={[scratchTask]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
@@ -364,6 +388,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
@@ -391,6 +417,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{ 'repo-1': [task] }}
         scratchTasks={[]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
@@ -418,6 +446,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
@@ -444,6 +474,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
@@ -469,6 +501,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
@@ -495,6 +529,8 @@ describe('RepoSidebar', () => {
         activeTasksByRepoId={{}}
         scratchTasks={[]}
         selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
         searchQuery=""
         onSearchQueryChange={vi.fn()}
         onSelectTask={vi.fn()}
@@ -512,5 +548,141 @@ describe('RepoSidebar', () => {
     );
     await userEvent.click(screen.getByRole('button', { name: 'Generate work log' }));
     expect(onGenerateDsuClick).toHaveBeenCalledOnce();
+  });
+
+  it('carries the full task/repo titles as native title attributes for hover tooltips', () => {
+    const scratchTask: TaskRecord = {
+      id: 'task-4',
+      title: 'What does this error mean?',
+      worktreePath: 'C:\\scratch\\task-4',
+      status: 'in-progress',
+      kind: 'scratch',
+      createdAt: '2026-07-08T00:00:00.000Z',
+      updatedAt: '2026-07-08T00:00:00.000Z',
+    };
+    render(
+      <RepoSidebar
+        repos={[repo]}
+        activeTasksByRepoId={{ 'repo-1': [task] }}
+        scratchTasks={[scratchTask]}
+        selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
+        onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('demo')).toHaveAttribute('title', 'demo');
+    expect(screen.getByRole('button', { name: 'Fix login bug' })).toHaveAttribute('title', 'Fix login bug');
+    expect(screen.getByRole('button', { name: 'What does this error mean?' })).toHaveAttribute(
+      'title',
+      'What does this error mean?',
+    );
+  });
+
+  it('shows a spinner in place of the trash icon and disables remove/archive for a task in removingTaskIds', () => {
+    render(
+      <RepoSidebar
+        repos={[repo]}
+        activeTasksByRepoId={{ 'repo-1': [task] }}
+        scratchTasks={[]}
+        selectedTaskId={undefined}
+        removingTaskIds={['task-1']}
+        isAddingRepo={false}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
+        onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Remove task' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Archive task' })).toBeDisabled();
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+  });
+
+  it('shows a spinner in place of the trash icon and disables remove for a Quick-Question row in removingTaskIds', () => {
+    const scratchTask: TaskRecord = {
+      id: 'task-4',
+      title: 'What does this error mean?',
+      worktreePath: 'C:\\scratch\\task-4',
+      status: 'in-progress',
+      kind: 'scratch',
+      createdAt: '2026-07-08T00:00:00.000Z',
+      updatedAt: '2026-07-08T00:00:00.000Z',
+    };
+    render(
+      <RepoSidebar
+        repos={[]}
+        activeTasksByRepoId={{}}
+        scratchTasks={[scratchTask]}
+        selectedTaskId={undefined}
+        removingTaskIds={['task-4']}
+        isAddingRepo={false}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
+        onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Remove question' })).toBeDisabled();
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+  });
+
+  it('shows a spinner in place of the folder icon and disables Open Existing Repo while isAddingRepo', () => {
+    render(
+      <RepoSidebar
+        repos={[]}
+        activeTasksByRepoId={{}}
+        scratchTasks={[]}
+        selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
+        onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
+      />,
+    );
+    const openRepoButton = screen.getByRole('button', { name: 'Open Existing Repo' });
+    expect(openRepoButton).toBeDisabled();
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
   });
 });

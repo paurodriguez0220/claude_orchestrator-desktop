@@ -13,6 +13,7 @@ describe('TabBar', () => {
         ]}
         activeTaskId="task-2"
         finishedTaskIds={[]}
+        closingTaskIds={[]}
         onSelectTab={vi.fn()}
         onCloseTab={vi.fn()}
       />,
@@ -28,6 +29,7 @@ describe('TabBar', () => {
         tabs={[{ taskId: 'task-1', title: 'Fix login bug' }]}
         activeTaskId={undefined}
         finishedTaskIds={[]}
+        closingTaskIds={[]}
         onSelectTab={onSelectTab}
         onCloseTab={vi.fn()}
       />,
@@ -43,6 +45,7 @@ describe('TabBar', () => {
         tabs={[{ taskId: 'task-1', title: 'Fix login bug' }]}
         activeTaskId="task-1"
         finishedTaskIds={[]}
+        closingTaskIds={[]}
         onSelectTab={vi.fn()}
         onCloseTab={onCloseTab}
       />,
@@ -60,6 +63,7 @@ describe('TabBar', () => {
         ]}
         activeTaskId="task-2"
         finishedTaskIds={['task-1']}
+        closingTaskIds={[]}
         onSelectTab={vi.fn()}
         onCloseTab={vi.fn()}
       />,
@@ -74,10 +78,41 @@ describe('TabBar', () => {
         tabs={[{ taskId: 'task-1', title: 'Fix login bug' }]}
         activeTaskId="task-1"
         finishedTaskIds={['task-1']}
+        closingTaskIds={[]}
         onSelectTab={vi.fn()}
         onCloseTab={vi.fn()}
       />,
     );
     expect(screen.queryByRole('status', { name: 'Fix login bug finished' })).not.toBeInTheDocument();
+  });
+
+  it('carries the full tab title as a native title attribute for hover tooltips', () => {
+    render(
+      <TabBar
+        tabs={[{ taskId: 'task-1', title: 'Fix login bug' }]}
+        activeTaskId="task-1"
+        finishedTaskIds={[]}
+        closingTaskIds={[]}
+        onSelectTab={vi.fn()}
+        onCloseTab={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Fix login bug' })).toHaveAttribute('title', 'Fix login bug');
+  });
+
+  it('shows a spinner in place of the close icon and disables the close button for a tab in closingTaskIds', () => {
+    render(
+      <TabBar
+        tabs={[{ taskId: 'task-1', title: 'Fix login bug' }]}
+        activeTaskId="task-1"
+        finishedTaskIds={[]}
+        closingTaskIds={['task-1']}
+        onSelectTab={vi.fn()}
+        onCloseTab={vi.fn()}
+      />,
+    );
+    const closeButton = screen.getByRole('button', { name: 'Close Fix login bug' });
+    expect(closeButton).toBeDisabled();
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
   });
 });

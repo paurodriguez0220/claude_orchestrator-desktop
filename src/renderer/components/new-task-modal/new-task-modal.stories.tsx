@@ -22,3 +22,6 @@ export const WithExistingBranches: Story = {
     ],
   },
 };
+export const LoadingBranches: Story = {
+  args: { isOpen: true, branches: [], mode: 'review', isLoadingBranches: true },
+};

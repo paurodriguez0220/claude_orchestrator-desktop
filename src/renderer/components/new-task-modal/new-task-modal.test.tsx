@@ -1,17 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NewTaskModal } from './new-task-modal';
 
 describe('NewTaskModal', () => {
   it('does not render when isOpen is false', () => {
-    render(<NewTaskModal isOpen={false} mode="task" branches={[]} isSubmitting={false} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    render(<NewTaskModal isOpen={false} mode="task" branches={[]} isSubmitting={false} isLoadingBranches={false} onClose={vi.fn()} onSubmit={vi.fn()} />);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('submits title, optional adoId, and optional branch', async () => {
     const onSubmit = vi.fn();
-    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} onClose={vi.fn()} onSubmit={onSubmit} />);
+    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} isLoadingBranches={false} onClose={vi.fn()} onSubmit={onSubmit} />);
     await userEvent.type(screen.getByLabelText('Title'), 'Fix login bug');
     await userEvent.type(screen.getByLabelText('ADO Task ID (optional)'), 'ADO-1234');
     await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
@@ -26,7 +26,7 @@ describe('NewTaskModal', () => {
 
   it('calls onClose when Cancel is clicked', async () => {
     const onClose = vi.fn();
-    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} onClose={onClose} onSubmit={vi.fn()} />);
+    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} isLoadingBranches={false} onClose={onClose} onSubmit={vi.fn()} />);
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onClose).toHaveBeenCalledOnce();
   });
@@ -41,6 +41,7 @@ describe('NewTaskModal', () => {
           { value: 'feature-y', label: 'origin/feature-y', isRemote: true },
         ]}
         isSubmitting={false}
+        isLoadingBranches={false}
         onClose={vi.fn()}
         onSubmit={vi.fn()}
       />,
@@ -60,6 +61,7 @@ describe('NewTaskModal', () => {
         mode="task"
         branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
         isSubmitting={false}
+        isLoadingBranches={false}
         onClose={vi.fn()}
         onSubmit={onSubmit}
       />,
@@ -79,7 +81,7 @@ describe('NewTaskModal', () => {
   });
 
   it('disables Cancel and Create Task and shows a spinner while isSubmitting', () => {
-    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting onClose={vi.fn()} onSubmit={vi.fn()} />);
+    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting isLoadingBranches={false} onClose={vi.fn()} onSubmit={vi.fn()} />);
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
     expect(screen.getByRole('button', { name: /Creating/ })).toBeDisabled();
     expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
@@ -92,6 +94,7 @@ describe('NewTaskModal', () => {
         mode="review"
         branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
         isSubmitting={false}
+        isLoadingBranches={false}
         onClose={vi.fn()}
         onSubmit={vi.fn()}
       />,
@@ -111,6 +114,7 @@ describe('NewTaskModal', () => {
         mode="review"
         branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
         isSubmitting={false}
+        isLoadingBranches={false}
         onClose={vi.fn()}
         onSubmit={onSubmit}
       />,
@@ -135,6 +139,7 @@ describe('NewTaskModal', () => {
         mode="review"
         branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
         isSubmitting={false}
+        isLoadingBranches={false}
         onClose={vi.fn()}
         onSubmit={vi.fn()}
       />,
@@ -151,6 +156,7 @@ describe('NewTaskModal', () => {
         mode="review"
         branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
         isSubmitting={false}
+        isLoadingBranches={false}
         onClose={vi.fn()}
         onSubmit={onSubmit}
       />,
@@ -176,6 +182,7 @@ describe('NewTaskModal', () => {
         mode="task"
         branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
         isSubmitting={false}
+        isLoadingBranches={false}
         onClose={vi.fn()}
         onSubmit={vi.fn()}
       />,
@@ -190,14 +197,14 @@ describe('NewTaskModal', () => {
   });
 
   it('defaults the branch folder to feature/ and previews prefix + title slug', async () => {
-    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} isLoadingBranches={false} onClose={vi.fn()} onSubmit={vi.fn()} />);
     await userEvent.type(screen.getByLabelText('Title'), 'Fix Login Bug');
     expect(screen.getByTestId('branch-preview')).toHaveTextContent('feature/fix-login-bug');
   });
 
   it('submits the selected folder as branchPrefix with no explicit branch', async () => {
     const onSubmit = vi.fn();
-    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} onClose={vi.fn()} onSubmit={onSubmit} />);
+    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} isLoadingBranches={false} onClose={vi.fn()} onSubmit={onSubmit} />);
     await userEvent.type(screen.getByLabelText('Title'), 'Fix Login Bug');
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Branch folder' }), 'fix/');
     expect(screen.getByTestId('branch-preview')).toHaveTextContent('fix/fix-login-bug');
@@ -213,7 +220,7 @@ describe('NewTaskModal', () => {
 
   it('Custom… reveals a free-text branch field and submits it as branch (no prefix)', async () => {
     const onSubmit = vi.fn();
-    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} onClose={vi.fn()} onSubmit={onSubmit} />);
+    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} isLoadingBranches={false} onClose={vi.fn()} onSubmit={onSubmit} />);
     await userEvent.type(screen.getByLabelText('Title'), 'Fix Login Bug');
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Branch folder' }), 'custom');
     await userEvent.type(screen.getByLabelText('Branch (optional)'), 'hotfix/urgent');
@@ -225,5 +232,72 @@ describe('NewTaskModal', () => {
       branchPrefix: undefined,
       existingBranch: undefined,
     });
+  });
+
+  it('shows a spinner in the branch area while isLoadingBranches', () => {
+    render(
+      <NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} isLoadingBranches onClose={vi.fn()} onSubmit={vi.fn()} />,
+    );
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+  });
+
+  it('review mode disables Create Task while isLoadingBranches, even with a branch selected', async () => {
+    render(
+      <NewTaskModal
+        isOpen
+        mode="review"
+        branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
+        isSubmitting={false}
+        isLoadingBranches={false}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText('Title'), 'Review PR #42');
+    await userEvent.click(screen.getByRole('combobox'));
+    await userEvent.click(screen.getByRole('option', { name: 'feature-x' }));
+    expect(screen.getByRole('button', { name: 'Create Task' })).not.toBeDisabled();
+
+    cleanup();
+    render(
+      <NewTaskModal
+        isOpen
+        mode="review"
+        branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
+        isSubmitting={false}
+        isLoadingBranches
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText('Title'), 'Review PR #42');
+    await userEvent.click(screen.getByRole('combobox'));
+    await userEvent.click(screen.getByRole('option', { name: 'feature-x' }));
+    expect(screen.getByRole('button', { name: 'Create Task' })).toBeDisabled();
+  });
+
+  it('"Use existing branch" mode disables Create Task while isLoadingBranches, even with a branch selected', async () => {
+    render(
+      <NewTaskModal
+        isOpen
+        mode="task"
+        branches={[{ value: 'feature-x', label: 'feature-x', isRemote: false }]}
+        isSubmitting={false}
+        isLoadingBranches
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    await userEvent.type(screen.getByLabelText('Title'), 'Resume feature work');
+    await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
+    await userEvent.click(screen.getByRole('combobox'));
+    await userEvent.click(screen.getByRole('option', { name: 'feature-x' }));
+    expect(screen.getByRole('button', { name: 'Create Task' })).toBeDisabled();
+  });
+
+  it('new-branch mode does not disable Create Task while isLoadingBranches (branches are not needed)', async () => {
+    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} isLoadingBranches onClose={vi.fn()} onSubmit={vi.fn()} />);
+    await userEvent.type(screen.getByLabelText('Title'), 'Fix Login Bug');
+    expect(screen.getByRole('button', { name: 'Create Task' })).not.toBeDisabled();
   });
 });
