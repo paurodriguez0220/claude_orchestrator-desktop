@@ -19,6 +19,7 @@ describe('NewTaskModal', () => {
       title: 'Fix login bug',
       adoId: 'ADO-1234',
       branch: undefined,
+      branchPrefix: 'feature/',
       existingBranch: undefined,
     });
   });
@@ -44,7 +45,7 @@ describe('NewTaskModal', () => {
         onSubmit={vi.fn()}
       />,
     );
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Branch folder' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('radio', { name: 'Use existing branch' }));
     await userEvent.click(screen.getByRole('combobox'));
     expect(screen.getByRole('option', { name: 'feature-x' })).toBeInTheDocument();
@@ -72,6 +73,7 @@ describe('NewTaskModal', () => {
       title: 'Resume feature work',
       adoId: undefined,
       branch: undefined,
+      branchPrefix: undefined,
       existingBranch: 'feature-x',
     });
   });
@@ -121,6 +123,7 @@ describe('NewTaskModal', () => {
       title: 'Review PR #42',
       adoId: undefined,
       branch: undefined,
+      branchPrefix: undefined,
       existingBranch: 'feature-x',
     });
   });
@@ -161,6 +164,7 @@ describe('NewTaskModal', () => {
       title: 'Review PR #42',
       adoId: undefined,
       branch: undefined,
+      branchPrefix: undefined,
       existingBranch: 'feature-x',
     });
   });
@@ -183,5 +187,43 @@ describe('NewTaskModal', () => {
     await userEvent.click(screen.getByRole('combobox'));
     await userEvent.click(screen.getByRole('option', { name: 'feature-x' }));
     expect(screen.getByRole('button', { name: 'Create Task' })).not.toBeDisabled();
+  });
+
+  it('defaults the branch folder to feature/ and previews prefix + title slug', async () => {
+    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    await userEvent.type(screen.getByLabelText('Title'), 'Fix Login Bug');
+    expect(screen.getByTestId('branch-preview')).toHaveTextContent('feature/fix-login-bug');
+  });
+
+  it('submits the selected folder as branchPrefix with no explicit branch', async () => {
+    const onSubmit = vi.fn();
+    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} onClose={vi.fn()} onSubmit={onSubmit} />);
+    await userEvent.type(screen.getByLabelText('Title'), 'Fix Login Bug');
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Branch folder' }), 'fix/');
+    expect(screen.getByTestId('branch-preview')).toHaveTextContent('fix/fix-login-bug');
+    await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
+    expect(onSubmit).toHaveBeenCalledWith({
+      title: 'Fix Login Bug',
+      adoId: undefined,
+      branch: undefined,
+      branchPrefix: 'fix/',
+      existingBranch: undefined,
+    });
+  });
+
+  it('Custom… reveals a free-text branch field and submits it as branch (no prefix)', async () => {
+    const onSubmit = vi.fn();
+    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} onClose={vi.fn()} onSubmit={onSubmit} />);
+    await userEvent.type(screen.getByLabelText('Title'), 'Fix Login Bug');
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Branch folder' }), 'custom');
+    await userEvent.type(screen.getByLabelText('Branch (optional)'), 'hotfix/urgent');
+    await userEvent.click(screen.getByRole('button', { name: 'Create Task' }));
+    expect(onSubmit).toHaveBeenCalledWith({
+      title: 'Fix Login Bug',
+      adoId: undefined,
+      branch: 'hotfix/urgent',
+      branchPrefix: undefined,
+      existingBranch: undefined,
+    });
   });
 });

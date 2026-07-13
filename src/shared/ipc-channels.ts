@@ -45,6 +45,7 @@ export interface TaskCreateRequest {
   title: string;
   adoId?: string;
   branch?: string;
+  branchPrefix?: string;
   existingBranch?: string;
   kind?: TaskKind;
 }

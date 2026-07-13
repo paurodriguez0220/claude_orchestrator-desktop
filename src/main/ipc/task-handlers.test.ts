@@ -95,7 +95,7 @@ describe('task-handlers', () => {
   it('TaskCreate adds a worktree, stores a task record, and spawns a fresh session', async () => {
     const handler = handlers.get(IpcChannels.TaskCreate);
     const task = await handler?.({}, { repoId: 'repo-1', title: 'Fix login bug', adoId: 'ADO-1' });
-    expect(addWorktree).toHaveBeenCalledWith('C:\\demo', 'C:\\demo\\..\\demo-worktrees\\fix-login-bug', 'task/fix-login-bug');
+    expect(addWorktree).toHaveBeenCalledWith('C:\\demo', 'C:\\demo\\..\\demo-worktrees\\fix-login-bug', 'feature/fix-login-bug');
     expect(task).toMatchObject({ title: 'Fix login bug', adoId: 'ADO-1', status: 'todo' });
     expect(store.tasks).toHaveLength(1);
     expect(spawnClaudeSession).toHaveBeenCalledWith(
@@ -104,6 +104,20 @@ describe('task-handlers', () => {
       false,
       onPtyData,
     );
+  });
+
+  it('TaskCreate composes the branch from branchPrefix + slug', async () => {
+    const handler = handlers.get(IpcChannels.TaskCreate);
+    const task = await handler?.({}, { repoId: 'repo-1', title: 'Fix login bug', branchPrefix: 'fix/' });
+    expect(addWorktree).toHaveBeenCalledWith('C:\\demo', 'C:\\demo\\..\\demo-worktrees\\fix-login-bug', 'fix/fix-login-bug');
+    expect(task).toMatchObject({ branch: 'fix/fix-login-bug' });
+  });
+
+  it('TaskCreate lets an explicit branch override the prefix', async () => {
+    const handler = handlers.get(IpcChannels.TaskCreate);
+    const task = await handler?.({}, { repoId: 'repo-1', title: 'Fix login bug', branchPrefix: 'fix/', branch: 'hotfix/custom' });
+    expect(addWorktree).toHaveBeenCalledWith('C:\\demo', 'C:\\demo\\..\\demo-worktrees\\fix-login-bug', 'hotfix/custom');
+    expect(task).toMatchObject({ branch: 'hotfix/custom' });
   });
 
   it('TaskCreate rejects an unknown repoId', async () => {
@@ -157,7 +171,7 @@ describe('task-handlers', () => {
       id: 'task-1',
       repoId: 'repo-1',
       title: 'Fix login bug',
-      branch: 'task/fix-login-bug',
+      branch: 'feature/fix-login-bug',
       worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
       status: 'todo',
       kind: 'worktree',
@@ -166,7 +180,7 @@ describe('task-handlers', () => {
     });
     const handler = handlers.get(IpcChannels.TaskCreate);
     await expect(handler?.({}, { repoId: 'repo-1', title: 'Fix login bug' })).rejects.toThrow(
-      'A task for branch "task/fix-login-bug" already exists',
+      'A task for branch "feature/fix-login-bug" already exists',
     );
     expect(addWorktree).not.toHaveBeenCalled();
     expect(store.tasks).toHaveLength(1);
