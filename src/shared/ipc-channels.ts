@@ -26,6 +26,7 @@ export const IpcChannels = {
   GenerateDsuSummary: 'dsu:generate',
   AdoListMyTasks: 'ado:list-my-tasks',
   AdoConfig: 'ado:config',
+  AdoCreateWorkItem: 'ado:create-work-item',
 } as const;
 
 export interface RepoAddRequest {
@@ -101,4 +102,17 @@ export interface AdoWorkItem {
   state: string;
   areaPath: string;
   storyPoints: number | undefined;
+}
+
+export interface AdoCreateWorkItemRequest {
+  type: string;
+  title: string;
+  description?: string;
+  parentId?: number;
+  assignee?: string;
+}
+
+export interface AdoCreateWorkItemResult {
+  id: number;
+  url: string;
 }

@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 let mockError: { stderr?: string } | null = null;
 
 const execFileMock = vi.fn();
+const writeFileMock = vi.fn(async (_path: string, _data: string) => undefined);
+const rmMock = vi.fn(async (_path: string, _options?: unknown) => undefined);
 
 vi.mock('node:child_process', () => ({
   execFile: (...args: unknown[]) => {
@@ -20,11 +22,30 @@ vi.mock('node:child_process', () => ({
   },
 }));
 
-import { assertAdoAuthenticated, getAdoConfig, listMyAssignedTasks, AdoCommandError } from './ado-service';
+vi.mock('node:fs/promises', () => ({
+  writeFile: (path: string, data: string) => writeFileMock(path, data),
+  rm: (path: string, options?: unknown) => rmMock(path, options),
+}));
+
+import {
+  assertAdoAuthenticated,
+  getAdoConfig,
+  listMyAssignedTasks,
+  createWorkItem,
+  AdoCommandError,
+} from './ado-service';
+
+function jsonResult(value: unknown): { stdout: string; stderr: string } {
+  return { stdout: JSON.stringify(value), stderr: '' };
+}
+
+const CONFIG_RESULT = { stdout: 'organization = myorg\nproject      = MyProject\n', stderr: '' };
 
 describe('ado-service', () => {
   beforeEach(() => {
     execFileMock.mockReset();
+    writeFileMock.mockClear();
+    rmMock.mockClear();
     mockError = null;
   });
 
@@ -131,6 +152,148 @@ describe('ado-service', () => {
       const result = await getAdoConfig();
 
       expect(result).toEqual({ organization: 'https://dev.azure.com/myorg', project: 'MyProject' });
+    });
+  });
+
+  describe('createWorkItem', () => {
+    it('creates a basic work item and returns its id + edit url', async () => {
+      execFileMock
+        .mockReturnValueOnce(CONFIG_RESULT)
+        .mockReturnValueOnce(jsonResult({ id: 501 }))
+        .mockReturnValueOnce(jsonResult({ fields: {} }));
+
+      const result = await createWorkItem({ type: 'Task', title: 'T' });
+
+      expect(result).toEqual({ id: 501, url: 'https://dev.azure.com/myorg/MyProject/_workitems/edit/501' });
+
+      const createCall = execFileMock.mock.calls[1] as unknown[];
+      expect(createCall[0]).toBe('az');
+      expect(createCall[1]).toEqual(['boards', 'work-item', 'create', '--type', 'Task', '--title', 'T', '-o', 'json']);
+    });
+
+    it('sets a large description via az rest PATCH with a body file, not inline', async () => {
+      execFileMock
+        .mockReturnValueOnce(CONFIG_RESULT)
+        .mockReturnValueOnce(jsonResult({ id: 502 }))
+        .mockReturnValueOnce({ stdout: '', stderr: '' })
+        .mockReturnValueOnce(jsonResult({ fields: { 'System.Description': 'Some long description' } }));
+
+      await createWorkItem({ type: 'Task', title: 'T', description: 'Some long description' });
+
+      const createCall = execFileMock.mock.calls[1] as unknown[];
+      const createArgs = createCall[1] as string[];
+      expect(createArgs.join(' ')).not.toContain('description');
+      expect(createArgs).not.toContain('--description');
+
+      const restCall = execFileMock.mock.calls[2] as unknown[];
+      const restArgs = restCall[1] as string[];
+      expect(restArgs).toContain('--method');
+      expect(restArgs[restArgs.indexOf('--method') + 1]).toBe('PATCH');
+      expect(restArgs).toContain('--resource');
+      expect(restArgs[restArgs.indexOf('--resource') + 1]).toBe('499b84ac-1321-427f-aa17-267ca6975798');
+      const bodyArg = restArgs.find((arg) => arg.startsWith('@'));
+      expect(bodyArg).toBeDefined();
+
+      expect(writeFileMock).toHaveBeenCalledOnce();
+      const writtenContent = writeFileMock.mock.calls[0]?.[1] as string;
+      const patch = JSON.parse(writtenContent) as Array<{ op: string; path: string; value: string }>;
+      expect(patch).toEqual([{ op: 'add', path: '/fields/System.Description', value: 'Some long description' }]);
+
+      expect(rmMock).toHaveBeenCalledOnce();
+    });
+
+    it('copies parent fields and adds a parent relation when parentId is given', async () => {
+      execFileMock
+        .mockReturnValueOnce(CONFIG_RESULT)
+        .mockReturnValueOnce(jsonResult({ id: 503 }))
+        .mockReturnValueOnce(
+          jsonResult({
+            fields: {
+              'System.AssignedTo': { uniqueName: 'x@y.com' },
+              'Microsoft.VSTS.Common.Priority': 2,
+              'Custom.EffortType': 'Story',
+              'System.AreaPath': 'Proj\\Team',
+              'System.IterationPath': 'Proj\\Sprint 1',
+            },
+          }),
+        )
+        .mockReturnValueOnce({ stdout: '', stderr: '' })
+        .mockReturnValueOnce({ stdout: '', stderr: '' })
+        .mockReturnValueOnce({ stdout: '', stderr: '' })
+        .mockReturnValueOnce({ stdout: '', stderr: '' })
+        .mockReturnValueOnce({ stdout: '', stderr: '' })
+        .mockReturnValueOnce({ stdout: '', stderr: '' })
+        .mockReturnValueOnce(jsonResult({ fields: {} }));
+
+      await createWorkItem({ type: 'Task', title: 'Child', parentId: 999 });
+
+      const allArgs = execFileMock.mock.calls.map((call) => (call as unknown[])[1] as string[]);
+
+      const showParentCall = allArgs[2];
+      expect(showParentCall).toEqual(['boards', 'work-item', 'show', '--id', '999', '-o', 'json']);
+
+      const updateCalls = allArgs.filter((args) => args[2] === 'update');
+      expect(updateCalls).toContainEqual([
+        'boards', 'work-item', 'update', '--id', '503', '--fields', 'System.AssignedTo=x@y.com',
+      ]);
+      expect(updateCalls).toContainEqual([
+        'boards', 'work-item', 'update', '--id', '503', '--fields', 'Microsoft.VSTS.Common.Priority=2',
+      ]);
+      expect(updateCalls).toContainEqual([
+        'boards', 'work-item', 'update', '--id', '503', '--fields', 'Custom.EffortType=Story',
+      ]);
+      expect(updateCalls).toContainEqual([
+        'boards', 'work-item', 'update', '--id', '503', '--fields', 'System.AreaPath=Proj\\Team',
+      ]);
+      expect(updateCalls).toContainEqual([
+        'boards', 'work-item', 'update', '--id', '503', '--fields', 'System.IterationPath=Proj\\Sprint 1',
+      ]);
+
+      const relationCall = allArgs.find((args) => args[2] === 'relation');
+      expect(relationCall).toEqual([
+        'boards', 'work-item', 'relation', 'add', '--id', '503', '--relation-type', 'parent', '--target-id', '999',
+      ]);
+    });
+
+    it('rejects with an AdoCommandError mentioning verification when the description did not persist', async () => {
+      execFileMock
+        .mockReturnValueOnce(CONFIG_RESULT)
+        .mockReturnValueOnce(jsonResult({ id: 504 }))
+        .mockReturnValueOnce({ stdout: '', stderr: '' })
+        .mockReturnValueOnce(jsonResult({ fields: { 'System.Description': '' } }));
+
+      await expect(createWorkItem({ type: 'Task', title: 'T', description: 'desc' })).rejects.toMatchObject({
+        name: 'AdoCommandError',
+        message: expect.stringContaining('verif'),
+      });
+    });
+
+    it('rejects with an AdoCommandError mentioning verification when the assignee did not persist', async () => {
+      execFileMock
+        .mockReturnValueOnce(CONFIG_RESULT)
+        .mockReturnValueOnce(jsonResult({ id: 505 }))
+        .mockReturnValueOnce(jsonResult({ fields: {} }));
+
+      await expect(
+        createWorkItem({ type: 'Task', title: 'T', assignee: 'x@y.com' }),
+      ).rejects.toMatchObject({
+        name: 'AdoCommandError',
+        message: expect.stringContaining('verif'),
+      });
+    });
+
+    it('passes an explicit assignee via --assigned-to on create', async () => {
+      execFileMock
+        .mockReturnValueOnce(CONFIG_RESULT)
+        .mockReturnValueOnce(jsonResult({ id: 506 }))
+        .mockReturnValueOnce(jsonResult({ fields: { 'System.AssignedTo': { uniqueName: 'x@y.com' } } }));
+
+      await createWorkItem({ type: 'Task', title: 'T', assignee: 'x@y.com' });
+
+      const createCall = execFileMock.mock.calls[1] as unknown[];
+      const createArgs = createCall[1] as string[];
+      expect(createArgs).toContain('--assigned-to');
+      expect(createArgs[createArgs.indexOf('--assigned-to') + 1]).toBe('x@y.com');
     });
   });
 });
