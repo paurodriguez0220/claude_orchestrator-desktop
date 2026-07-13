@@ -40,6 +40,10 @@ export function App(): JSX.Element {
   const [isArchivedModalOpen, setIsArchivedModalOpen] = useState(false);
   const [dsuSummary, setDsuSummary] = useState<{ markdown: string; filePath: string } | undefined>();
   const [isGeneratingDsu, setIsGeneratingDsu] = useState(false);
+  const [closingTaskIds, setClosingTaskIds] = useState<string[]>([]);
+  const [removingTaskIds, setRemovingTaskIds] = useState<string[]>([]);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+  const [isAddingRepo, setIsAddingRepo] = useState(false);
   // Mirrors newTaskRepoId so handleNewTaskClick's in-flight listBranches
   // callback can check, after the fact, whether its response is still
   // relevant — reading state directly from inside an already-started async
@@ -107,7 +111,14 @@ export function App(): JSX.Element {
   }
 
   async function handleCloseTab(taskId: string): Promise<void> {
+    // Ignore a repeat close for a tab already in flight — its close button is
+    // disabled while closing, but this guard also protects against any other
+    // path that might invoke the handler again for the same id.
+    if (closingTaskIds.includes(taskId)) {
+      return;
+    }
     setErrorMessage(undefined);
+    setClosingTaskIds((current) => [...current, taskId]);
     try {
       // Block the UI close until the backend confirms the PTY is actually gone.
       // This mirrors the pattern used elsewhere in this file (handleRemoveTask,
@@ -121,6 +132,8 @@ export function App(): JSX.Element {
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
       return;
+    } finally {
+      setClosingTaskIds((current) => current.filter((id) => id !== taskId));
     }
     const remaining = openTaskIds.filter((id) => id !== taskId);
     setOpenTaskIds(remaining);
@@ -138,6 +151,7 @@ export function App(): JSX.Element {
     setErrorMessage(undefined);
     setNewTaskMode('task');
     setNewTaskRepoId(repoId);
+    setIsLoadingBranches(true);
     try {
       const options = await window.claudeOrchestrator.listBranches(repoId);
       // Guard against out-of-order responses: if the user closed this modal
@@ -148,6 +162,8 @@ export function App(): JSX.Element {
       }
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
+    } finally {
+      setIsLoadingBranches(false);
     }
   }
 
@@ -155,12 +171,15 @@ export function App(): JSX.Element {
     setErrorMessage(undefined);
     setNewTaskMode('review');
     setNewTaskRepoId(repoId);
+    setIsLoadingBranches(true);
     try {
       await window.claudeOrchestrator.fetchRepo(repoId);
       const options = await window.claudeOrchestrator.listBranches(repoId);
       setBranches(options);
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
+    } finally {
+      setIsLoadingBranches(false);
     }
   }
 
@@ -208,8 +227,13 @@ export function App(): JSX.Element {
       if (path === undefined) {
         return;
       }
-      const repo = await window.claudeOrchestrator.addRepo(path);
-      setRepos((current) => [...current, repo]);
+      setIsAddingRepo(true);
+      try {
+        const repo = await window.claudeOrchestrator.addRepo(path);
+        setRepos((current) => [...current, repo]);
+      } finally {
+        setIsAddingRepo(false);
+      }
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
     }
@@ -239,6 +263,7 @@ export function App(): JSX.Element {
       return;
     }
     setErrorMessage(undefined);
+    setRemovingTaskIds((current) => [...current, taskId]);
     try {
       await window.claudeOrchestrator.removeTask(taskId);
       setTasks((current) => current.filter((task) => task.id !== taskId));
@@ -248,6 +273,8 @@ export function App(): JSX.Element {
       }
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
+    } finally {
+      setRemovingTaskIds((current) => current.filter((id) => id !== taskId));
     }
   }
 
@@ -332,6 +359,8 @@ export function App(): JSX.Element {
           activeTasksByRepoId={filteredActiveTasksByRepoId}
           scratchTasks={scratchTasks}
           selectedTaskId={activeTaskId}
+          removingTaskIds={removingTaskIds}
+          isAddingRepo={isAddingRepo}
           searchQuery={searchQuery}
           onSearchQueryChange={setSearchQuery}
           onSelectTask={(taskId) => void handleSelectTask(taskId)}
@@ -350,6 +379,7 @@ export function App(): JSX.Element {
           isOpen={newTaskRepoId !== undefined}
           branches={branches}
           isSubmitting={isSubmittingModal}
+          isLoadingBranches={isLoadingBranches}
           mode={newTaskMode}
           onClose={() => {
             setNewTaskRepoId(undefined);
@@ -397,6 +427,7 @@ export function App(): JSX.Element {
               }))}
               activeTaskId={activeTaskId}
               finishedTaskIds={finishedTaskIds}
+              closingTaskIds={closingTaskIds}
               onSelectTab={(taskId) => void handleSelectTask(taskId)}
               onCloseTab={(taskId) => void handleCloseTab(taskId)}
             />

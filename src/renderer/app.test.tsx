@@ -32,12 +32,18 @@ vi.mock('@xterm/addon-fit', () => ({
 
 import { App } from './app';
 
-function createDeferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+function createDeferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (reason: unknown) => void;
+} {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((res) => {
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
     resolve = res;
+    reject = rej;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
 
 const repo: RepoRecord = { id: 'repo-1', name: 'demo', path: 'C:\\demo', createdAt: '2026-07-08T00:00:00.000Z' };
@@ -639,5 +645,157 @@ describe('App', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Generate work log' }));
     await userEvent.click(screen.getByRole('button', { name: 'Generate' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('claude -p failed to generate the work log');
+  });
+
+  it('shows a spinner and disables the close button while closing a tab, then removes it on success', async () => {
+    const closeDeferred = createDeferred<undefined>();
+    closeTask.mockReturnValueOnce(closeDeferred.promise);
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Fix login bug' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Close Fix login bug' }));
+
+    expect(screen.getByRole('button', { name: 'Close Fix login bug' })).toBeDisabled();
+
+    closeDeferred.resolve(undefined);
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Close Fix login bug' })).not.toBeInTheDocument());
+  });
+
+  it('re-enables the close button and surfaces an error if closing a tab fails', async () => {
+    const closeDeferred = createDeferred<undefined>();
+    closeTask.mockReturnValueOnce(closeDeferred.promise);
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Fix login bug' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Close Fix login bug' }));
+
+    expect(screen.getByRole('button', { name: 'Close Fix login bug' })).toBeDisabled();
+
+    closeDeferred.reject(new Error('pty kill failed'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Close Fix login bug' })).not.toBeDisabled());
+    expect(await screen.findByRole('alert')).toHaveTextContent('pty kill failed');
+  });
+
+  it('shows a spinner and disables remove/archive while removing a task, then removes it on success', async () => {
+    const removeDeferred = createDeferred<undefined>();
+    removeTask.mockReturnValueOnce(removeDeferred.promise);
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<App />);
+    await screen.findByText('Fix login bug');
+    const removeButton = screen.getAllByRole('button', { name: 'Remove task' })[0];
+    if (!removeButton) {
+      throw new Error('Expected at least one "Remove task" button to be rendered');
+    }
+    await userEvent.click(removeButton);
+
+    expect(screen.getAllByRole('button', { name: 'Remove task' })[0]).toBeDisabled();
+    expect(screen.getAllByRole('button', { name: 'Archive task' })[0]).toBeDisabled();
+
+    removeDeferred.resolve(undefined);
+    await waitFor(() => expect(screen.queryByText('Fix login bug')).not.toBeInTheDocument());
+    confirmSpy.mockRestore();
+  });
+
+  it('re-enables remove/archive and surfaces an error if removing a task fails', async () => {
+    const removeDeferred = createDeferred<undefined>();
+    removeTask.mockReturnValueOnce(removeDeferred.promise);
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<App />);
+    await screen.findByText('Fix login bug');
+    const removeButton = screen.getAllByRole('button', { name: 'Remove task' })[0];
+    if (!removeButton) {
+      throw new Error('Expected at least one "Remove task" button to be rendered');
+    }
+    await userEvent.click(removeButton);
+
+    expect(screen.getAllByRole('button', { name: 'Remove task' })[0]).toBeDisabled();
+
+    removeDeferred.reject(new Error('git worktree remove failed'));
+    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Remove task' })[0]).not.toBeDisabled());
+    expect(await screen.findByRole('alert')).toHaveTextContent('git worktree remove failed');
+    confirmSpy.mockRestore();
+  });
+
+  it('shows a branch-loading spinner in the New Task modal while listBranches is pending, then clears it', async () => {
+    const branchesDeferred = createDeferred<{ value: string; label: string; isRemote: boolean }[]>();
+    listBranches.mockReturnValueOnce(branchesDeferred.promise);
+    render(<App />);
+    const newTaskButtons = await screen.findAllByRole('button', { name: 'New Task' });
+    const firstNewTaskButton = newTaskButtons[0];
+    if (!firstNewTaskButton) {
+      throw new Error('Expected at least one "New Task" button to be rendered');
+    }
+    await userEvent.click(firstNewTaskButton);
+
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+
+    branchesDeferred.resolve([{ value: 'feature-x', label: 'feature-x', isRemote: false }]);
+    await waitFor(() => expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument());
+  });
+
+  it('clears the branch-loading spinner and surfaces an error if listBranches fails for New Task', async () => {
+    const branchesDeferred = createDeferred<{ value: string; label: string; isRemote: boolean }[]>();
+    listBranches.mockReturnValueOnce(branchesDeferred.promise);
+    render(<App />);
+    const newTaskButtons = await screen.findAllByRole('button', { name: 'New Task' });
+    const firstNewTaskButton = newTaskButtons[0];
+    if (!firstNewTaskButton) {
+      throw new Error('Expected at least one "New Task" button to be rendered');
+    }
+    await userEvent.click(firstNewTaskButton);
+
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+
+    branchesDeferred.reject(new Error('git branch listing failed'));
+    await waitFor(() => expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument());
+    expect(await screen.findByRole('alert')).toHaveTextContent('git branch listing failed');
+  });
+
+  it('shows a branch-loading spinner while Review Code fetches the repo and lists branches, then clears it', async () => {
+    const fetchDeferred = createDeferred<undefined>();
+    fetchRepo.mockReturnValueOnce(fetchDeferred.promise);
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Review Code' }));
+
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+
+    fetchDeferred.resolve(undefined);
+    await waitFor(() => expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument());
+  });
+
+  it('clears the branch-loading spinner and surfaces an error if fetchRepo fails for Review Code', async () => {
+    const fetchDeferred = createDeferred<undefined>();
+    fetchRepo.mockReturnValueOnce(fetchDeferred.promise);
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Review Code' }));
+
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+
+    fetchDeferred.reject(new Error('git fetch failed'));
+    await waitFor(() => expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument());
+    expect(await screen.findByRole('alert')).toHaveTextContent('git fetch failed');
+  });
+
+  it('shows a spinner and disables Open Existing Repo while addRepo is pending, then clears it on success', async () => {
+    const addRepoDeferred = createDeferred<RepoRecord>();
+    addRepo.mockReturnValueOnce(addRepoDeferred.promise);
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Open Existing Repo' }));
+
+    expect(screen.getByRole('button', { name: 'Open Existing Repo' })).toBeDisabled();
+
+    addRepoDeferred.resolve(repoB);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Open Existing Repo' })).not.toBeDisabled());
+  });
+
+  it('re-enables Open Existing Repo and surfaces an error if addRepo fails', async () => {
+    const addRepoDeferred = createDeferred<RepoRecord>();
+    addRepo.mockReturnValueOnce(addRepoDeferred.promise);
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Open Existing Repo' }));
+
+    expect(screen.getByRole('button', { name: 'Open Existing Repo' })).toBeDisabled();
+
+    addRepoDeferred.reject(new Error('not a git repository'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Open Existing Repo' })).not.toBeDisabled());
+    expect(await screen.findByRole('alert')).toHaveTextContent('not a git repository');
   });
 });
