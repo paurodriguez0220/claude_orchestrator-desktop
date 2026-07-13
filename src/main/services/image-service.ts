@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import type { Clipboard } from 'electron';
 
 const MIME_TO_EXTENSION: Record<string, string> = {
   'image/png': 'png',
@@ -24,4 +25,12 @@ export async function saveClipboardImage(dataUrl: string, destinationDir: string
   const filePath = join(destinationDir, `${randomUUID()}.${extension}`);
   await writeFile(filePath, Buffer.from(base64Data, 'base64'));
   return filePath;
+}
+
+export function readClipboardImageDataUrl(clipboard: Pick<Clipboard, 'readImage'>): string | undefined {
+  const image = clipboard.readImage();
+  if (image.isEmpty()) {
+    return undefined;
+  }
+  return image.toDataURL();
 }
