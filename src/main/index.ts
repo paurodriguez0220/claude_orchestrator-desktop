@@ -5,6 +5,7 @@ import { registerTaskHandlers } from './ipc/task-handlers';
 import { registerImageHandlers } from './ipc/image-handlers';
 import { registerAppHandlers } from './ipc/app-handlers';
 import { registerDsuHandlers } from './ipc/dsu-handlers';
+import { registerAdoHandlers } from './ipc/ado-handlers';
 import { startTranscriptExportScheduler } from './services/transcript-service';
 import { startFinishedStatePoller } from './services/finished-state-poller';
 import { IpcChannels } from '../shared/ipc-channels';
@@ -55,6 +56,7 @@ app.whenReady().then(() => {
   registerImageHandlers();
   registerAppHandlers();
   registerDsuHandlers();
+  registerAdoHandlers();
   startTranscriptExportScheduler(5 * 60 * 1000);
   startFinishedStatePoller(5000, broadcastFinishedState);
 

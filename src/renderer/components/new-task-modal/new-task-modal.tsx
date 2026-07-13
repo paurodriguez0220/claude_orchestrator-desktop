@@ -19,6 +19,8 @@ export interface NewTaskModalProps {
   isSubmitting: boolean;
   isLoadingBranches: boolean;
   mode: 'task' | 'review';
+  initialTitle?: string;
+  initialAdoId?: string;
   onClose: () => void;
   onSubmit: (fields: NewTaskFields) => void;
 }
@@ -36,11 +38,13 @@ export function NewTaskModal({
   isSubmitting,
   isLoadingBranches,
   mode,
+  initialTitle,
+  initialAdoId,
   onClose,
   onSubmit,
 }: NewTaskModalProps): JSX.Element | null {
-  const [title, setTitle] = useState('');
-  const [adoId, setAdoId] = useState('');
+  const [title, setTitle] = useState(initialTitle ?? '');
+  const [adoId, setAdoId] = useState(initialAdoId ?? '');
   const [branch, setBranch] = useState('');
   const [useExistingBranch, setUseExistingBranch] = useState(false);
   const [selectedExistingBranch, setSelectedExistingBranch] = useState('');

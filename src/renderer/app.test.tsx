@@ -102,6 +102,20 @@ const generateDsuSummary = vi.fn(async () => ({
   markdown: '## Fix login bug\n\n- Fixed a null check.',
   filePath: 'C:\\Users\\paulo.rodriguez\\claude-orchestrator\\dsu\\2026-07-09.md',
 }));
+const adoItem = {
+  id: 101,
+  title: 'Fix login',
+  type: 'Bug',
+  state: 'Active',
+  areaPath: 'Proj\\Team',
+  storyPoints: 3,
+};
+const listAdoTasks = vi.fn(async () => [adoItem]);
+const getAdoConfig = vi.fn(async () => ({ organization: 'https://dev.azure.com/myorg', project: 'MyProject' }));
+const createAdoWorkItem = vi.fn(async () => ({
+  id: 501,
+  url: 'https://dev.azure.com/myorg/MyProject/_workitems/edit/501',
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -123,6 +137,9 @@ beforeEach(() => {
     setTaskNotes,
     setTaskStatus,
     generateDsuSummary,
+    listAdoTasks,
+    getAdoConfig,
+    createAdoWorkItem,
     sendPtyInput: vi.fn(),
     resizePty: vi.fn(),
     onPtyOutput: vi.fn(() => vi.fn()),
@@ -797,5 +814,116 @@ describe('App', () => {
     addRepoDeferred.reject(new Error('not a git repository'));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Open Existing Repo' })).not.toBeDisabled());
     expect(await screen.findByRole('alert')).toHaveTextContent('not a git repository');
+  });
+
+  it('"ADO tasks" opens the modal and loads tasks and config', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'ADO tasks' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Azure DevOps tasks' });
+    expect(listAdoTasks).toHaveBeenCalled();
+    expect(getAdoConfig).toHaveBeenCalled();
+    expect(await within(dialog).findByText('Fix login')).toBeInTheDocument();
+  });
+
+  it('shows a loading spinner in the ADO modal while listAdoTasks is pending', async () => {
+    const tasksDeferred = createDeferred<typeof adoItem[]>();
+    listAdoTasks.mockReturnValueOnce(tasksDeferred.promise);
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'ADO tasks' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Azure DevOps tasks' });
+    expect(within(dialog).getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+
+    tasksDeferred.resolve([adoItem]);
+    await waitFor(() => expect(within(dialog).queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument());
+  });
+
+  it('"Create worktree" from an ADO item opens the New Task modal prefilled with its title and closes the ADO modal', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'ADO tasks' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Azure DevOps tasks' });
+    await within(dialog).findByText('Fix login');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create worktree' }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Azure DevOps tasks' })).not.toBeInTheDocument(),
+    );
+    const newTaskDialog = await screen.findByRole('dialog', { name: 'New Task' });
+    expect(within(newTaskDialog).getByLabelText('Title')).toHaveValue('Fix login');
+    expect(within(newTaskDialog).getByLabelText('ADO Task ID (optional)')).toHaveValue('101');
+    expect(listBranches).toHaveBeenCalledWith('repo-1');
+  });
+
+  it('"New ADO item" opens the create modal without calling createAdoWorkItem merely on open', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'New ADO item' }));
+    await screen.findByRole('dialog', { name: 'New ADO work item' });
+    expect(createAdoWorkItem).not.toHaveBeenCalled();
+  });
+
+  it('submitting the New ADO work item form forwards the request and shows the created id/link on success', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'New ADO item' }));
+    const dialog = await screen.findByRole('dialog', { name: 'New ADO work item' });
+    await userEvent.type(within(dialog).getByLabelText('Title'), 'Fix login bug');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
+
+    expect(createAdoWorkItem).toHaveBeenCalledWith({
+      type: 'Task',
+      title: 'Fix login bug',
+      description: undefined,
+      parentId: undefined,
+      assignee: 'paulo.rodriguez@fefundinfo.com',
+    });
+    expect(await within(dialog).findByText(/Created #501/)).toBeInTheDocument();
+  });
+
+  it('shows a blank New ADO work item form when reopened after being closed with stale input', async () => {
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'New ADO item' }));
+    let dialog = await screen.findByRole('dialog', { name: 'New ADO work item' });
+    await userEvent.type(within(dialog).getByLabelText('Title'), 'Fix login bug');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog', { name: 'New ADO work item' })).not.toBeInTheDocument();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'New ADO item' }));
+    dialog = await screen.findByRole('dialog', { name: 'New ADO work item' });
+    expect(within(dialog).getByLabelText('Title')).toHaveValue('');
+  });
+
+  it('shows a submitting spinner in the New ADO work item modal while the create call is pending', async () => {
+    const adoCreateDeferred = createDeferred<{ id: number; url: string }>();
+    createAdoWorkItem.mockReturnValueOnce(adoCreateDeferred.promise);
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'New ADO item' }));
+    const dialog = await screen.findByRole('dialog', { name: 'New ADO work item' });
+    await userEvent.type(within(dialog).getByLabelText('Title'), 'Fix login bug');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
+
+    expect(within(dialog).getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+
+    adoCreateDeferred.resolve({ id: 501, url: 'https://dev.azure.com/myorg/MyProject/_workitems/edit/501' });
+    await waitFor(() =>
+      expect(within(dialog).queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument(),
+    );
+  });
+
+  it('loads branches for the target repo when creating a worktree from an ADO item', async () => {
+    const branchesDeferred = createDeferred<{ value: string; label: string; isRemote: boolean }[]>();
+    listBranches.mockReturnValueOnce(branchesDeferred.promise);
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'ADO tasks' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Azure DevOps tasks' });
+    await within(dialog).findByText('Fix login');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create worktree' }));
+
+    const newTaskDialog = await screen.findByRole('dialog', { name: 'New Task' });
+    expect(listBranches).toHaveBeenCalledWith('repo-1');
+    expect(within(newTaskDialog).getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+
+    branchesDeferred.resolve([{ value: 'feature-x', label: 'feature-x', isRemote: false }]);
+    await waitFor(() =>
+      expect(within(newTaskDialog).queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument(),
+    );
+    expect(within(newTaskDialog).getByLabelText('Title')).toHaveValue('Fix login');
   });
 });

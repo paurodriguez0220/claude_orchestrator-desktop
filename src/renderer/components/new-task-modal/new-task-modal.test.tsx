@@ -300,4 +300,28 @@ describe('NewTaskModal', () => {
     await userEvent.type(screen.getByLabelText('Title'), 'Fix Login Bug');
     expect(screen.getByRole('button', { name: 'Create Task' })).not.toBeDisabled();
   });
+
+  it('seeds the Title and ADO Task ID inputs from initialTitle/initialAdoId when provided', () => {
+    render(
+      <NewTaskModal
+        isOpen
+        mode="task"
+        branches={[]}
+        isSubmitting={false}
+        isLoadingBranches={false}
+        initialTitle="Fix login"
+        initialAdoId="12345"
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('Title')).toHaveValue('Fix login');
+    expect(screen.getByLabelText('ADO Task ID (optional)')).toHaveValue('12345');
+  });
+
+  it('defaults the Title and ADO Task ID inputs to empty when initialTitle/initialAdoId are not provided', () => {
+    render(<NewTaskModal isOpen mode="task" branches={[]} isSubmitting={false} isLoadingBranches={false} onClose={vi.fn()} onSubmit={vi.fn()} />);
+    expect(screen.getByLabelText('Title')).toHaveValue('');
+    expect(screen.getByLabelText('ADO Task ID (optional)')).toHaveValue('');
+  });
 });

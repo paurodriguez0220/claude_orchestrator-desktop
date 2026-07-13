@@ -39,6 +39,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     expect(screen.getByText('demo')).toBeInTheDocument();
@@ -68,6 +70,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Fix login bug' }));
@@ -97,6 +101,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Open Existing Repo' }));
@@ -126,6 +132,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Clone Repo' }));
@@ -155,6 +163,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Remove task' }));
@@ -184,6 +194,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Review Code' }));
@@ -213,6 +225,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     expect(screen.getByRole('img', { name: 'Review' })).toBeInTheDocument();
@@ -241,6 +255,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search tasks' }), 'x');
@@ -270,6 +286,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     expect(screen.getByText('demo')).toBeInTheDocument();
@@ -299,6 +317,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     expect(screen.getByText('empty-repo')).toBeInTheDocument();
@@ -335,6 +355,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     expect(screen.getByText('Quick Questions')).toBeInTheDocument();
@@ -374,6 +396,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Remove question' }));
@@ -403,6 +427,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'New Question' }));
@@ -432,6 +458,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={onArchiveTaskClick}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Archive task' }));
@@ -461,10 +489,74 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={onOpenArchivedClick}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Archived tasks' }));
     expect(onOpenArchivedClick).toHaveBeenCalledOnce();
+  });
+
+  it('calls onOpenAdoClick when the ADO tasks toolbar button is clicked', async () => {
+    const onOpenAdoClick = vi.fn();
+    render(
+      <RepoSidebar
+        repos={[]}
+        activeTasksByRepoId={{}}
+        scratchTasks={[]}
+        selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
+        onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={onOpenAdoClick}
+        onNewAdoItemClick={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'ADO tasks' }));
+    expect(onOpenAdoClick).toHaveBeenCalledOnce();
+  });
+
+  it('calls onNewAdoItemClick when the "New ADO item" toolbar button is clicked', async () => {
+    const onNewAdoItemClick = vi.fn();
+    render(
+      <RepoSidebar
+        repos={[]}
+        activeTasksByRepoId={{}}
+        scratchTasks={[]}
+        selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
+        onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={onNewAdoItemClick}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'New ADO item' }));
+    expect(onNewAdoItemClick).toHaveBeenCalledOnce();
   });
 
   it('shows the app version in the footer once it is known', () => {
@@ -489,6 +581,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     expect(screen.getByText('v1.2.3')).toBeInTheDocument();
@@ -516,6 +610,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     expect(screen.queryByText(/^v\d/)).not.toBeInTheDocument();
@@ -544,6 +640,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={onGenerateDsuClick}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Generate work log' }));
@@ -581,6 +679,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     expect(screen.getByText('demo')).toHaveAttribute('title', 'demo');
@@ -613,6 +713,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     expect(screen.getByRole('button', { name: 'Remove task' })).toBeDisabled();
@@ -651,6 +753,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     expect(screen.getByRole('button', { name: 'Remove question' })).toBeDisabled();
@@ -679,6 +783,8 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick={vi.fn()}
         onArchiveTaskClick={vi.fn()}
         onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
       />,
     );
     const openRepoButton = screen.getByRole('button', { name: 'Open Existing Repo' });
