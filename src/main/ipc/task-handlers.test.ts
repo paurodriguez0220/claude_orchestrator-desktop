@@ -68,6 +68,7 @@ import { registerTaskHandlers } from './task-handlers';
 import { IpcChannels } from '../../shared/ipc-channels';
 import { addWorktree, addWorktreeForExistingBranch, removeWorktree } from '../services/git-service';
 import { readTaskNotes, writeTaskNotes } from '../services/notes-service';
+import { writeStore } from '../services/store';
 import { mkdir, rm } from 'node:fs/promises';
 
 describe('task-handlers', () => {
@@ -356,6 +357,28 @@ describe('task-handlers', () => {
         frontmatter: expect.objectContaining({ status: 'done', title: 't' }),
       }),
     );
+  });
+
+  it('TaskSetStatus also persists the new status onto the matching task in store.json', async () => {
+    store.tasks.push({
+      id: 'task-1',
+      repoId: 'repo-1',
+      title: 'Fix login bug',
+      branch: 'task/fix-login-bug',
+      worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
+      status: 'todo',
+      kind: 'worktree',
+      createdAt: '2026-07-08T00:00:00.000Z',
+      updatedAt: '2026-07-08T00:00:00.000Z',
+    });
+    vi.mocked(readTaskNotes).mockResolvedValueOnce({
+      frontmatter: { title: 't', branch: 'b', worktreePath: 'C:\\w', status: 'todo', kind: 'worktree' },
+      body: 'existing notes',
+    });
+    const handler = handlers.get(IpcChannels.TaskSetStatus);
+    await handler?.({}, { taskId: 'task-1', status: 'done' });
+    expect(store.tasks.find((task) => task.id === 'task-1')).toMatchObject({ status: 'done' });
+    expect(vi.mocked(writeStore)).toHaveBeenCalled();
   });
 
   it('TaskCreate creates an empty scratch directory and stores a task with no repoId/branch, without calling git', async () => {

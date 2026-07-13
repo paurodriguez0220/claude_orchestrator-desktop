@@ -178,6 +178,12 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
         ...notes,
         frontmatter: { ...notes.frontmatter, status: request.status },
       });
+      const store = await readStore(getStorePath());
+      const task = store.tasks.find((candidate) => candidate.id === request.taskId);
+      if (task) {
+        task.status = request.status;
+        await writeStore(getStorePath(), store);
+      }
     },
   );
 
