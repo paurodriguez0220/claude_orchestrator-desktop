@@ -84,7 +84,15 @@ export function TerminalTab({ taskId }: TerminalTabProps): JSX.Element {
         }
         const text = await navigator.clipboard.readText();
         if (text) {
-          window.claudeOrchestrator.sendPtyInput(taskId, text);
+          // Hand the text to xterm's paste pipeline rather than shipping the
+          // raw string straight to the pty. terminal.paste() normalizes line
+          // endings (\r\n/\n -> \r) and, when the running app has enabled
+          // bracketed paste mode (Claude Code does), wraps the text in
+          // ESC[200~ ... ESC[201~ so a multi-line block arrives as one literal
+          // paste. Skipping this made multi-line pastes collapse to just their
+          // last line. The transformed text is then emitted through onData,
+          // which forwards it to sendPtyInput for this task — still one paste.
+          terminal.paste(text);
         }
       } catch (err) {
         terminal.write(`\r\n[Failed to paste: ${toErrorMessage(err)}]\r\n`);
