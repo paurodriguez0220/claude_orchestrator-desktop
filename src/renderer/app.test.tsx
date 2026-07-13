@@ -845,5 +845,26 @@ describe('App', () => {
     const newTaskDialog = await screen.findByRole('dialog', { name: 'New Task' });
     expect(within(newTaskDialog).getByLabelText('Title')).toHaveValue('Fix login');
     expect(within(newTaskDialog).getByLabelText('ADO Task ID (optional)')).toHaveValue('101');
+    expect(listBranches).toHaveBeenCalledWith('repo-1');
+  });
+
+  it('loads branches for the target repo when creating a worktree from an ADO item', async () => {
+    const branchesDeferred = createDeferred<{ value: string; label: string; isRemote: boolean }[]>();
+    listBranches.mockReturnValueOnce(branchesDeferred.promise);
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'ADO tasks' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Azure DevOps tasks' });
+    await within(dialog).findByText('Fix login');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create worktree' }));
+
+    const newTaskDialog = await screen.findByRole('dialog', { name: 'New Task' });
+    expect(listBranches).toHaveBeenCalledWith('repo-1');
+    expect(within(newTaskDialog).getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+
+    branchesDeferred.resolve([{ value: 'feature-x', label: 'feature-x', isRemote: false }]);
+    await waitFor(() =>
+      expect(within(newTaskDialog).queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument(),
+    );
+    expect(within(newTaskDialog).getByLabelText('Title')).toHaveValue('Fix login');
   });
 });

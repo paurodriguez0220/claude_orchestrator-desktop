@@ -153,10 +153,7 @@ export function App(): JSX.Element {
     }
   }
 
-  async function handleNewTaskClick(repoId: string): Promise<void> {
-    setErrorMessage(undefined);
-    setNewTaskMode('task');
-    setNewTaskRepoId(repoId);
+  async function loadBranchesForRepo(repoId: string): Promise<void> {
     setIsLoadingBranches(true);
     try {
       const options = await window.claudeOrchestrator.listBranches(repoId);
@@ -171,6 +168,13 @@ export function App(): JSX.Element {
     } finally {
       setIsLoadingBranches(false);
     }
+  }
+
+  async function handleNewTaskClick(repoId: string): Promise<void> {
+    setErrorMessage(undefined);
+    setNewTaskMode('task');
+    setNewTaskRepoId(repoId);
+    await loadBranchesForRepo(repoId);
   }
 
   async function handleReviewCodeClick(repoId: string): Promise<void> {
@@ -340,15 +344,17 @@ export function App(): JSX.Element {
   // repos there is no way to ask the user which one to use. A repo picker
   // is a follow-up; until then, this only works meaningfully with a single
   // managed repo.
-  function handleCreateWorktreeFromAdoItem(item: AdoWorkItem): void {
+  async function handleCreateWorktreeFromAdoItem(item: AdoWorkItem): Promise<void> {
     const targetRepoId = repos[0]?.id;
     if (targetRepoId === undefined) {
       return;
     }
+    setErrorMessage(undefined);
     setPrefillTask({ title: item.title, adoId: String(item.id) });
     setNewTaskRepoId(targetRepoId);
     setNewTaskMode('task');
     setIsAdoModalOpen(false);
+    await loadBranchesForRepo(targetRepoId);
   }
 
   const activeTasksByRepoId = tasks.reduce<Record<string, TaskRecord[]>>((acc, task) => {
@@ -468,7 +474,7 @@ export function App(): JSX.Element {
           tasks={adoTasks}
           isLoading={isLoadingAdo}
           orgUrlBase={adoOrgUrlBase}
-          onCreateWorktree={handleCreateWorktreeFromAdoItem}
+          onCreateWorktree={(item) => void handleCreateWorktreeFromAdoItem(item)}
           onClose={() => setIsAdoModalOpen(false)}
         />
         <main className="flex flex-1 flex-col overflow-hidden">
