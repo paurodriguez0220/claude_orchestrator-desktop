@@ -16,11 +16,12 @@ vi.mock('../services/ado-service', () => ({
   listMyAssignedTasks: vi.fn(async () => [
     { id: 101, title: 'Fix login', type: 'Bug', state: 'Active', areaPath: 'Proj\\Team', storyPoints: 3 },
   ]),
+  createWorkItem: vi.fn(async () => ({ id: 501, url: 'https://dev.azure.com/myorg/MyProject/_workitems/edit/501' })),
 }));
 
 import { registerAdoHandlers } from './ado-handlers';
 import { IpcChannels } from '../../shared/ipc-channels';
-import { assertAdoAuthenticated, getAdoConfig, listMyAssignedTasks } from '../services/ado-service';
+import { assertAdoAuthenticated, getAdoConfig, listMyAssignedTasks, createWorkItem } from '../services/ado-service';
 
 describe('ado-handlers', () => {
   beforeEach(() => {
@@ -34,6 +35,9 @@ describe('ado-handlers', () => {
       .mockResolvedValue([
         { id: 101, title: 'Fix login', type: 'Bug', state: 'Active', areaPath: 'Proj\\Team', storyPoints: 3 },
       ]);
+    vi.mocked(createWorkItem)
+      .mockClear()
+      .mockResolvedValue({ id: 501, url: 'https://dev.azure.com/myorg/MyProject/_workitems/edit/501' });
     registerAdoHandlers();
   });
 
@@ -52,5 +56,14 @@ describe('ado-handlers', () => {
     const result = await handler?.({});
     expect(getAdoConfig).toHaveBeenCalled();
     expect(result).toEqual({ organization: 'https://dev.azure.com/myorg', project: 'MyProject' });
+  });
+
+  it('AdoCreateWorkItem checks auth then delegates to createWorkItem, returning its value', async () => {
+    const handler = handlers.get(IpcChannels.AdoCreateWorkItem);
+    const request = { type: 'Task', title: 'Fix login' };
+    const result = await handler?.({}, request);
+    expect(assertAdoAuthenticated).toHaveBeenCalled();
+    expect(createWorkItem).toHaveBeenCalledWith(request);
+    expect(result).toEqual({ id: 501, url: 'https://dev.azure.com/myorg/MyProject/_workitems/edit/501' });
   });
 });

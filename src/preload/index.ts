@@ -14,6 +14,8 @@ import type {
   BranchOption,
   DsuGenerateResponse,
   AdoWorkItem,
+  AdoCreateWorkItemRequest,
+  AdoCreateWorkItemResult,
 } from '../shared/ipc-channels';
 
 export interface ClaudeOrchestratorApi {
@@ -42,6 +44,7 @@ export interface ClaudeOrchestratorApi {
   generateDsuSummary(date: string): Promise<DsuGenerateResponse>;
   listAdoTasks(email?: string): Promise<AdoWorkItem[]>;
   getAdoConfig(): Promise<{ organization: string; project: string }>;
+  createAdoWorkItem(request: AdoCreateWorkItemRequest): Promise<AdoCreateWorkItemResult>;
 }
 
 const api: ClaudeOrchestratorApi = {
@@ -79,6 +82,7 @@ const api: ClaudeOrchestratorApi = {
   generateDsuSummary: (date) => ipcRenderer.invoke(IpcChannels.GenerateDsuSummary, date),
   listAdoTasks: (email) => ipcRenderer.invoke(IpcChannels.AdoListMyTasks, email),
   getAdoConfig: () => ipcRenderer.invoke(IpcChannels.AdoConfig),
+  createAdoWorkItem: (request) => ipcRenderer.invoke(IpcChannels.AdoCreateWorkItem, request),
 };
 
 contextBridge.exposeInMainWorld('claudeOrchestrator', api);
