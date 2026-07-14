@@ -4,8 +4,10 @@ out
 .DS_Store
 *.log*
 *.tsbuildinfo
+electron.vite.config.*.mjs
 
 *storybook.log
 storybook-static
 
 .claude/
+.superpowers/

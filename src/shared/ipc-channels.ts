@@ -15,6 +15,7 @@ export const IpcChannels = {
   TaskNotesSet: 'task:notes:set',
   TaskSetStatus: 'task:set-status',
   TaskSearch: 'task:search',
+  TaskOpenInEditor: 'task:open-in-editor',
   PtyInput: 'pty:input',
   PtyOutput: 'pty:output',
   PtyResize: 'pty:resize',

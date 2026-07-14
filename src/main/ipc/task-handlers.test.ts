@@ -64,6 +64,12 @@ vi.mock('../services/dsu-orchestrator', () => ({
   queueDsuAutoRegenerate: (...args: unknown[]) => queueDsuAutoRegenerate(...args),
 }));
 
+const openInVsCode = vi.fn();
+
+vi.mock('../services/editor-service', () => ({
+  openInVsCode: (...args: unknown[]) => openInVsCode(...args),
+}));
+
 import { registerTaskHandlers } from './task-handlers';
 import { IpcChannels } from '../../shared/ipc-channels';
 import { addWorktree, addWorktreeForExistingBranch, removeWorktree } from '../services/git-service';
@@ -90,6 +96,7 @@ describe('task-handlers', () => {
     vi.mocked(mkdir).mockClear();
     vi.mocked(rm).mockClear();
     queueDsuAutoRegenerate.mockClear();
+    openInVsCode.mockClear();
     registerTaskHandlers(onPtyData);
   });
 
@@ -220,6 +227,29 @@ describe('task-handlers', () => {
     const handler = handlers.get(IpcChannels.TaskOpen);
     await handler?.({}, 'task-1');
     expect(spawnClaudeSession).not.toHaveBeenCalled();
+  });
+
+  it('TaskOpenInEditor resolves the task worktree path and opens it in VS Code', async () => {
+    store.tasks.push({
+      id: 'task-1',
+      repoId: 'repo-1',
+      title: 'Fix login bug',
+      branch: 'task/fix-login-bug',
+      worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
+      status: 'todo',
+      kind: 'worktree',
+      createdAt: '2026-07-08T00:00:00.000Z',
+      updatedAt: '2026-07-08T00:00:00.000Z',
+    });
+    const handler = handlers.get(IpcChannels.TaskOpenInEditor);
+    await handler?.({}, 'task-1');
+    expect(openInVsCode).toHaveBeenCalledWith('C:\\demo-worktrees\\fix-login-bug');
+  });
+
+  it('TaskOpenInEditor rejects an unknown task id without opening anything', async () => {
+    const handler = handlers.get(IpcChannels.TaskOpenInEditor);
+    await expect(handler?.({}, 'nope')).rejects.toThrow('Unknown task');
+    expect(openInVsCode).not.toHaveBeenCalled();
   });
 
   it('TaskRemove kills the session, removes the worktree, drops the task, and archives notes', async () => {
