@@ -291,6 +291,15 @@ export function App(): JSX.Element {
     }
   }
 
+  async function handleOpenTaskInEditor(taskId: string): Promise<void> {
+    setErrorMessage(undefined);
+    try {
+      await window.claudeOrchestrator.openTaskInEditor(taskId);
+    } catch (err) {
+      setErrorMessage(toErrorMessage(err));
+    }
+  }
+
   async function handleArchiveTask(taskId: string): Promise<void> {
     setErrorMessage(undefined);
     try {
@@ -435,6 +444,7 @@ export function App(): JSX.Element {
           appVersion={appVersion}
           onGenerateDsuClick={() => setIsDsuModalOpen(true)}
           onArchiveTaskClick={(taskId) => void handleArchiveTask(taskId)}
+          onOpenTaskInEditorClick={(taskId) => void handleOpenTaskInEditor(taskId)}
           onOpenArchivedClick={() => setIsArchivedModalOpen(true)}
           onOpenAdoClick={() => void handleOpenAdo()}
           onNewAdoItemClick={() => {

@@ -466,6 +466,67 @@ describe('RepoSidebar', () => {
     expect(onArchiveTaskClick).toHaveBeenCalledWith('task-1');
   });
 
+  it('calls onOpenTaskInEditorClick with the task id when a task row\'s "Open in VS Code" button is clicked', async () => {
+    const onOpenTaskInEditorClick = vi.fn();
+    render(
+      <RepoSidebar
+        repos={[repo]}
+        activeTasksByRepoId={{ 'repo-1': [task] }}
+        scratchTasks={[]}
+        selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
+        onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
+        onOpenTaskInEditorClick={onOpenTaskInEditorClick}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Open in VS Code' }));
+    expect(onOpenTaskInEditorClick).toHaveBeenCalledWith('task-1');
+  });
+
+  it('renders no "Open in VS Code" button when onOpenTaskInEditorClick is not provided', () => {
+    render(
+      <RepoSidebar
+        repos={[repo]}
+        activeTasksByRepoId={{ 'repo-1': [task] }}
+        scratchTasks={[]}
+        selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
+        onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Open in VS Code' })).not.toBeInTheDocument();
+  });
+
   it('calls onOpenArchivedClick when the Archived toolbar button is clicked', async () => {
     const onOpenArchivedClick = vi.fn();
     render(

@@ -14,6 +14,7 @@ import { addWorktree, addWorktreeForExistingBranch, removeWorktree } from '../se
 import { slugify, assertSafeBranchName } from '../services/slug';
 import { readTaskNotes, writeTaskNotes, archiveTaskNotes } from '../services/notes-service';
 import { spawnClaudeSession, isSessionAlive, killSession } from '../services/pty-manager';
+import { openInVsCode } from '../services/editor-service';
 import { queueDsuAutoRegenerate } from '../services/dsu-orchestrator';
 import { getStorePath, getTaskNotesPath, getWorktreePath, getScratchPath } from '../paths';
 
@@ -124,6 +125,15 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
       throw new Error(`Unknown task: ${taskId}`);
     }
     spawnClaudeSession(taskId, task.worktreePath, true, onPtyData);
+  });
+
+  ipcMain.handle(IpcChannels.TaskOpenInEditor, async (_event, taskId: string): Promise<void> => {
+    const store = await readStore(getStorePath());
+    const task = store.tasks.find((candidate) => candidate.id === taskId);
+    if (!task) {
+      throw new Error(`Unknown task: ${taskId}`);
+    }
+    await openInVsCode(task.worktreePath);
   });
 
   ipcMain.handle(IpcChannels.TaskClose, async (_event, taskId: string): Promise<void> => {

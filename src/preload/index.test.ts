@@ -178,6 +178,16 @@ describe('preload', () => {
     expect(ipcRendererInvoke).toHaveBeenCalledWith('task:search', 'login');
   });
 
+  it('openTaskInEditor invokes the TaskOpenInEditor channel with the task id', async () => {
+    await import('./index');
+    const call = exposeInMainWorld.mock.calls[0];
+    if (!call) throw new Error('exposeInMainWorld not called');
+    const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (api.openTaskInEditor as any)('task-1');
+    expect(ipcRendererInvoke).toHaveBeenCalledWith('task:open-in-editor', 'task-1');
+  });
+
   it('generateDsuSummary invokes the GenerateDsuSummary channel', async () => {
     await import('./index');
     const call = exposeInMainWorld.mock.calls[0];

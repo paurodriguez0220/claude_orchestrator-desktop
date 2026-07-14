@@ -2,6 +2,7 @@ import {
   Archive,
   ArchiveRestore,
   CalendarClock,
+  Code2,
   Download,
   Eye,
   FilePlus2,
@@ -38,6 +39,7 @@ export interface RepoSidebarProps {
   onOpenArchivedClick: () => void;
   onOpenAdoClick: () => void;
   onNewAdoItemClick: () => void;
+  onOpenTaskInEditorClick?: (taskId: string) => void;
 }
 
 interface TaskRowProps {
@@ -47,6 +49,7 @@ interface TaskRowProps {
   onSelectTask: (taskId: string) => void;
   onArchiveTaskClick: (taskId: string) => void;
   onRemoveTaskClick: (taskId: string) => void;
+  onOpenTaskInEditorClick?: (taskId: string) => void;
 }
 
 function TaskRow({
@@ -56,6 +59,7 @@ function TaskRow({
   onSelectTask,
   onArchiveTaskClick,
   onRemoveTaskClick,
+  onOpenTaskInEditorClick,
 }: TaskRowProps): JSX.Element {
   return (
     <li className="flex items-center justify-between gap-2">
@@ -76,6 +80,17 @@ function TaskRow({
         <span className="shrink-0 rounded-full bg-clay-600/20 px-1.5 py-0.5 text-clay-400">
           <GitPullRequest role="img" aria-label="Review" className="h-3 w-3" />
         </span>
+      )}
+      {onOpenTaskInEditorClick && (
+        <button
+          type="button"
+          aria-label="Open in VS Code"
+          title="Open in VS Code"
+          onClick={() => onOpenTaskInEditorClick(task.id)}
+          className="shrink-0 rounded-md px-2 py-1 text-graphite-400 hover:text-clay-400"
+        >
+          <Code2 aria-hidden="true" className="h-4 w-4" />
+        </button>
       )}
       <button
         type="button"
@@ -122,6 +137,7 @@ export function RepoSidebar({
   onOpenArchivedClick,
   onOpenAdoClick,
   onNewAdoItemClick,
+  onOpenTaskInEditorClick,
 }: RepoSidebarProps): JSX.Element {
   const isSearchActive = searchQuery.trim() !== '';
   const visibleRepos = isSearchActive
@@ -230,6 +246,7 @@ export function RepoSidebar({
                     onSelectTask={onSelectTask}
                     onArchiveTaskClick={onArchiveTaskClick}
                     onRemoveTaskClick={onRemoveTaskClick}
+                    onOpenTaskInEditorClick={onOpenTaskInEditorClick}
                   />
                 ))}
               </ul>
