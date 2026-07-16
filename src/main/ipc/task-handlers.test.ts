@@ -113,7 +113,7 @@ describe('task-handlers', () => {
     expect(getDefaultBranch).toHaveBeenCalledWith('C:\\demo');
     expect(addWorktreeFromRef).toHaveBeenCalledWith('C:\\demo', 'C:\\demo\\..\\demo-worktrees\\fix-login-bug', 'feature/fix-login-bug', 'origin/main');
     expect(addWorktree).not.toHaveBeenCalled();
-    expect(task).toMatchObject({ title: 'Fix login bug', adoId: 'ADO-1', status: 'todo' });
+    expect(task).toMatchObject({ title: 'Fix login bug', adoIds: ['ADO-1'], status: 'todo' });
     expect(store.tasks).toHaveLength(1);
     expect(spawnClaudeSession).toHaveBeenCalledWith(
       expect.any(String),
@@ -309,13 +309,13 @@ describe('task-handlers', () => {
     expect(store.tasks).toHaveLength(0);
   });
 
-  it('TaskSearch matches by title, branch, and adoId case-insensitively, without reading any notes file', async () => {
+  it('TaskSearch matches by title, branch, and adoIds case-insensitively, without reading any notes file', async () => {
     store.tasks.push(
       {
         id: 'task-1',
         repoId: 'repo-1',
         title: 'Fix login bug',
-        adoId: 'ADO-42',
+        adoIds: ['ADO-42'],
         branch: 'task/fix-login-bug',
         worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
         status: 'todo',

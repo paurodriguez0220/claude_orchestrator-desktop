@@ -18,7 +18,10 @@ export interface TaskRecord {
   id: string;
   repoId?: string;
   title: string;
-  adoId?: string;
+  // ADO work item ids linked to this worktree. A worktree often spans a parent
+  // plus several child items, so this is a list. Legacy records that stored a
+  // single `adoId` string are migrated to a one-element array on read.
+  adoIds?: string[];
   branch?: string;
   worktreePath: string;
   status: TaskStatus;
@@ -34,7 +37,7 @@ export interface StoreData {
 
 export interface TaskNotesFrontmatter {
   title: string;
-  adoId?: string;
+  adoIds?: string[];
   branch?: string;
   worktreePath: string;
   status: TaskStatus;

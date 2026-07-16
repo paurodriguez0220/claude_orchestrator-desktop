@@ -37,7 +37,7 @@ import {
 const sample: TaskNotes = {
   frontmatter: {
     title: 'Fix login bug',
-    adoId: 'ADO-1234',
+    adoIds: ['1234', '5678'],
     branch: 'task/fix-login-bug',
     worktreePath: 'C:\\repo-worktrees\\fix-login-bug',
     status: 'todo',
@@ -54,6 +54,20 @@ describe('serializeTaskNotes / parseTaskNotes', () => {
 
   it('parseTaskNotes throws on missing frontmatter delimiters', () => {
     expect(() => parseTaskNotes('just some text, no frontmatter')).toThrow('Invalid task notes format');
+  });
+
+  it('reads a legacy single adoId field as a one-element adoIds list', () => {
+    const raw = [
+      '---',
+      'title: Legacy task',
+      'adoId: 1234',
+      'worktreePath: C:\\repo-worktrees\\legacy',
+      'status: todo',
+      'kind: worktree',
+      '---',
+      '',
+    ].join('\n');
+    expect(parseTaskNotes(raw).frontmatter.adoIds).toEqual(['1234']);
   });
 
   it('round-trips a review-kind task', () => {

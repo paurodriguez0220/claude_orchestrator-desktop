@@ -4,8 +4,8 @@ import type { TaskNotes, TaskStatus, TaskKind } from '../../shared/types';
 
 export function serializeTaskNotes(notes: TaskNotes): string {
   const lines = ['---', `title: ${notes.frontmatter.title}`];
-  if (notes.frontmatter.adoId) {
-    lines.push(`adoId: ${notes.frontmatter.adoId}`);
+  if (notes.frontmatter.adoIds && notes.frontmatter.adoIds.length > 0) {
+    lines.push(`adoIds: ${notes.frontmatter.adoIds.join(', ')}`);
   }
   if (notes.frontmatter.branch !== undefined) {
     lines.push(`branch: ${notes.frontmatter.branch}`);
@@ -34,10 +34,20 @@ export function parseTaskNotes(raw: string): TaskNotes {
     const value = line.slice(separatorIndex + 1).trim();
     fields[key] = value;
   }
+  // `adoIds` is a comma-separated list; a legacy single `adoId` field is read
+  // as a one-element list so notes written before multi-link still parse.
+  const rawAdoIds = fields.adoIds ?? fields.adoId;
+  const adoIds = rawAdoIds
+    ? rawAdoIds
+        .split(',')
+        .map((id) => id.trim())
+        .filter((id) => id !== '')
+    : undefined;
+
   return {
     frontmatter: {
       title: fields.title ?? '',
-      adoId: fields.adoId,
+      adoIds: adoIds && adoIds.length > 0 ? adoIds : undefined,
       branch: fields.branch,
       worktreePath: fields.worktreePath ?? '',
       status: (fields.status as TaskStatus) ?? 'todo',

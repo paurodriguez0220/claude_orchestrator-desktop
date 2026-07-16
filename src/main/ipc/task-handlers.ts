@@ -39,7 +39,7 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
       const task: TaskRecord = {
         id: taskId,
         title: request.title,
-        adoId: request.adoId,
+        adoIds: request.adoId ? [request.adoId] : undefined,
         worktreePath,
         status: 'todo',
         kind: 'scratch',
@@ -51,7 +51,7 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
       await writeTaskNotes(getTaskNotesPath(task.id), {
         frontmatter: {
           title: task.title,
-          adoId: task.adoId,
+          adoIds: task.adoIds,
           worktreePath: task.worktreePath,
           status: task.status,
           kind: task.kind,
@@ -113,7 +113,7 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
       id: randomUUID(),
       repoId: repo.id,
       title: request.title,
-      adoId: request.adoId,
+      adoIds: request.adoId ? [request.adoId] : undefined,
       branch,
       worktreePath,
       status: 'todo',
@@ -126,7 +126,7 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
     await writeTaskNotes(getTaskNotesPath(task.id), {
       frontmatter: {
         title: task.title,
-        adoId: task.adoId,
+        adoIds: task.adoIds,
         branch: task.branch,
         worktreePath: task.worktreePath,
         status: task.status,
@@ -235,7 +235,7 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
         (task) =>
           task.title.toLowerCase().includes(needle) ||
           (task.branch ?? '').toLowerCase().includes(needle) ||
-          (task.adoId ?? '').toLowerCase().includes(needle),
+          (task.adoIds ?? []).some((id) => id.toLowerCase().includes(needle)),
       )
       .map((task) => task.id);
     if (inMemoryMatchIds.length > 0) {
