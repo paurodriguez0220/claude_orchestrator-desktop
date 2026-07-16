@@ -8,9 +8,14 @@ import type {
   TaskNotesSetRequest,
   TaskNotesGetResponse,
   TaskSetStatusRequest,
+  TaskLinkAdoRequest,
+  AdoSyncTasksRequest,
+  AdoSyncResult,
 } from '../../shared/ipc-channels';
 import type { TaskRecord } from '../../shared/types';
 import { readStore, writeStore } from '../services/store';
+import { assertAdoAuthenticated } from '../services/ado-service';
+import { syncTasksToAdo } from '../services/ado-sync-service';
 import {
   addWorktree,
   addWorktreeFromRef,
@@ -39,7 +44,7 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
       const task: TaskRecord = {
         id: taskId,
         title: request.title,
-        adoId: request.adoId,
+        adoIds: request.adoId ? [request.adoId] : undefined,
         worktreePath,
         status: 'todo',
         kind: 'scratch',
@@ -51,7 +56,7 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
       await writeTaskNotes(getTaskNotesPath(task.id), {
         frontmatter: {
           title: task.title,
-          adoId: task.adoId,
+          adoIds: task.adoIds,
           worktreePath: task.worktreePath,
           status: task.status,
           kind: task.kind,
@@ -113,7 +118,7 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
       id: randomUUID(),
       repoId: repo.id,
       title: request.title,
-      adoId: request.adoId,
+      adoIds: request.adoId ? [request.adoId] : undefined,
       branch,
       worktreePath,
       status: 'todo',
@@ -126,7 +131,7 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
     await writeTaskNotes(getTaskNotesPath(task.id), {
       frontmatter: {
         title: task.title,
-        adoId: task.adoId,
+        adoIds: task.adoIds,
         branch: task.branch,
         worktreePath: task.worktreePath,
         status: task.status,
@@ -227,6 +232,66 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
     },
   );
 
+  // Links/unlinks an ADO work item id on an existing worktree, keeping the
+  // store record and the notes frontmatter in sync. Returns the updated list.
+  async function updateAdoIds(taskId: string, mutate: (ids: string[]) => string[]): Promise<string[]> {
+    const store = await readStore(getStorePath());
+    const task = store.tasks.find((candidate) => candidate.id === taskId);
+    if (!task) {
+      throw new Error(`Unknown task: ${taskId}`);
+    }
+    const next = mutate(task.adoIds ?? []);
+    task.adoIds = next.length > 0 ? next : undefined;
+    task.updatedAt = new Date().toISOString();
+    await writeStore(getStorePath(), store);
+
+    const notesPath = getTaskNotesPath(taskId);
+    const notes = await readTaskNotes(notesPath);
+    await writeTaskNotes(notesPath, {
+      ...notes,
+      frontmatter: { ...notes.frontmatter, adoIds: task.adoIds },
+    });
+    return next;
+  }
+
+  ipcMain.handle(IpcChannels.TaskLinkAdo, async (_event, request: TaskLinkAdoRequest): Promise<string[]> => {
+    const adoId = request.adoId.trim();
+    if (adoId === '') {
+      throw new Error('ADO id must not be empty');
+    }
+    return updateAdoIds(request.taskId, (ids) => (ids.includes(adoId) ? ids : [...ids, adoId]));
+  });
+
+  ipcMain.handle(IpcChannels.TaskUnlinkAdo, async (_event, request: TaskLinkAdoRequest): Promise<string[]> => {
+    return updateAdoIds(request.taskId, (ids) => ids.filter((id) => id !== request.adoId));
+  });
+
+  // Explicit, user-triggered sync of a worktree's tasks.md to ADO. A dry run
+  // reports what would be created; a real run asserts auth, creates the child
+  // work items, and links the parent + each created id onto the worktree so the
+  // panel reflects them. Never invoked automatically.
+  ipcMain.handle(IpcChannels.AdoSyncTasks, async (_event, request: AdoSyncTasksRequest): Promise<AdoSyncResult> => {
+    const store = await readStore(getStorePath());
+    const task = store.tasks.find((candidate) => candidate.id === request.taskId);
+    if (!task) {
+      throw new Error(`Unknown task: ${request.taskId}`);
+    }
+    if (!request.dryRun) {
+      await assertAdoAuthenticated();
+    }
+    const result = await syncTasksToAdo(task.worktreePath, { dryRun: request.dryRun });
+    if (!request.dryRun) {
+      const toLink = [
+        ...(result.parentId !== undefined ? [String(result.parentId)] : []),
+        ...result.created.map((item) => String(item.id)),
+      ];
+      for (const adoId of toLink) {
+        await updateAdoIds(request.taskId, (ids) => (ids.includes(adoId) ? ids : [...ids, adoId]));
+      }
+    }
+    return result;
+  });
+
   ipcMain.handle(IpcChannels.TaskSearch, async (_event, query: string): Promise<string[]> => {
     const store = await readStore(getStorePath());
     const needle = query.toLowerCase();
@@ -235,7 +300,7 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
         (task) =>
           task.title.toLowerCase().includes(needle) ||
           (task.branch ?? '').toLowerCase().includes(needle) ||
-          (task.adoId ?? '').toLowerCase().includes(needle),
+          (task.adoIds ?? []).some((id) => id.toLowerCase().includes(needle)),
       )
       .map((task) => task.id);
     if (inMemoryMatchIds.length > 0) {

@@ -15,6 +15,8 @@ export const IpcChannels = {
   TaskNotesGet: 'task:notes:get',
   TaskNotesSet: 'task:notes:set',
   TaskSetStatus: 'task:set-status',
+  TaskLinkAdo: 'task:link-ado',
+  TaskUnlinkAdo: 'task:unlink-ado',
   TaskSearch: 'task:search',
   TaskOpenInEditor: 'task:open-in-editor',
   PtyInput: 'pty:input',
@@ -29,6 +31,7 @@ export const IpcChannels = {
   AdoListMyTasks: 'ado:list-my-tasks',
   AdoConfig: 'ado:config',
   AdoCreateWorkItem: 'ado:create-work-item',
+  AdoSyncTasks: 'ado:sync-tasks',
 } as const;
 
 export interface RepoAddRequest {
@@ -76,6 +79,11 @@ export interface TaskNotesSetRequest {
 export interface TaskSetStatusRequest {
   taskId: string;
   status: TaskStatus;
+}
+
+export interface TaskLinkAdoRequest {
+  taskId: string;
+  adoId: string;
 }
 
 export interface PtyInputRequest {
@@ -129,4 +137,24 @@ export interface AdoCreateWorkItemRequest {
 export interface AdoCreateWorkItemResult {
   id: number;
   url: string;
+}
+
+export interface AdoSyncTasksRequest {
+  taskId: string;
+  dryRun: boolean;
+}
+
+export interface AdoSyncCreated {
+  title: string;
+  id: number;
+  url: string;
+}
+
+export interface AdoSyncResult {
+  parentId?: number;
+  // Items that would be created (populated on a dry run, empty after a real sync).
+  toCreate: Array<{ type: string; title: string }>;
+  created: AdoSyncCreated[];
+  // Count of items skipped because they already carry an ADO id.
+  skipped: number;
 }

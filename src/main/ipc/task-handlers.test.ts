@@ -73,6 +73,18 @@ vi.mock('../services/editor-service', () => ({
   openInVsCode: (...args: unknown[]) => openInVsCode(...args),
 }));
 
+const assertAdoAuthenticated = vi.fn(async (..._args: unknown[]) => undefined);
+
+vi.mock('../services/ado-service', () => ({
+  assertAdoAuthenticated: (...args: unknown[]) => assertAdoAuthenticated(...args),
+}));
+
+const syncTasksToAdo = vi.fn();
+
+vi.mock('../services/ado-sync-service', () => ({
+  syncTasksToAdo: (...args: unknown[]) => syncTasksToAdo(...args),
+}));
+
 import { registerTaskHandlers } from './task-handlers';
 import { IpcChannels } from '../../shared/ipc-channels';
 import { addWorktree, addWorktreeFromRef, addWorktreeForExistingBranch, removeWorktree, fetchRepo, getDefaultBranch } from '../services/git-service';
@@ -103,6 +115,8 @@ describe('task-handlers', () => {
     vi.mocked(rm).mockClear();
     queueDsuAutoRegenerate.mockClear();
     openInVsCode.mockClear();
+    assertAdoAuthenticated.mockClear();
+    syncTasksToAdo.mockReset();
     registerTaskHandlers(onPtyData);
   });
 
@@ -113,7 +127,7 @@ describe('task-handlers', () => {
     expect(getDefaultBranch).toHaveBeenCalledWith('C:\\demo');
     expect(addWorktreeFromRef).toHaveBeenCalledWith('C:\\demo', 'C:\\demo\\..\\demo-worktrees\\fix-login-bug', 'feature/fix-login-bug', 'origin/main');
     expect(addWorktree).not.toHaveBeenCalled();
-    expect(task).toMatchObject({ title: 'Fix login bug', adoId: 'ADO-1', status: 'todo' });
+    expect(task).toMatchObject({ title: 'Fix login bug', adoIds: ['ADO-1'], status: 'todo' });
     expect(store.tasks).toHaveLength(1);
     expect(spawnClaudeSession).toHaveBeenCalledWith(
       expect.any(String),
@@ -309,13 +323,13 @@ describe('task-handlers', () => {
     expect(store.tasks).toHaveLength(0);
   });
 
-  it('TaskSearch matches by title, branch, and adoId case-insensitively, without reading any notes file', async () => {
+  it('TaskSearch matches by title, branch, and adoIds case-insensitively, without reading any notes file', async () => {
     store.tasks.push(
       {
         id: 'task-1',
         repoId: 'repo-1',
         title: 'Fix login bug',
-        adoId: 'ADO-42',
+        adoIds: ['ADO-42'],
         branch: 'task/fix-login-bug',
         worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
         status: 'todo',
@@ -547,5 +561,92 @@ describe('task-handlers', () => {
     const handler = handlers.get(IpcChannels.TaskRemove);
     await handler?.({}, 'task-1');
     expect(queueDsuAutoRegenerate).not.toHaveBeenCalled();
+  });
+
+  function seedTask(adoIds?: string[]): void {
+    store.tasks = [
+      {
+        id: 'task-1',
+        repoId: 'repo-1',
+        title: 'Fix login bug',
+        adoIds,
+        branch: 'task/fix-login-bug',
+        worktreePath: 'C:\\w',
+        status: 'todo',
+        kind: 'worktree',
+        createdAt: '2026-07-08T00:00:00.000Z',
+        updatedAt: '2026-07-08T00:00:00.000Z',
+      },
+    ];
+    vi.mocked(readTaskNotes).mockResolvedValue({
+      frontmatter: { title: 't', adoIds, branch: 'b', worktreePath: 'C:\\w', status: 'todo', kind: 'worktree' },
+      body: 'existing notes',
+    });
+  }
+
+  it('TaskLinkAdo appends the id to the store record and the notes frontmatter, and returns the new list', async () => {
+    seedTask();
+    const result = await handlers.get(IpcChannels.TaskLinkAdo)?.({}, { taskId: 'task-1', adoId: '1234' });
+    expect(result).toEqual(['1234']);
+    expect(store.tasks[0]?.adoIds).toEqual(['1234']);
+    expect(vi.mocked(writeTaskNotes)).toHaveBeenCalledWith(
+      'C:\\fake\\tasks\\task-1.md',
+      expect.objectContaining({ frontmatter: expect.objectContaining({ adoIds: ['1234'] }) }),
+    );
+  });
+
+  it('TaskLinkAdo is idempotent — linking an already-linked id does not duplicate it', async () => {
+    seedTask(['1234']);
+    const result = await handlers.get(IpcChannels.TaskLinkAdo)?.({}, { taskId: 'task-1', adoId: '1234' });
+    expect(result).toEqual(['1234']);
+    expect(store.tasks[0]?.adoIds).toEqual(['1234']);
+  });
+
+  it('TaskUnlinkAdo removes the id from the store record and the notes frontmatter', async () => {
+    seedTask(['1234', '5678']);
+    const result = await handlers.get(IpcChannels.TaskUnlinkAdo)?.({}, { taskId: 'task-1', adoId: '1234' });
+    expect(result).toEqual(['5678']);
+    expect(store.tasks[0]?.adoIds).toEqual(['5678']);
+    expect(vi.mocked(writeTaskNotes)).toHaveBeenCalledWith(
+      'C:\\fake\\tasks\\task-1.md',
+      expect.objectContaining({ frontmatter: expect.objectContaining({ adoIds: ['5678'] }) }),
+    );
+  });
+
+  it('TaskLinkAdo throws for an unknown task', async () => {
+    seedTask();
+    await expect(
+      handlers.get(IpcChannels.TaskLinkAdo)?.({}, { taskId: 'nope', adoId: '1' }),
+    ).rejects.toThrow('Unknown task');
+  });
+
+  it('AdoSyncTasks dry run syncs the task worktree without asserting auth or linking ids', async () => {
+    seedTask();
+    syncTasksToAdo.mockResolvedValue({ parentId: 500, toCreate: [{ type: 'Task', title: 'A' }], created: [], skipped: 0 });
+    const result = await handlers.get(IpcChannels.AdoSyncTasks)?.({}, { taskId: 'task-1', dryRun: true });
+    expect(syncTasksToAdo).toHaveBeenCalledWith('C:\\w', { dryRun: true });
+    expect(assertAdoAuthenticated).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ parentId: 500, skipped: 0 });
+    expect(store.tasks[0]?.adoIds).toBeUndefined();
+  });
+
+  it('AdoSyncTasks real run asserts auth, then links the parent and each created id onto the task', async () => {
+    seedTask();
+    syncTasksToAdo.mockResolvedValue({
+      parentId: 500,
+      toCreate: [],
+      created: [{ title: 'A', id: 900, url: 'http://ado/900' }],
+      skipped: 0,
+    });
+    await handlers.get(IpcChannels.AdoSyncTasks)?.({}, { taskId: 'task-1', dryRun: false });
+    expect(assertAdoAuthenticated).toHaveBeenCalledOnce();
+    expect(store.tasks[0]?.adoIds).toEqual(['500', '900']);
+  });
+
+  it('AdoSyncTasks throws for an unknown task', async () => {
+    seedTask();
+    await expect(
+      handlers.get(IpcChannels.AdoSyncTasks)?.({}, { taskId: 'nope', dryRun: true }),
+    ).rejects.toThrow('Unknown task');
   });
 });

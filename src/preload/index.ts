@@ -17,6 +17,7 @@ import type {
   AdoWorkItem,
   AdoCreateWorkItemRequest,
   AdoCreateWorkItemResult,
+  AdoSyncResult,
 } from '../shared/ipc-channels';
 
 export interface ClaudeOrchestratorApi {
@@ -35,6 +36,8 @@ export interface ClaudeOrchestratorApi {
   getTaskNotes(taskId: string): Promise<TaskNotesGetResponse>;
   setTaskNotes(request: TaskNotesSetRequest): Promise<void>;
   setTaskStatus(request: TaskSetStatusRequest): Promise<void>;
+  linkAdo(taskId: string, adoId: string): Promise<string[]>;
+  unlinkAdo(taskId: string, adoId: string): Promise<string[]>;
   taskSearch(query: string): Promise<string[]>;
   openTaskInEditor(taskId: string): Promise<void>;
   sendPtyInput(taskId: string, data: string): void;
@@ -48,6 +51,7 @@ export interface ClaudeOrchestratorApi {
   listAdoTasks(email?: string): Promise<AdoWorkItem[]>;
   getAdoConfig(): Promise<{ organization: string; project: string }>;
   createAdoWorkItem(request: AdoCreateWorkItemRequest): Promise<AdoCreateWorkItemResult>;
+  syncTasksToAdo(taskId: string, dryRun: boolean): Promise<AdoSyncResult>;
 }
 
 const api: ClaudeOrchestratorApi = {
@@ -67,6 +71,8 @@ const api: ClaudeOrchestratorApi = {
   getTaskNotes: (taskId) => ipcRenderer.invoke(IpcChannels.TaskNotesGet, taskId),
   setTaskNotes: (request) => ipcRenderer.invoke(IpcChannels.TaskNotesSet, request),
   setTaskStatus: (request) => ipcRenderer.invoke(IpcChannels.TaskSetStatus, request),
+  linkAdo: (taskId, adoId) => ipcRenderer.invoke(IpcChannels.TaskLinkAdo, { taskId, adoId }),
+  unlinkAdo: (taskId, adoId) => ipcRenderer.invoke(IpcChannels.TaskUnlinkAdo, { taskId, adoId }),
   taskSearch: (query) => ipcRenderer.invoke(IpcChannels.TaskSearch, query),
   openTaskInEditor: (taskId) => ipcRenderer.invoke(IpcChannels.TaskOpenInEditor, taskId),
   sendPtyInput: (taskId, data) => ipcRenderer.send(IpcChannels.PtyInput, { taskId, data }),
@@ -89,6 +95,7 @@ const api: ClaudeOrchestratorApi = {
   listAdoTasks: (email) => ipcRenderer.invoke(IpcChannels.AdoListMyTasks, email),
   getAdoConfig: () => ipcRenderer.invoke(IpcChannels.AdoConfig),
   createAdoWorkItem: (request) => ipcRenderer.invoke(IpcChannels.AdoCreateWorkItem, request),
+  syncTasksToAdo: (taskId, dryRun) => ipcRenderer.invoke(IpcChannels.AdoSyncTasks, { taskId, dryRun }),
 };
 
 contextBridge.exposeInMainWorld('claudeOrchestrator', api);

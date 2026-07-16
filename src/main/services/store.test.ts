@@ -29,6 +29,30 @@ describe('store', () => {
     expect(result).toEqual<StoreData>({ repos: [], tasks: [] });
   });
 
+  it('migrates a legacy task adoId string to a one-element adoIds list on read', async () => {
+    files.set(
+      'C:\\fake\\store.json',
+      JSON.stringify({
+        repos: [],
+        tasks: [
+          {
+            id: 't1',
+            title: 'Legacy',
+            adoId: '1234',
+            worktreePath: 'C:\\wt',
+            status: 'todo',
+            kind: 'worktree',
+            createdAt: '2026-07-08T00:00:00.000Z',
+            updatedAt: '2026-07-08T00:00:00.000Z',
+          },
+        ],
+      }),
+    );
+    const result = await readStore('C:\\fake\\store.json');
+    expect(result.tasks[0]?.adoIds).toEqual(['1234']);
+    expect((result.tasks[0] as { adoId?: string }).adoId).toBeUndefined();
+  });
+
   it('writeStore then readStore round-trips the data', async () => {
     const data: StoreData = {
       repos: [{ id: '1', name: 'demo', path: 'C:\\demo', createdAt: '2026-07-08T00:00:00.000Z' }],
