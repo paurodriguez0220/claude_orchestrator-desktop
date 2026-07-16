@@ -234,6 +234,52 @@ export function App(): JSX.Element {
     }
   }
 
+  async function handleCreateFolder(repoId: string, name: string): Promise<void> {
+    setErrorMessage(undefined);
+    try {
+      const updated = await window.claudeOrchestrator.createRepoFolder(repoId, name);
+      setRepos((current) => current.map((repo) => (repo.id === repoId ? updated : repo)));
+    } catch (err) {
+      setErrorMessage(toErrorMessage(err));
+    }
+  }
+
+  async function handleRenameFolder(repoId: string, folderId: string, name: string): Promise<void> {
+    setErrorMessage(undefined);
+    try {
+      const updated = await window.claudeOrchestrator.renameRepoFolder(repoId, folderId, name);
+      setRepos((current) => current.map((repo) => (repo.id === repoId ? updated : repo)));
+    } catch (err) {
+      setErrorMessage(toErrorMessage(err));
+    }
+  }
+
+  async function handleDeleteFolder(repoId: string, folderId: string): Promise<void> {
+    setErrorMessage(undefined);
+    try {
+      const updated = await window.claudeOrchestrator.deleteRepoFolder(repoId, folderId);
+      setRepos((current) => current.map((repo) => (repo.id === repoId ? updated : repo)));
+      // Tasks that were in the deleted folder fall back to ungrouped.
+      setTasks((current) =>
+        current.map((task) => (task.folderId === folderId ? { ...task, folderId: undefined } : task)),
+      );
+    } catch (err) {
+      setErrorMessage(toErrorMessage(err));
+    }
+  }
+
+  async function handleAssignTaskToFolder(taskId: string, folderId: string | null): Promise<void> {
+    setErrorMessage(undefined);
+    try {
+      await window.claudeOrchestrator.setTaskFolder(taskId, folderId ?? undefined);
+      setTasks((current) =>
+        current.map((task) => (task.id === taskId ? { ...task, folderId: folderId ?? undefined } : task)),
+      );
+    } catch (err) {
+      setErrorMessage(toErrorMessage(err));
+    }
+  }
+
   async function handleCreateQuestion(fields: NewQuestionFields): Promise<void> {
     setErrorMessage(undefined);
     setIsSubmittingModal(true);
@@ -414,6 +460,10 @@ export function App(): JSX.Element {
           onToggleUpdateBase={(repoId, updateBaseOnCreate) =>
             void handleToggleUpdateBase(repoId, updateBaseOnCreate)
           }
+          onCreateFolder={(repoId, name) => void handleCreateFolder(repoId, name)}
+          onRenameFolder={(repoId, folderId, name) => void handleRenameFolder(repoId, folderId, name)}
+          onDeleteFolder={(repoId, folderId) => void handleDeleteFolder(repoId, folderId)}
+          onAssignTaskToFolder={(taskId, folderId) => void handleAssignTaskToFolder(taskId, folderId)}
           onOpenTaskInEditorClick={(taskId) => void handleOpenTaskInEditor(taskId)}
           onOpenArchivedClick={() => setIsArchivedModalOpen(true)}
         />

@@ -7,6 +7,9 @@ import type {
   RepoCloneRequest,
   BranchOption,
   RepoSetUpdateBaseRequest,
+  RepoFolderCreateRequest,
+  RepoFolderRenameRequest,
+  RepoFolderDeleteRequest,
 } from '../../shared/ipc-channels';
 import type { RepoRecord } from '../../shared/types';
 import { readStore, writeStore } from '../services/store';
@@ -98,6 +101,59 @@ export function registerRepoHandlers(): void {
       }
       repo.updateBaseOnCreate = request.updateBaseOnCreate;
       await writeStore(getStorePath(), store);
+    },
+  );
+
+  ipcMain.handle(
+    IpcChannels.RepoFolderCreate,
+    async (_event, request: RepoFolderCreateRequest): Promise<RepoRecord> => {
+      const store = await readStore(getStorePath());
+      const repo = store.repos.find((candidate) => candidate.id === request.repoId);
+      if (!repo) {
+        throw new Error(`Unknown repo: ${request.repoId}`);
+      }
+      repo.folders = [...(repo.folders ?? []), { id: randomUUID(), name: request.name }];
+      await writeStore(getStorePath(), store);
+      return repo;
+    },
+  );
+
+  ipcMain.handle(
+    IpcChannels.RepoFolderRename,
+    async (_event, request: RepoFolderRenameRequest): Promise<RepoRecord> => {
+      const store = await readStore(getStorePath());
+      const repo = store.repos.find((candidate) => candidate.id === request.repoId);
+      if (!repo) {
+        throw new Error(`Unknown repo: ${request.repoId}`);
+      }
+      const folder = repo.folders?.find((candidate) => candidate.id === request.folderId);
+      if (!folder) {
+        throw new Error(`Unknown folder: ${request.folderId}`);
+      }
+      folder.name = request.name;
+      await writeStore(getStorePath(), store);
+      return repo;
+    },
+  );
+
+  ipcMain.handle(
+    IpcChannels.RepoFolderDelete,
+    async (_event, request: RepoFolderDeleteRequest): Promise<RepoRecord> => {
+      const store = await readStore(getStorePath());
+      const repo = store.repos.find((candidate) => candidate.id === request.repoId);
+      if (!repo) {
+        throw new Error(`Unknown repo: ${request.repoId}`);
+      }
+      repo.folders = (repo.folders ?? []).filter((folder) => folder.id !== request.folderId);
+      // Un-group any tasks that referenced the deleted folder — never touch the
+      // worktree itself.
+      for (const task of store.tasks) {
+        if (task.repoId === repo.id && task.folderId === request.folderId) {
+          delete task.folderId;
+        }
+      }
+      await writeStore(getStorePath(), store);
+      return repo;
     },
   );
 }

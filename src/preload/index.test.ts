@@ -141,6 +141,50 @@ describe('preload', () => {
     });
   });
 
+  it('createRepoFolder invokes the RepoFolderCreate channel with the request', async () => {
+    await import('./index');
+    const call = exposeInMainWorld.mock.calls[0];
+    if (!call) throw new Error('exposeInMainWorld not called');
+    const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (api.createRepoFolder as any)('repo-1', 'Bug fixes');
+    expect(ipcRendererInvoke).toHaveBeenCalledWith('repo:folder:create', { repoId: 'repo-1', name: 'Bug fixes' });
+  });
+
+  it('renameRepoFolder invokes the RepoFolderRename channel with the request', async () => {
+    await import('./index');
+    const call = exposeInMainWorld.mock.calls[0];
+    if (!call) throw new Error('exposeInMainWorld not called');
+    const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (api.renameRepoFolder as any)('repo-1', 'folder-1', 'New');
+    expect(ipcRendererInvoke).toHaveBeenCalledWith('repo:folder:rename', {
+      repoId: 'repo-1',
+      folderId: 'folder-1',
+      name: 'New',
+    });
+  });
+
+  it('deleteRepoFolder invokes the RepoFolderDelete channel with the request', async () => {
+    await import('./index');
+    const call = exposeInMainWorld.mock.calls[0];
+    if (!call) throw new Error('exposeInMainWorld not called');
+    const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (api.deleteRepoFolder as any)('repo-1', 'folder-1');
+    expect(ipcRendererInvoke).toHaveBeenCalledWith('repo:folder:delete', { repoId: 'repo-1', folderId: 'folder-1' });
+  });
+
+  it('setTaskFolder invokes the TaskSetFolder channel with the request', async () => {
+    await import('./index');
+    const call = exposeInMainWorld.mock.calls[0];
+    if (!call) throw new Error('exposeInMainWorld not called');
+    const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (api.setTaskFolder as any)('task-1', 'folder-1');
+    expect(ipcRendererInvoke).toHaveBeenCalledWith('task:set-folder', { taskId: 'task-1', folderId: 'folder-1' });
+  });
+
   it('saveClipboardImage invokes the SaveClipboardImage channel with the data URL', async () => {
     await import('./index');
     const call = exposeInMainWorld.mock.calls[0];

@@ -12,6 +12,14 @@ export interface RepoRecord {
   // remote default branch so they start fresh. When false, they branch from the
   // main clone's current HEAD (the pre-fetch legacy behaviour).
   updateBaseOnCreate?: boolean;
+  // Ordered, user-created folders for organising this repo's tasks in the
+  // sidebar. Pure UI grouping — never affects worktrees or git.
+  folders?: RepoFolder[];
+}
+
+export interface RepoFolder {
+  id: string;
+  name: string;
 }
 
 export interface TaskRecord {
@@ -26,6 +34,9 @@ export interface TaskRecord {
   worktreePath: string;
   status: TaskStatus;
   kind: TaskKind;
+  // Id of the per-repo folder this task is grouped under in the sidebar, or
+  // undefined when ungrouped. UI organisation only; never affects the worktree.
+  folderId?: string;
   createdAt: string;
   updatedAt: string;
 }

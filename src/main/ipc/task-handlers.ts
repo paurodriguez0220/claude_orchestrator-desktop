@@ -11,6 +11,7 @@ import type {
   TaskLinkAdoRequest,
   AdoSyncTasksRequest,
   AdoSyncResult,
+  TaskSetFolderRequest,
 } from '../../shared/ipc-channels';
 import type { TaskRecord } from '../../shared/types';
 import { readStore, writeStore } from '../services/store';
@@ -144,6 +145,20 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
     // baseUpdateWarning is transient (renderer-only) and deliberately not part
     // of the persisted TaskRecord above.
     return baseUpdateWarning === undefined ? task : { ...task, baseUpdateWarning };
+  });
+
+  ipcMain.handle(IpcChannels.TaskSetFolder, async (_event, request: TaskSetFolderRequest): Promise<void> => {
+    const store = await readStore(getStorePath());
+    const task = store.tasks.find((candidate) => candidate.id === request.taskId);
+    if (!task) {
+      throw new Error(`Unknown task: ${request.taskId}`);
+    }
+    if (request.folderId === undefined) {
+      delete task.folderId;
+    } else {
+      task.folderId = request.folderId;
+    }
+    await writeStore(getStorePath(), store);
   });
 
   ipcMain.handle(IpcChannels.TaskList, async (): Promise<TaskRecord[]> => {
