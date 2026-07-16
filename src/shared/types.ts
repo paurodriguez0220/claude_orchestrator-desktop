@@ -45,3 +45,23 @@ export interface TaskNotes {
   frontmatter: TaskNotesFrontmatter;
   body: string;
 }
+
+// One work item parsed from a worktree's `tasks.md`. `adoId` is present only
+// when the source line carried a trailing `#<id>` marker — the signal the sync
+// step uses to update an existing item rather than create a new one. `checked`
+// carries the checkbox state through unchanged; it is not an ADO field.
+export interface ParsedWorkItem {
+  type: string;
+  title: string;
+  description?: string;
+  adoId?: number;
+  checked: boolean;
+}
+
+// The structured result of parsing a `tasks.md` file. `parentId` comes from the
+// frontmatter `adoParent`; `featureTitle` is the first `#` heading (context only).
+export interface ParsedTasks {
+  parentId?: number;
+  featureTitle?: string;
+  items: ParsedWorkItem[];
+}
