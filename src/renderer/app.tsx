@@ -5,6 +5,7 @@ import { CloneRepoModal } from './components/clone-repo-modal/clone-repo-modal';
 import { NewQuestionModal } from './components/new-question-modal/new-question-modal';
 import { TerminalTab } from './components/terminal-tab/terminal-tab';
 import { TaskNotesPanel } from './components/task-notes-panel/task-notes-panel';
+import { LinkedAdoItems } from './components/linked-ado-items/linked-ado-items';
 import { TabBar } from './components/tab-bar/tab-bar';
 import { Spinner } from './components/spinner/spinner';
 import { DsuSummaryModal } from './components/dsu-summary-modal/dsu-summary-modal';
@@ -564,19 +565,39 @@ export function App(): JSX.Element {
                   ))}
                 </div>
                 {activeTaskId !== undefined && (
-                  <div className="w-80 shrink-0 overflow-y-auto border-l border-graphite-700 bg-graphite-800">
-                    <TaskNotesPanel
-                      key={activeTaskId}
-                      body={notesByTaskId[activeTaskId]?.body ?? ''}
-                      status={notesByTaskId[activeTaskId]?.status ?? 'todo'}
-                      onSave={async (newBody) => {
-                        await window.claudeOrchestrator.setTaskNotes({ taskId: activeTaskId, body: newBody });
-                        setNotesByTaskId((current) => ({
-                          ...current,
-                          [activeTaskId]: { body: newBody, status: current[activeTaskId]?.status ?? 'todo' },
-                        }));
+                  <div className="flex w-80 shrink-0 flex-col border-l border-graphite-700 bg-graphite-800">
+                    <LinkedAdoItems
+                      adoIds={tasks.find((task) => task.id === activeTaskId)?.adoIds ?? []}
+                      orgUrlBase={adoOrgUrlBase}
+                      onLink={(adoId) => {
+                        void window.claudeOrchestrator.linkAdo(activeTaskId, adoId).then((adoIds) => {
+                          setTasks((current) =>
+                            current.map((task) => (task.id === activeTaskId ? { ...task, adoIds } : task)),
+                          );
+                        });
+                      }}
+                      onUnlink={(adoId) => {
+                        void window.claudeOrchestrator.unlinkAdo(activeTaskId, adoId).then((adoIds) => {
+                          setTasks((current) =>
+                            current.map((task) => (task.id === activeTaskId ? { ...task, adoIds } : task)),
+                          );
+                        });
                       }}
                     />
+                    <div className="min-h-0 flex-1">
+                      <TaskNotesPanel
+                        key={activeTaskId}
+                        body={notesByTaskId[activeTaskId]?.body ?? ''}
+                        status={notesByTaskId[activeTaskId]?.status ?? 'todo'}
+                        onSave={async (newBody) => {
+                          await window.claudeOrchestrator.setTaskNotes({ taskId: activeTaskId, body: newBody });
+                          setNotesByTaskId((current) => ({
+                            ...current,
+                            [activeTaskId]: { body: newBody, status: current[activeTaskId]?.status ?? 'todo' },
+                          }));
+                        }}
+                      />
+                    </div>
                   </div>
                 )}
               </>
