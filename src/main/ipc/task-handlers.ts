@@ -9,9 +9,13 @@ import type {
   TaskNotesGetResponse,
   TaskSetStatusRequest,
   TaskLinkAdoRequest,
+  AdoSyncTasksRequest,
+  AdoSyncResult,
 } from '../../shared/ipc-channels';
 import type { TaskRecord } from '../../shared/types';
 import { readStore, writeStore } from '../services/store';
+import { assertAdoAuthenticated } from '../services/ado-service';
+import { syncTasksToAdo } from '../services/ado-sync-service';
 import {
   addWorktree,
   addWorktreeFromRef,
@@ -260,6 +264,32 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
 
   ipcMain.handle(IpcChannels.TaskUnlinkAdo, async (_event, request: TaskLinkAdoRequest): Promise<string[]> => {
     return updateAdoIds(request.taskId, (ids) => ids.filter((id) => id !== request.adoId));
+  });
+
+  // Explicit, user-triggered sync of a worktree's tasks.md to ADO. A dry run
+  // reports what would be created; a real run asserts auth, creates the child
+  // work items, and links the parent + each created id onto the worktree so the
+  // panel reflects them. Never invoked automatically.
+  ipcMain.handle(IpcChannels.AdoSyncTasks, async (_event, request: AdoSyncTasksRequest): Promise<AdoSyncResult> => {
+    const store = await readStore(getStorePath());
+    const task = store.tasks.find((candidate) => candidate.id === request.taskId);
+    if (!task) {
+      throw new Error(`Unknown task: ${request.taskId}`);
+    }
+    if (!request.dryRun) {
+      await assertAdoAuthenticated();
+    }
+    const result = await syncTasksToAdo(task.worktreePath, { dryRun: request.dryRun });
+    if (!request.dryRun) {
+      const toLink = [
+        ...(result.parentId !== undefined ? [String(result.parentId)] : []),
+        ...result.created.map((item) => String(item.id)),
+      ];
+      for (const adoId of toLink) {
+        await updateAdoIds(request.taskId, (ids) => (ids.includes(adoId) ? ids : [...ids, adoId]));
+      }
+    }
+    return result;
   });
 
   ipcMain.handle(IpcChannels.TaskSearch, async (_event, query: string): Promise<string[]> => {

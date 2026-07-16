@@ -98,3 +98,36 @@ export function parseTasksMarkdown(content: string): ParsedTasks {
 
   return { parentId, featureTitle, items };
 }
+
+// Appends the given ADO work-item ids to the un-synced item lines (those under
+// "## Work items" that carry no trailing `#id`), in document order, one id per
+// line until the ids run out. Already-synced lines and all prose are left
+// exactly as they were — this is the write side of the idempotency marker.
+export function appendAdoIds(content: string, ids: number[]): string {
+  let idIndex = 0;
+  let inSection = false;
+
+  return content
+    .split('\n')
+    .map((line) => {
+      if (WORK_ITEMS_HEADING_RE.test(line)) {
+        inSection = true;
+        return line;
+      }
+      if (!inSection || HEADING_RE.test(line)) {
+        if (HEADING_RE.test(line) && !WORK_ITEMS_HEADING_RE.test(line)) {
+          inSection = false;
+        }
+        return line;
+      }
+      if (idIndex >= ids.length) {
+        return line;
+      }
+      const itemMatch = ITEM_RE.exec(line);
+      if (itemMatch && !TRAILING_ID_RE.test(itemMatch[3]!)) {
+        return `${line} #${ids[idIndex++]}`;
+      }
+      return line;
+    })
+    .join('\n');
+}

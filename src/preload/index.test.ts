@@ -261,4 +261,14 @@ describe('preload', () => {
     await (api.createAdoWorkItem as any)(request);
     expect(ipcRendererInvoke).toHaveBeenCalledWith('ado:create-work-item', request);
   });
+
+  it('syncTasksToAdo invokes the AdoSyncTasks channel with the taskId and dryRun flag', async () => {
+    await import('./index');
+    const call = exposeInMainWorld.mock.calls[0];
+    if (!call) throw new Error('exposeInMainWorld not called');
+    const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (api.syncTasksToAdo as any)('task-1', true);
+    expect(ipcRendererInvoke).toHaveBeenCalledWith('ado:sync-tasks', { taskId: 'task-1', dryRun: true });
+  });
 });

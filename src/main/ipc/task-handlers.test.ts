@@ -73,6 +73,18 @@ vi.mock('../services/editor-service', () => ({
   openInVsCode: (...args: unknown[]) => openInVsCode(...args),
 }));
 
+const assertAdoAuthenticated = vi.fn(async (..._args: unknown[]) => undefined);
+
+vi.mock('../services/ado-service', () => ({
+  assertAdoAuthenticated: (...args: unknown[]) => assertAdoAuthenticated(...args),
+}));
+
+const syncTasksToAdo = vi.fn();
+
+vi.mock('../services/ado-sync-service', () => ({
+  syncTasksToAdo: (...args: unknown[]) => syncTasksToAdo(...args),
+}));
+
 import { registerTaskHandlers } from './task-handlers';
 import { IpcChannels } from '../../shared/ipc-channels';
 import { addWorktree, addWorktreeFromRef, addWorktreeForExistingBranch, removeWorktree, fetchRepo, getDefaultBranch } from '../services/git-service';
@@ -103,6 +115,8 @@ describe('task-handlers', () => {
     vi.mocked(rm).mockClear();
     queueDsuAutoRegenerate.mockClear();
     openInVsCode.mockClear();
+    assertAdoAuthenticated.mockClear();
+    syncTasksToAdo.mockReset();
     registerTaskHandlers(onPtyData);
   });
 
@@ -603,6 +617,36 @@ describe('task-handlers', () => {
     seedTask();
     await expect(
       handlers.get(IpcChannels.TaskLinkAdo)?.({}, { taskId: 'nope', adoId: '1' }),
+    ).rejects.toThrow('Unknown task');
+  });
+
+  it('AdoSyncTasks dry run syncs the task worktree without asserting auth or linking ids', async () => {
+    seedTask();
+    syncTasksToAdo.mockResolvedValue({ parentId: 500, toCreate: [{ type: 'Task', title: 'A' }], created: [], skipped: 0 });
+    const result = await handlers.get(IpcChannels.AdoSyncTasks)?.({}, { taskId: 'task-1', dryRun: true });
+    expect(syncTasksToAdo).toHaveBeenCalledWith('C:\\w', { dryRun: true });
+    expect(assertAdoAuthenticated).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ parentId: 500, skipped: 0 });
+    expect(store.tasks[0]?.adoIds).toBeUndefined();
+  });
+
+  it('AdoSyncTasks real run asserts auth, then links the parent and each created id onto the task', async () => {
+    seedTask();
+    syncTasksToAdo.mockResolvedValue({
+      parentId: 500,
+      toCreate: [],
+      created: [{ title: 'A', id: 900, url: 'http://ado/900' }],
+      skipped: 0,
+    });
+    await handlers.get(IpcChannels.AdoSyncTasks)?.({}, { taskId: 'task-1', dryRun: false });
+    expect(assertAdoAuthenticated).toHaveBeenCalledOnce();
+    expect(store.tasks[0]?.adoIds).toEqual(['500', '900']);
+  });
+
+  it('AdoSyncTasks throws for an unknown task', async () => {
+    seedTask();
+    await expect(
+      handlers.get(IpcChannels.AdoSyncTasks)?.({}, { taskId: 'nope', dryRun: true }),
     ).rejects.toThrow('Unknown task');
   });
 });

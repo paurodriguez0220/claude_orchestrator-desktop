@@ -17,6 +17,7 @@ import type {
   AdoWorkItem,
   AdoCreateWorkItemRequest,
   AdoCreateWorkItemResult,
+  AdoSyncResult,
 } from '../shared/ipc-channels';
 
 export interface ClaudeOrchestratorApi {
@@ -50,6 +51,7 @@ export interface ClaudeOrchestratorApi {
   listAdoTasks(email?: string): Promise<AdoWorkItem[]>;
   getAdoConfig(): Promise<{ organization: string; project: string }>;
   createAdoWorkItem(request: AdoCreateWorkItemRequest): Promise<AdoCreateWorkItemResult>;
+  syncTasksToAdo(taskId: string, dryRun: boolean): Promise<AdoSyncResult>;
 }
 
 const api: ClaudeOrchestratorApi = {
@@ -93,6 +95,7 @@ const api: ClaudeOrchestratorApi = {
   listAdoTasks: (email) => ipcRenderer.invoke(IpcChannels.AdoListMyTasks, email),
   getAdoConfig: () => ipcRenderer.invoke(IpcChannels.AdoConfig),
   createAdoWorkItem: (request) => ipcRenderer.invoke(IpcChannels.AdoCreateWorkItem, request),
+  syncTasksToAdo: (taskId, dryRun) => ipcRenderer.invoke(IpcChannels.AdoSyncTasks, { taskId, dryRun }),
 };
 
 contextBridge.exposeInMainWorld('claudeOrchestrator', api);

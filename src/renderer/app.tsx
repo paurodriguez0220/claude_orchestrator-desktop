@@ -6,6 +6,7 @@ import { NewQuestionModal } from './components/new-question-modal/new-question-m
 import { TerminalTab } from './components/terminal-tab/terminal-tab';
 import { TaskNotesPanel } from './components/task-notes-panel/task-notes-panel';
 import { LinkedAdoItems } from './components/linked-ado-items/linked-ado-items';
+import { SyncTasksButton } from './components/sync-tasks-button/sync-tasks-button';
 import { TabBar } from './components/tab-bar/tab-bar';
 import { Spinner } from './components/spinner/spinner';
 import { DsuSummaryModal } from './components/dsu-summary-modal/dsu-summary-modal';
@@ -584,6 +585,17 @@ export function App(): JSX.Element {
                         });
                       }}
                     />
+                    <div className="border-b border-graphite-700 p-4">
+                      <SyncTasksButton
+                        key={activeTaskId}
+                        onDryRun={() => window.claudeOrchestrator.syncTasksToAdo(activeTaskId, true)}
+                        onSync={async () => {
+                          const result = await window.claudeOrchestrator.syncTasksToAdo(activeTaskId, false);
+                          setTasks(await window.claudeOrchestrator.listTasks());
+                          return result;
+                        }}
+                      />
+                    </div>
                     <div className="min-h-0 flex-1">
                       <TaskNotesPanel
                         key={activeTaskId}

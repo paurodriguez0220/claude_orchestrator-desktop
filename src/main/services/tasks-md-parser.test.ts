@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseTasksMarkdown } from './tasks-md-parser';
+import { parseTasksMarkdown, appendAdoIds } from './tasks-md-parser';
 
 describe('parseTasksMarkdown', () => {
   it('parses the parent id from frontmatter', () => {
@@ -79,5 +79,35 @@ describe('parseTasksMarkdown', () => {
       '- a bullet with no checkbox',
     ].join('\n');
     expect(parseTasksMarkdown(md).items).toHaveLength(1);
+  });
+});
+
+describe('appendAdoIds', () => {
+  it('appends the given ids to un-synced item lines in document order', () => {
+    const md = ['## Work items', '- [ ] (Task) First', '- [ ] (Bug) Second'].join('\n');
+    const result = appendAdoIds(md, [111, 222]);
+    expect(result).toContain('- [ ] (Task) First #111');
+    expect(result).toContain('- [ ] (Bug) Second #222');
+  });
+
+  it('leaves already-synced lines (with a trailing #id) untouched', () => {
+    const md = ['## Work items', '- [x] (Task) Done #999', '- [ ] (Task) New'].join('\n');
+    const result = appendAdoIds(md, [111]);
+    expect(result).toContain('- [x] (Task) Done #999');
+    expect(result).toContain('- [ ] (Task) New #111');
+  });
+
+  it('stops appending when it runs out of ids, leaving remaining lines unchanged', () => {
+    const md = ['## Work items', '- [ ] (Task) First', '- [ ] (Task) Second'].join('\n');
+    const result = appendAdoIds(md, [111]);
+    expect(result).toContain('- [ ] (Task) First #111');
+    expect(result).toContain('- [ ] (Task) Second');
+    expect(result).not.toContain('Second #');
+  });
+
+  it('preserves prose and does not touch lines outside the Work items section', () => {
+    const md = ['# Title', 'prose', '## Work items', '- [ ] (Task) First'].join('\n');
+    const result = appendAdoIds(md, [111]);
+    expect(result.split('\n').slice(0, 3)).toEqual(['# Title', 'prose', '## Work items']);
   });
 });
