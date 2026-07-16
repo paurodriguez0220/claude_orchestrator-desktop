@@ -11,6 +11,8 @@ import {
   ListChecks,
   MessageCirclePlus,
   Plus,
+  RefreshCw,
+  RefreshCwOff,
   Trash2,
 } from 'lucide-react';
 import type { RepoRecord, TaskRecord } from '../../../shared/types';
@@ -40,6 +42,7 @@ export interface RepoSidebarProps {
   onOpenAdoClick: () => void;
   onNewAdoItemClick: () => void;
   onOpenTaskInEditorClick?: (taskId: string) => void;
+  onToggleUpdateBase?: (repoId: string, updateBaseOnCreate: boolean) => void;
 }
 
 interface TaskRowProps {
@@ -138,6 +141,7 @@ export function RepoSidebar({
   onOpenAdoClick,
   onNewAdoItemClick,
   onOpenTaskInEditorClick,
+  onToggleUpdateBase,
 }: RepoSidebarProps): JSX.Element {
   const isSearchActive = searchQuery.trim() !== '';
   const visibleRepos = isSearchActive
@@ -209,6 +213,7 @@ export function RepoSidebar({
       <TaskSearchInput value={searchQuery} onChange={onSearchQueryChange} />
       <ul className="flex flex-col gap-3">
         {visibleRepos.map((repo) => {
+          const updateBaseEnabled = repo.updateBaseOnCreate !== false;
           return (
             <li key={repo.id} className="flex flex-col gap-1">
               <div className="flex items-center justify-between gap-2">
@@ -216,6 +221,30 @@ export function RepoSidebar({
                   {repo.name}
                 </span>
                 <div className="flex shrink-0 gap-1">
+                  {onToggleUpdateBase && (
+                    <button
+                      type="button"
+                      aria-label="Update base before new tasks"
+                      aria-pressed={updateBaseEnabled}
+                      title={
+                        updateBaseEnabled
+                          ? 'New tasks branch from the latest remote default branch (click to branch from your local copy instead)'
+                          : 'New tasks branch from your local copy (click to fetch and branch from the latest remote default branch)'
+                      }
+                      onClick={() => onToggleUpdateBase(repo.id, !updateBaseEnabled)}
+                      className={
+                        updateBaseEnabled
+                          ? 'flex items-center justify-center rounded-md border border-clay-500 p-1.5 text-clay-400 hover:border-clay-400'
+                          : 'flex items-center justify-center rounded-md border border-graphite-600 p-1.5 text-graphite-500 hover:border-clay-500 hover:text-clay-400'
+                      }
+                    >
+                      {updateBaseEnabled ? (
+                        <RefreshCw aria-hidden="true" className="h-4 w-4" />
+                      ) : (
+                        <RefreshCwOff aria-hidden="true" className="h-4 w-4" />
+                      )}
+                    </button>
+                  )}
                   <button
                     type="button"
                     aria-label="Review Code"

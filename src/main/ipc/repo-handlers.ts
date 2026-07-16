@@ -2,7 +2,12 @@ import { ipcMain, dialog } from 'electron';
 import { randomUUID } from 'node:crypto';
 import { join, basename } from 'node:path';
 import { IpcChannels } from '../../shared/ipc-channels';
-import type { RepoAddRequest, RepoCloneRequest, BranchOption } from '../../shared/ipc-channels';
+import type {
+  RepoAddRequest,
+  RepoCloneRequest,
+  BranchOption,
+  RepoSetUpdateBaseRequest,
+} from '../../shared/ipc-channels';
 import type { RepoRecord } from '../../shared/types';
 import { readStore, writeStore } from '../services/store';
 import { cloneRepo, listBranches, fetchRepo } from '../services/git-service';
@@ -82,4 +87,17 @@ export function registerRepoHandlers(): void {
     }
     await fetchRepo(repo.path);
   });
+
+  ipcMain.handle(
+    IpcChannels.RepoSetUpdateBase,
+    async (_event, request: RepoSetUpdateBaseRequest): Promise<void> => {
+      const store = await readStore(getStorePath());
+      const repo = store.repos.find((candidate) => candidate.id === request.repoId);
+      if (!repo) {
+        throw new Error(`Unknown repo: ${request.repoId}`);
+      }
+      repo.updateBaseOnCreate = request.updateBaseOnCreate;
+      await writeStore(getStorePath(), store);
+    },
+  );
 }

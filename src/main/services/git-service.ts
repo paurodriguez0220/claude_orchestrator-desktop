@@ -53,6 +53,30 @@ export async function addWorktree(
   await runGit(['worktree', 'add', worktreePath, '-b', branch], repoPath);
 }
 
+export async function addWorktreeFromRef(
+  repoPath: string,
+  worktreePath: string,
+  branch: string,
+  startPoint: string,
+): Promise<void> {
+  await runGit(['worktree', 'add', worktreePath, '-b', branch, startPoint], repoPath);
+}
+
+// Resolves the repo's default branch (e.g. "main"/"master") from origin/HEAD,
+// falling back to the main clone's currently checked-out branch when origin/HEAD
+// is not set (rare — happens if the remote never advertised a default).
+export async function getDefaultBranch(repoPath: string): Promise<string> {
+  try {
+    const output = await runGitCapture(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'], repoPath);
+    const ref = output.trim();
+    const slashIndex = ref.indexOf('/');
+    return slashIndex === -1 ? ref : ref.slice(slashIndex + 1);
+  } catch {
+    const output = await runGitCapture(['rev-parse', '--abbrev-ref', 'HEAD'], repoPath);
+    return output.trim();
+  }
+}
+
 export async function removeWorktree(repoPath: string, worktreePath: string): Promise<void> {
   await runGit(['worktree', 'remove', worktreePath], repoPath);
 }

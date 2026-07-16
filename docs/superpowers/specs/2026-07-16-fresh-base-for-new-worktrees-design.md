@@ -39,10 +39,13 @@ Branching from `origin/<default>` guarantees the worktree starts at the latest r
 commit **without touching the main clone's working tree**, so it cannot fail on a dirty or
 diverged local default branch.
 
-Additionally, best-effort fast-forward the local default branch ref so the main clone also
-reflects latest (the literal "keep the main folder updated" ask). If it cannot fast-forward
-(local commits / diverged / dirty), skip silently — the worktree is already fresh
-regardless. This is a nicety, not a correctness requirement.
+> **Implementation note (2026-07-16):** the best-effort fast-forward of the main clone's
+> local default branch was dropped. In the common case the default branch is the branch
+> checked out in the main clone, and git refuses to move a checked-out branch's ref via a
+> fetch refspec, so it would almost always no-op. Branching new worktrees from
+> `origin/<default>` already guarantees freshness — the actual goal — so advancing the main
+> clone's working copy adds edge cases (dirty tree, branch checked out elsewhere) for no
+> functional benefit to the worktree workflow. It can return as a follow-up if wanted.
 
 ### Default branch detection
 
@@ -79,18 +82,24 @@ updateBaseOnCreate?: boolean; // undefined => treated as true
 
 ## Affected code
 
-- `src/shared/types.ts` — add `updateBaseOnCreate?: boolean` to `RepoRecord`.
+- `src/shared/types.ts` — added `updateBaseOnCreate?: boolean` to `RepoRecord`.
 - `src/main/services/git-service.ts` — new helpers:
-  - `getDefaultBranch(repoPath): Promise<string>` (symbolic-ref + fallback).
+  - `getDefaultBranch(repoPath): Promise<string>` (symbolic-ref + rev-parse fallback).
   - `addWorktreeFromRef(repoPath, worktreePath, branch, startPoint)` — `worktree add -b`
     from an explicit start point (e.g. `origin/<default>`).
-  - best-effort `fastForwardBranch(repoPath, branch)` (skips on failure).
   - reuse existing `fetchRepo`.
 - `src/main/ipc/task-handlers.ts` — in the new-branch path, when `updateBaseOnCreate` is not
-  `false`: fetch → resolve default → branch from `origin/<default>` (with fallback on fetch
-  failure) → best-effort FF local default. Emit the notice on the fallback path.
-- `src/main/ipc/repo-handlers.ts` + IPC channel — handler to toggle `updateBaseOnCreate`.
-- Renderer — toggle in the repo context menu; surface the fallback notice.
+  `false`: fetch → resolve default → branch from `origin/<default>`; on fetch failure, fall
+  back to `addWorktree` (local HEAD) and attach a transient `baseUpdateWarning`. Returns the
+  new `TaskCreateResult` (TaskRecord + optional non-persisted `baseUpdateWarning`).
+- `src/shared/ipc-channels.ts` — `RepoSetUpdateBase` channel, `RepoSetUpdateBaseRequest`,
+  `TaskCreateResult`.
+- `src/main/ipc/repo-handlers.ts` — `RepoSetUpdateBase` handler persisting the toggle.
+- `src/preload/index.ts` — `setRepoUpdateBase(repoId, value)`; `createTask` now returns
+  `TaskCreateResult`.
+- Renderer — per-repo `RefreshCw` / `RefreshCwOff` toggle in the sidebar repo header
+  (`repo-sidebar.tsx`); `app.tsx` persists the toggle and surfaces `baseUpdateWarning` in the
+  existing banner.
 
 ## Testing
 

@@ -17,6 +17,7 @@ const meta: Meta<typeof RepoSidebar> = {
     onGenerateDsuClick: fn(),
     onArchiveTaskClick: fn(),
     onOpenArchivedClick: fn(),
+    onToggleUpdateBase: fn(),
     scratchTasks: [],
     appVersion: '0.1.0',
     removingTaskIds: [],
@@ -83,6 +84,23 @@ export const WithReviewTask: Story = {
       ],
     },
     selectedTaskId: 'task-1',
+    searchQuery: '',
+  },
+};
+
+export const WithBaseUpdateDisabled: Story = {
+  args: {
+    repos: [
+      {
+        id: 'repo-1',
+        name: 'demo',
+        path: 'C:\\demo',
+        createdAt: '2026-07-08T00:00:00.000Z',
+        updateBaseOnCreate: false,
+      },
+    ],
+    activeTasksByRepoId: { 'repo-1': [] },
+    selectedTaskId: undefined,
     searchQuery: '',
   },
 };

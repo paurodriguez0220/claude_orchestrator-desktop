@@ -128,6 +128,19 @@ describe('preload', () => {
     expect(ipcRendererInvoke).toHaveBeenCalledWith('repo:fetch', 'repo-1');
   });
 
+  it('setRepoUpdateBase invokes the RepoSetUpdateBase channel with the request', async () => {
+    await import('./index');
+    const call = exposeInMainWorld.mock.calls[0];
+    if (!call) throw new Error('exposeInMainWorld not called');
+    const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (api.setRepoUpdateBase as any)('repo-1', false);
+    expect(ipcRendererInvoke).toHaveBeenCalledWith('repo:set-update-base', {
+      repoId: 'repo-1',
+      updateBaseOnCreate: false,
+    });
+  });
+
   it('saveClipboardImage invokes the SaveClipboardImage channel with the data URL', async () => {
     await import('./index');
     const call = exposeInMainWorld.mock.calls[0];
