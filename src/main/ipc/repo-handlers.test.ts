@@ -131,6 +131,18 @@ describe('repo-handlers', () => {
     expect(fetchRepo).toHaveBeenCalledWith('C:\\demo');
   });
 
+  it('RepoSetUpdateBase persists updateBaseOnCreate onto the matching repo', async () => {
+    store.repos.push({ id: 'repo-1', name: 'demo', path: 'C:\\demo', createdAt: '2026-07-08T00:00:00.000Z' });
+    const handler = handlers.get(IpcChannels.RepoSetUpdateBase);
+    await handler?.({}, { repoId: 'repo-1', updateBaseOnCreate: false });
+    expect(store.repos.find((repo) => repo.id === 'repo-1')?.updateBaseOnCreate).toBe(false);
+  });
+
+  it('RepoSetUpdateBase rejects an unknown repoId', async () => {
+    const handler = handlers.get(IpcChannels.RepoSetUpdateBase);
+    await expect(handler?.({}, { repoId: 'nope', updateBaseOnCreate: true })).rejects.toThrow('Unknown repo');
+  });
+
   it('RepoFetch rejects an unknown repoId', async () => {
     const handler = handlers.get(IpcChannels.RepoFetch);
     await expect(handler?.({}, 'nope')).rejects.toThrow('Unknown repo');

@@ -202,6 +202,104 @@ describe('RepoSidebar', () => {
     expect(onReviewCodeClick).toHaveBeenCalledWith('repo-1');
   });
 
+  it('renders the update-base toggle as enabled by default and toggles it off when clicked', async () => {
+    const onToggleUpdateBase = vi.fn();
+    render(
+      <RepoSidebar
+        repos={[repo]}
+        activeTasksByRepoId={{ 'repo-1': [task] }}
+        scratchTasks={[]}
+        selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
+        onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
+        onToggleUpdateBase={onToggleUpdateBase}
+      />,
+    );
+    const toggle = screen.getByRole('button', { name: 'Update base before new tasks' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(toggle);
+    expect(onToggleUpdateBase).toHaveBeenCalledWith('repo-1', false);
+  });
+
+  it('shows the update-base toggle as disabled and toggles it on when the repo has opted out', async () => {
+    const optedOut: RepoRecord = { ...repo, updateBaseOnCreate: false };
+    const onToggleUpdateBase = vi.fn();
+    render(
+      <RepoSidebar
+        repos={[optedOut]}
+        activeTasksByRepoId={{ 'repo-1': [task] }}
+        scratchTasks={[]}
+        selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
+        onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
+        onToggleUpdateBase={onToggleUpdateBase}
+      />,
+    );
+    const toggle = screen.getByRole('button', { name: 'Update base before new tasks' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(toggle);
+    expect(onToggleUpdateBase).toHaveBeenCalledWith('repo-1', true);
+  });
+
+  it('renders no update-base toggle when onToggleUpdateBase is not provided', () => {
+    render(
+      <RepoSidebar
+        repos={[repo]}
+        activeTasksByRepoId={{ 'repo-1': [task] }}
+        scratchTasks={[]}
+        selectedTaskId={undefined}
+        removingTaskIds={[]}
+        isAddingRepo={false}
+        searchQuery=""
+        onSearchQueryChange={vi.fn()}
+        onSelectTask={vi.fn()}
+        onOpenRepoClick={vi.fn()}
+        onCloneRepoClick={vi.fn()}
+        onNewTaskClick={vi.fn()}
+        onRemoveTaskClick={vi.fn()}
+        onReviewCodeClick={vi.fn()}
+        onNewQuestionClick={vi.fn()}
+        appVersion={undefined}
+        onGenerateDsuClick={vi.fn()}
+        onArchiveTaskClick={vi.fn()}
+        onOpenArchivedClick={vi.fn()}
+        onOpenAdoClick={vi.fn()}
+        onNewAdoItemClick={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: 'Update base before new tasks' })).not.toBeInTheDocument();
+  });
+
   it('shows a "Review" badge next to a task whose kind is "review"', () => {
     const reviewTask: TaskRecord = { ...task, id: 'task-2', title: 'Review PR #42', kind: 'review' };
     render(

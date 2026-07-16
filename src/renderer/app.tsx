@@ -203,7 +203,7 @@ export function App(): JSX.Element {
     setErrorMessage(undefined);
     setIsSubmittingModal(true);
     try {
-      const task = await window.claudeOrchestrator.createTask({
+      const { baseUpdateWarning, ...task } = await window.claudeOrchestrator.createTask({
         repoId: newTaskRepoId,
         ...fields,
         kind: newTaskMode === 'review' ? 'review' : undefined,
@@ -211,10 +211,25 @@ export function App(): JSX.Element {
       setTasks((current) => [...current, task]);
       await handleSelectTask(task.id);
       setNewTaskRepoId(undefined);
+      if (baseUpdateWarning !== undefined) {
+        setErrorMessage(baseUpdateWarning);
+      }
     } catch (err) {
       setErrorMessage(toErrorMessage(err));
     } finally {
       setIsSubmittingModal(false);
+    }
+  }
+
+  async function handleToggleUpdateBase(repoId: string, updateBaseOnCreate: boolean): Promise<void> {
+    setErrorMessage(undefined);
+    try {
+      await window.claudeOrchestrator.setRepoUpdateBase(repoId, updateBaseOnCreate);
+      setRepos((current) =>
+        current.map((repo) => (repo.id === repoId ? { ...repo, updateBaseOnCreate } : repo)),
+      );
+    } catch (err) {
+      setErrorMessage(toErrorMessage(err));
     }
   }
 
@@ -444,6 +459,9 @@ export function App(): JSX.Element {
           appVersion={appVersion}
           onGenerateDsuClick={() => setIsDsuModalOpen(true)}
           onArchiveTaskClick={(taskId) => void handleArchiveTask(taskId)}
+          onToggleUpdateBase={(repoId, updateBaseOnCreate) =>
+            void handleToggleUpdateBase(repoId, updateBaseOnCreate)
+          }
           onOpenTaskInEditorClick={(taskId) => void handleOpenTaskInEditor(taskId)}
           onOpenArchivedClick={() => setIsArchivedModalOpen(true)}
           onOpenAdoClick={() => void handleOpenAdo()}

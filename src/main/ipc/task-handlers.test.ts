@@ -27,8 +27,11 @@ vi.mock('../services/store', () => ({
 
 vi.mock('../services/git-service', () => ({
   addWorktree: vi.fn(async () => undefined),
+  addWorktreeFromRef: vi.fn(async () => undefined),
   addWorktreeForExistingBranch: vi.fn(async () => undefined),
   removeWorktree: vi.fn(async () => undefined),
+  fetchRepo: vi.fn(async () => undefined),
+  getDefaultBranch: vi.fn(async () => 'main'),
 }));
 
 vi.mock('../services/notes-service', () => ({
@@ -72,7 +75,7 @@ vi.mock('../services/editor-service', () => ({
 
 import { registerTaskHandlers } from './task-handlers';
 import { IpcChannels } from '../../shared/ipc-channels';
-import { addWorktree, addWorktreeForExistingBranch, removeWorktree } from '../services/git-service';
+import { addWorktree, addWorktreeFromRef, addWorktreeForExistingBranch, removeWorktree, fetchRepo, getDefaultBranch } from '../services/git-service';
 import { readTaskNotes, writeTaskNotes } from '../services/notes-service';
 import { writeStore } from '../services/store';
 import { mkdir, rm } from 'node:fs/promises';
@@ -90,8 +93,11 @@ describe('task-handlers', () => {
     isSessionAlive.mockClear();
     killSession.mockClear();
     vi.mocked(addWorktree).mockClear();
+    vi.mocked(addWorktreeFromRef).mockClear();
     vi.mocked(addWorktreeForExistingBranch).mockClear();
     vi.mocked(removeWorktree).mockClear();
+    vi.mocked(fetchRepo).mockReset().mockResolvedValue(undefined);
+    vi.mocked(getDefaultBranch).mockReset().mockResolvedValue('main');
     vi.mocked(readTaskNotes).mockClear();
     vi.mocked(mkdir).mockClear();
     vi.mocked(rm).mockClear();
@@ -100,10 +106,13 @@ describe('task-handlers', () => {
     registerTaskHandlers(onPtyData);
   });
 
-  it('TaskCreate adds a worktree, stores a task record, and spawns a fresh session', async () => {
+  it('TaskCreate fetches and branches a new-branch task from origin/<default>, stores a record, and spawns a fresh session', async () => {
     const handler = handlers.get(IpcChannels.TaskCreate);
     const task = await handler?.({}, { repoId: 'repo-1', title: 'Fix login bug', adoId: 'ADO-1' });
-    expect(addWorktree).toHaveBeenCalledWith('C:\\demo', 'C:\\demo\\..\\demo-worktrees\\fix-login-bug', 'feature/fix-login-bug');
+    expect(fetchRepo).toHaveBeenCalledWith('C:\\demo');
+    expect(getDefaultBranch).toHaveBeenCalledWith('C:\\demo');
+    expect(addWorktreeFromRef).toHaveBeenCalledWith('C:\\demo', 'C:\\demo\\..\\demo-worktrees\\fix-login-bug', 'feature/fix-login-bug', 'origin/main');
+    expect(addWorktree).not.toHaveBeenCalled();
     expect(task).toMatchObject({ title: 'Fix login bug', adoId: 'ADO-1', status: 'todo' });
     expect(store.tasks).toHaveLength(1);
     expect(spawnClaudeSession).toHaveBeenCalledWith(
@@ -117,15 +126,44 @@ describe('task-handlers', () => {
   it('TaskCreate composes the branch from branchPrefix + slug', async () => {
     const handler = handlers.get(IpcChannels.TaskCreate);
     const task = await handler?.({}, { repoId: 'repo-1', title: 'Fix login bug', branchPrefix: 'fix/' });
-    expect(addWorktree).toHaveBeenCalledWith('C:\\demo', 'C:\\demo\\..\\demo-worktrees\\fix-login-bug', 'fix/fix-login-bug');
+    expect(addWorktreeFromRef).toHaveBeenCalledWith('C:\\demo', 'C:\\demo\\..\\demo-worktrees\\fix-login-bug', 'fix/fix-login-bug', 'origin/main');
     expect(task).toMatchObject({ branch: 'fix/fix-login-bug' });
   });
 
   it('TaskCreate lets an explicit branch override the prefix', async () => {
     const handler = handlers.get(IpcChannels.TaskCreate);
     const task = await handler?.({}, { repoId: 'repo-1', title: 'Fix login bug', branchPrefix: 'fix/', branch: 'hotfix/custom' });
-    expect(addWorktree).toHaveBeenCalledWith('C:\\demo', 'C:\\demo\\..\\demo-worktrees\\fix-login-bug', 'hotfix/custom');
+    expect(addWorktreeFromRef).toHaveBeenCalledWith('C:\\demo', 'C:\\demo\\..\\demo-worktrees\\fix-login-bug', 'hotfix/custom', 'origin/main');
     expect(task).toMatchObject({ branch: 'hotfix/custom' });
+  });
+
+  it('TaskCreate branches from local HEAD (no fetch) when the repo has updateBaseOnCreate set to false', async () => {
+    store.repos = store.repos.map((repo) => ({ ...repo, updateBaseOnCreate: false }));
+    const handler = handlers.get(IpcChannels.TaskCreate);
+    const task = await handler?.({}, { repoId: 'repo-1', title: 'Fix login bug' });
+    expect(addWorktree).toHaveBeenCalledWith('C:\\demo', 'C:\\demo\\..\\demo-worktrees\\fix-login-bug', 'feature/fix-login-bug');
+    expect(fetchRepo).not.toHaveBeenCalled();
+    expect(addWorktreeFromRef).not.toHaveBeenCalled();
+    expect(task).toMatchObject({ branch: 'feature/fix-login-bug' });
+  });
+
+  it('TaskCreate falls back to branching from local HEAD and returns a warning when the fetch fails', async () => {
+    vi.mocked(fetchRepo).mockRejectedValueOnce(new Error('could not resolve host'));
+    const handler = handlers.get(IpcChannels.TaskCreate);
+    const task = await handler?.({}, { repoId: 'repo-1', title: 'Fix login bug' });
+    expect(fetchRepo).toHaveBeenCalledWith('C:\\demo');
+    expect(addWorktreeFromRef).not.toHaveBeenCalled();
+    expect(addWorktree).toHaveBeenCalledWith('C:\\demo', 'C:\\demo\\..\\demo-worktrees\\fix-login-bug', 'feature/fix-login-bug');
+    expect(task).toMatchObject({ branch: 'feature/fix-login-bug' });
+    expect((task as { baseUpdateWarning?: string }).baseUpdateWarning).toMatch(/local copy/i);
+    expect(store.tasks).toHaveLength(1);
+  });
+
+  it('TaskCreate does not persist the transient baseUpdateWarning to the store', async () => {
+    vi.mocked(fetchRepo).mockRejectedValueOnce(new Error('offline'));
+    const handler = handlers.get(IpcChannels.TaskCreate);
+    await handler?.({}, { repoId: 'repo-1', title: 'Fix login bug' });
+    expect(store.tasks[0]).not.toHaveProperty('baseUpdateWarning');
   });
 
   it('TaskCreate rejects an unknown repoId', async () => {

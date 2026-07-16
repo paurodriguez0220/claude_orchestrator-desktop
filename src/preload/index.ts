@@ -6,6 +6,7 @@ import type {
 } from '../shared/types';
 import type {
   TaskCreateRequest,
+  TaskCreateResult,
   TaskNotesSetRequest,
   TaskSetStatusRequest,
   TaskNotesGetResponse,
@@ -25,7 +26,8 @@ export interface ClaudeOrchestratorApi {
   listRepos(): Promise<RepoRecord[]>;
   listBranches(repoId: string): Promise<BranchOption[]>;
   fetchRepo(repoId: string): Promise<void>;
-  createTask(request: TaskCreateRequest): Promise<TaskRecord>;
+  setRepoUpdateBase(repoId: string, updateBaseOnCreate: boolean): Promise<void>;
+  createTask(request: TaskCreateRequest): Promise<TaskCreateResult>;
   listTasks(): Promise<TaskRecord[]>;
   openTask(taskId: string): Promise<void>;
   closeTask(taskId: string): Promise<void>;
@@ -55,6 +57,8 @@ const api: ClaudeOrchestratorApi = {
   listRepos: () => ipcRenderer.invoke(IpcChannels.RepoList),
   listBranches: (repoId) => ipcRenderer.invoke(IpcChannels.RepoBranches, repoId),
   fetchRepo: (repoId) => ipcRenderer.invoke(IpcChannels.RepoFetch, repoId),
+  setRepoUpdateBase: (repoId, updateBaseOnCreate) =>
+    ipcRenderer.invoke(IpcChannels.RepoSetUpdateBase, { repoId, updateBaseOnCreate }),
   createTask: (request) => ipcRenderer.invoke(IpcChannels.TaskCreate, request),
   listTasks: () => ipcRenderer.invoke(IpcChannels.TaskList),
   openTask: (taskId) => ipcRenderer.invoke(IpcChannels.TaskOpen, taskId),

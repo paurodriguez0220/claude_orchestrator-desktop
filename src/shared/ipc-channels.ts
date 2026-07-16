@@ -1,4 +1,4 @@
-import type { TaskKind, TaskStatus } from './types';
+import type { TaskKind, TaskStatus, TaskRecord } from './types';
 
 export const IpcChannels = {
   RepoAdd: 'repo:add',
@@ -6,6 +6,7 @@ export const IpcChannels = {
   RepoList: 'repo:list',
   RepoBranches: 'repo:branches',
   RepoFetch: 'repo:fetch',
+  RepoSetUpdateBase: 'repo:set-update-base',
   TaskCreate: 'task:create',
   TaskList: 'task:list',
   TaskOpen: 'task:open',
@@ -53,6 +54,18 @@ export interface TaskCreateRequest {
   branchPrefix?: string;
   existingBranch?: string;
   kind?: TaskKind;
+}
+
+// Task record returned from TaskCreate, optionally carrying a transient,
+// non-persisted warning (e.g. the remote was unreachable and the worktree was
+// branched from the local copy instead).
+export interface TaskCreateResult extends TaskRecord {
+  baseUpdateWarning?: string;
+}
+
+export interface RepoSetUpdateBaseRequest {
+  repoId: string;
+  updateBaseOnCreate: boolean;
 }
 
 export interface TaskNotesSetRequest {

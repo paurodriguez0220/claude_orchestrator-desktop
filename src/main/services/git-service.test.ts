@@ -20,7 +20,7 @@ vi.mock('node:child_process', () => ({
   },
 }));
 
-import { cloneRepo, addWorktree, addWorktreeForExistingBranch, removeWorktree, listBranches, fetchRepo, getBranchCommitsInRange, GitCommandError } from './git-service';
+import { cloneRepo, addWorktree, addWorktreeFromRef, addWorktreeForExistingBranch, removeWorktree, listBranches, fetchRepo, getDefaultBranch, getBranchCommitsInRange, GitCommandError } from './git-service';
 
 describe('git-service', () => {
   beforeEach(() => {
@@ -53,6 +53,43 @@ describe('git-service', () => {
       ['-c', 'core.longpaths=true', 'worktree', 'remove', 'C:\\repo-worktrees\\slug'],
       { cwd: 'C:\\repo' },
     );
+  });
+
+  it('addWorktreeFromRef calls git worktree add with -b and an explicit start point, and enables long paths', async () => {
+    await addWorktreeFromRef('C:\\repo', 'C:\\repo-worktrees\\slug', 'feature/slug', 'origin/main');
+    expect(execFileMock).toHaveBeenCalledWith(
+      'git',
+      ['-c', 'core.longpaths=true', 'worktree', 'add', 'C:\\repo-worktrees\\slug', '-b', 'feature/slug', 'origin/main'],
+      { cwd: 'C:\\repo' },
+    );
+  });
+
+  it('getDefaultBranch reads origin/HEAD and strips the origin/ prefix', async () => {
+    execFileMock.mockImplementation(() => ({ stdout: 'origin/main\n', stderr: '' }));
+    const result = await getDefaultBranch('C:\\repo');
+    expect(execFileMock).toHaveBeenCalledWith(
+      'git',
+      ['-c', 'core.longpaths=true', 'symbolic-ref', '--short', 'refs/remotes/origin/HEAD'],
+      { cwd: 'C:\\repo' },
+    );
+    expect(result).toBe('main');
+  });
+
+  it('getDefaultBranch falls back to the current HEAD branch when origin/HEAD is not set', async () => {
+    execFileMock.mockImplementation((...args: unknown[]) => {
+      const gitArgs = args[1] as string[];
+      if (gitArgs.includes('symbolic-ref')) {
+        throw new Error('fatal: ref refs/remotes/origin/HEAD is not a symbolic ref');
+      }
+      return { stdout: 'master\n', stderr: '' };
+    });
+    const result = await getDefaultBranch('C:\\repo');
+    expect(execFileMock).toHaveBeenCalledWith(
+      'git',
+      ['-c', 'core.longpaths=true', 'rev-parse', '--abbrev-ref', 'HEAD'],
+      { cwd: 'C:\\repo' },
+    );
+    expect(result).toBe('master');
   });
 
   it('addWorktreeForExistingBranch calls git worktree add without -b, and enables long paths', async () => {

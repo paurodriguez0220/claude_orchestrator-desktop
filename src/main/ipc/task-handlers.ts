@@ -4,13 +4,21 @@ import { mkdir, rm } from 'node:fs/promises';
 import { IpcChannels } from '../../shared/ipc-channels';
 import type {
   TaskCreateRequest,
+  TaskCreateResult,
   TaskNotesSetRequest,
   TaskNotesGetResponse,
   TaskSetStatusRequest,
 } from '../../shared/ipc-channels';
 import type { TaskRecord } from '../../shared/types';
 import { readStore, writeStore } from '../services/store';
-import { addWorktree, addWorktreeForExistingBranch, removeWorktree } from '../services/git-service';
+import {
+  addWorktree,
+  addWorktreeFromRef,
+  addWorktreeForExistingBranch,
+  removeWorktree,
+  fetchRepo,
+  getDefaultBranch,
+} from '../services/git-service';
 import { slugify, assertSafeBranchName } from '../services/slug';
 import { readTaskNotes, writeTaskNotes, archiveTaskNotes } from '../services/notes-service';
 import { spawnClaudeSession, isSessionAlive, killSession } from '../services/pty-manager';
@@ -19,7 +27,7 @@ import { queueDsuAutoRegenerate } from '../services/dsu-orchestrator';
 import { getStorePath, getTaskNotesPath, getWorktreePath, getScratchPath } from '../paths';
 
 export function registerTaskHandlers(onPtyData: (taskId: string, data: string) => void): void {
-  ipcMain.handle(IpcChannels.TaskCreate, async (_event, request: TaskCreateRequest): Promise<TaskRecord> => {
+  ipcMain.handle(IpcChannels.TaskCreate, async (_event, request: TaskCreateRequest): Promise<TaskCreateResult> => {
     const store = await readStore(getStorePath());
 
     if (request.kind === 'scratch') {
@@ -74,10 +82,30 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
 
     const worktreePath = getWorktreePath(repo.path, repo.name, slug);
 
+    let baseUpdateWarning: string | undefined;
+
     if (existingBranch !== undefined) {
+      // Resuming an existing branch — attach to it as-is, no rebasing of the base.
       await addWorktreeForExistingBranch(repo.path, worktreePath, branch);
-    } else {
+    } else if (repo.updateBaseOnCreate === false) {
+      // Opted out per repo: branch from the main clone's current HEAD (legacy).
       await addWorktree(repo.path, worktreePath, branch);
+    } else {
+      // Default: fetch and branch from the remote default branch so the new
+      // worktree starts fresh. If the remote is unreachable, fall back to the
+      // local HEAD rather than blocking task creation, and surface a warning.
+      let startPoint: string | undefined;
+      try {
+        await fetchRepo(repo.path);
+        startPoint = `origin/${await getDefaultBranch(repo.path)}`;
+      } catch {
+        baseUpdateWarning = "Couldn't reach the remote — branched from your local copy instead.";
+      }
+      if (startPoint !== undefined) {
+        await addWorktreeFromRef(repo.path, worktreePath, branch, startPoint);
+      } else {
+        await addWorktree(repo.path, worktreePath, branch);
+      }
     }
 
     const now = new Date().toISOString();
@@ -107,7 +135,9 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
       body: '',
     });
     spawnClaudeSession(task.id, task.worktreePath, false, onPtyData);
-    return task;
+    // baseUpdateWarning is transient (renderer-only) and deliberately not part
+    // of the persisted TaskRecord above.
+    return baseUpdateWarning === undefined ? task : { ...task, baseUpdateWarning };
   });
 
   ipcMain.handle(IpcChannels.TaskList, async (): Promise<TaskRecord[]> => {
