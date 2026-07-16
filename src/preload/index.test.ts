@@ -181,6 +181,26 @@ describe('preload', () => {
     expect(ipcRendererInvoke).toHaveBeenCalledWith('task:set-status', { taskId: 'task-1', status: 'done' });
   });
 
+  it('linkAdo invokes the TaskLinkAdo channel with the taskId and adoId', async () => {
+    await import('./index');
+    const call = exposeInMainWorld.mock.calls[0];
+    if (!call) throw new Error('exposeInMainWorld not called');
+    const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (api.linkAdo as any)('task-1', '1234');
+    expect(ipcRendererInvoke).toHaveBeenCalledWith('task:link-ado', { taskId: 'task-1', adoId: '1234' });
+  });
+
+  it('unlinkAdo invokes the TaskUnlinkAdo channel with the taskId and adoId', async () => {
+    await import('./index');
+    const call = exposeInMainWorld.mock.calls[0];
+    if (!call) throw new Error('exposeInMainWorld not called');
+    const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (api.unlinkAdo as any)('task-1', '1234');
+    expect(ipcRendererInvoke).toHaveBeenCalledWith('task:unlink-ado', { taskId: 'task-1', adoId: '1234' });
+  });
+
   it('taskSearch invokes the TaskSearch channel with the query string', async () => {
     await import('./index');
     const call = exposeInMainWorld.mock.calls[0];

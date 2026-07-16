@@ -15,6 +15,8 @@ export const IpcChannels = {
   TaskNotesGet: 'task:notes:get',
   TaskNotesSet: 'task:notes:set',
   TaskSetStatus: 'task:set-status',
+  TaskLinkAdo: 'task:link-ado',
+  TaskUnlinkAdo: 'task:unlink-ado',
   TaskSearch: 'task:search',
   TaskOpenInEditor: 'task:open-in-editor',
   PtyInput: 'pty:input',
@@ -76,6 +78,11 @@ export interface TaskNotesSetRequest {
 export interface TaskSetStatusRequest {
   taskId: string;
   status: TaskStatus;
+}
+
+export interface TaskLinkAdoRequest {
+  taskId: string;
+  adoId: string;
 }
 
 export interface PtyInputRequest {

@@ -548,4 +548,61 @@ describe('task-handlers', () => {
     await handler?.({}, 'task-1');
     expect(queueDsuAutoRegenerate).not.toHaveBeenCalled();
   });
+
+  function seedTask(adoIds?: string[]): void {
+    store.tasks = [
+      {
+        id: 'task-1',
+        repoId: 'repo-1',
+        title: 'Fix login bug',
+        adoIds,
+        branch: 'task/fix-login-bug',
+        worktreePath: 'C:\\w',
+        status: 'todo',
+        kind: 'worktree',
+        createdAt: '2026-07-08T00:00:00.000Z',
+        updatedAt: '2026-07-08T00:00:00.000Z',
+      },
+    ];
+    vi.mocked(readTaskNotes).mockResolvedValue({
+      frontmatter: { title: 't', adoIds, branch: 'b', worktreePath: 'C:\\w', status: 'todo', kind: 'worktree' },
+      body: 'existing notes',
+    });
+  }
+
+  it('TaskLinkAdo appends the id to the store record and the notes frontmatter, and returns the new list', async () => {
+    seedTask();
+    const result = await handlers.get(IpcChannels.TaskLinkAdo)?.({}, { taskId: 'task-1', adoId: '1234' });
+    expect(result).toEqual(['1234']);
+    expect(store.tasks[0]?.adoIds).toEqual(['1234']);
+    expect(vi.mocked(writeTaskNotes)).toHaveBeenCalledWith(
+      'C:\\fake\\tasks\\task-1.md',
+      expect.objectContaining({ frontmatter: expect.objectContaining({ adoIds: ['1234'] }) }),
+    );
+  });
+
+  it('TaskLinkAdo is idempotent — linking an already-linked id does not duplicate it', async () => {
+    seedTask(['1234']);
+    const result = await handlers.get(IpcChannels.TaskLinkAdo)?.({}, { taskId: 'task-1', adoId: '1234' });
+    expect(result).toEqual(['1234']);
+    expect(store.tasks[0]?.adoIds).toEqual(['1234']);
+  });
+
+  it('TaskUnlinkAdo removes the id from the store record and the notes frontmatter', async () => {
+    seedTask(['1234', '5678']);
+    const result = await handlers.get(IpcChannels.TaskUnlinkAdo)?.({}, { taskId: 'task-1', adoId: '1234' });
+    expect(result).toEqual(['5678']);
+    expect(store.tasks[0]?.adoIds).toEqual(['5678']);
+    expect(vi.mocked(writeTaskNotes)).toHaveBeenCalledWith(
+      'C:\\fake\\tasks\\task-1.md',
+      expect.objectContaining({ frontmatter: expect.objectContaining({ adoIds: ['5678'] }) }),
+    );
+  });
+
+  it('TaskLinkAdo throws for an unknown task', async () => {
+    seedTask();
+    await expect(
+      handlers.get(IpcChannels.TaskLinkAdo)?.({}, { taskId: 'nope', adoId: '1' }),
+    ).rejects.toThrow('Unknown task');
+  });
 });

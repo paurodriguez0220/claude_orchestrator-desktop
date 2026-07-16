@@ -35,6 +35,8 @@ export interface ClaudeOrchestratorApi {
   getTaskNotes(taskId: string): Promise<TaskNotesGetResponse>;
   setTaskNotes(request: TaskNotesSetRequest): Promise<void>;
   setTaskStatus(request: TaskSetStatusRequest): Promise<void>;
+  linkAdo(taskId: string, adoId: string): Promise<string[]>;
+  unlinkAdo(taskId: string, adoId: string): Promise<string[]>;
   taskSearch(query: string): Promise<string[]>;
   openTaskInEditor(taskId: string): Promise<void>;
   sendPtyInput(taskId: string, data: string): void;
@@ -67,6 +69,8 @@ const api: ClaudeOrchestratorApi = {
   getTaskNotes: (taskId) => ipcRenderer.invoke(IpcChannels.TaskNotesGet, taskId),
   setTaskNotes: (request) => ipcRenderer.invoke(IpcChannels.TaskNotesSet, request),
   setTaskStatus: (request) => ipcRenderer.invoke(IpcChannels.TaskSetStatus, request),
+  linkAdo: (taskId, adoId) => ipcRenderer.invoke(IpcChannels.TaskLinkAdo, { taskId, adoId }),
+  unlinkAdo: (taskId, adoId) => ipcRenderer.invoke(IpcChannels.TaskUnlinkAdo, { taskId, adoId }),
   taskSearch: (query) => ipcRenderer.invoke(IpcChannels.TaskSearch, query),
   openTaskInEditor: (taskId) => ipcRenderer.invoke(IpcChannels.TaskOpenInEditor, taskId),
   sendPtyInput: (taskId, data) => ipcRenderer.send(IpcChannels.PtyInput, { taskId, data }),

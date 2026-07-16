@@ -8,6 +8,7 @@ import type {
   TaskNotesSetRequest,
   TaskNotesGetResponse,
   TaskSetStatusRequest,
+  TaskLinkAdoRequest,
 } from '../../shared/ipc-channels';
 import type { TaskRecord } from '../../shared/types';
 import { readStore, writeStore } from '../services/store';
@@ -226,6 +227,40 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
       }
     },
   );
+
+  // Links/unlinks an ADO work item id on an existing worktree, keeping the
+  // store record and the notes frontmatter in sync. Returns the updated list.
+  async function updateAdoIds(taskId: string, mutate: (ids: string[]) => string[]): Promise<string[]> {
+    const store = await readStore(getStorePath());
+    const task = store.tasks.find((candidate) => candidate.id === taskId);
+    if (!task) {
+      throw new Error(`Unknown task: ${taskId}`);
+    }
+    const next = mutate(task.adoIds ?? []);
+    task.adoIds = next.length > 0 ? next : undefined;
+    task.updatedAt = new Date().toISOString();
+    await writeStore(getStorePath(), store);
+
+    const notesPath = getTaskNotesPath(taskId);
+    const notes = await readTaskNotes(notesPath);
+    await writeTaskNotes(notesPath, {
+      ...notes,
+      frontmatter: { ...notes.frontmatter, adoIds: task.adoIds },
+    });
+    return next;
+  }
+
+  ipcMain.handle(IpcChannels.TaskLinkAdo, async (_event, request: TaskLinkAdoRequest): Promise<string[]> => {
+    const adoId = request.adoId.trim();
+    if (adoId === '') {
+      throw new Error('ADO id must not be empty');
+    }
+    return updateAdoIds(request.taskId, (ids) => (ids.includes(adoId) ? ids : [...ids, adoId]));
+  });
+
+  ipcMain.handle(IpcChannels.TaskUnlinkAdo, async (_event, request: TaskLinkAdoRequest): Promise<string[]> => {
+    return updateAdoIds(request.taskId, (ids) => ids.filter((id) => id !== request.adoId));
+  });
 
   ipcMain.handle(IpcChannels.TaskSearch, async (_event, query: string): Promise<string[]> => {
     const store = await readStore(getStorePath());
