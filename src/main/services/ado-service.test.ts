@@ -27,13 +27,7 @@ vi.mock('node:fs/promises', () => ({
   rm: (path: string, options?: unknown) => rmMock(path, options),
 }));
 
-import {
-  assertAdoAuthenticated,
-  getAdoConfig,
-  listMyAssignedTasks,
-  createWorkItem,
-  AdoCommandError,
-} from './ado-service';
+import { assertAdoAuthenticated, getAdoConfig, createWorkItem, AdoCommandError } from './ado-service';
 
 function jsonResult(value: unknown): { stdout: string; stderr: string } {
   return { stdout: JSON.stringify(value), stderr: '' };
@@ -47,83 +41,6 @@ describe('ado-service', () => {
     writeFileMock.mockClear();
     rmMock.mockClear();
     mockError = null;
-  });
-
-  describe('listMyAssignedTasks', () => {
-    it('maps az boards query JSON output into AdoWorkItem[]', async () => {
-      const wiqlJson = JSON.stringify([
-        {
-          id: 101,
-          fields: {
-            'System.Title': 'Fix login',
-            'System.WorkItemType': 'Bug',
-            'System.State': 'Active',
-            'System.AreaPath': 'Proj\\Team',
-            'Microsoft.VSTS.Scheduling.StoryPoints': 3,
-          },
-        },
-      ]);
-      execFileMock.mockReturnValue({ stdout: wiqlJson, stderr: '' });
-
-      const result = await listMyAssignedTasks('paulo.rodriguez@fefundinfo.com');
-
-      expect(result).toEqual([
-        { id: 101, title: 'Fix login', type: 'Bug', state: 'Active', areaPath: 'Proj\\Team', storyPoints: 3 },
-      ]);
-
-      const callArgs = execFileMock.mock.calls[0] as unknown[];
-      expect(callArgs[0]).toBe('az');
-      const args = callArgs[1] as string[];
-      const wiql = args[3];
-      expect(wiql).toContain("[System.AssignedTo] = 'paulo.rodriguez@fefundinfo.com'");
-      expect(wiql).toContain("[System.State] NOT IN ('Closed', 'Resolved', 'Done', 'Removed')");
-      expect(args).toEqual(['boards', 'query', '--wiql', wiql, '-o', 'json']);
-    });
-
-    it('rejects with an AdoCommandError mentioning invalid email, without calling execFile', async () => {
-      await expect(listMyAssignedTasks('bad email!')).rejects.toMatchObject({
-        name: 'AdoCommandError',
-        message: expect.stringContaining('Invalid'),
-      });
-      expect(execFileMock).not.toHaveBeenCalled();
-    });
-
-    it('rejects an email containing a single quote (WIQL injection guard), without calling execFile', async () => {
-      await expect(listMyAssignedTasks("x'y@z.com")).rejects.toMatchObject({
-        name: 'AdoCommandError',
-        message: expect.stringContaining('Invalid'),
-      });
-      expect(execFileMock).not.toHaveBeenCalled();
-    });
-
-    it('yields storyPoints: undefined when the field is missing', async () => {
-      const wiqlJson = JSON.stringify([
-        {
-          id: 202,
-          fields: {
-            'System.Title': 'No story points',
-            'System.WorkItemType': 'Task',
-            'System.State': 'New',
-            'System.AreaPath': 'Proj\\Team',
-          },
-        },
-      ]);
-      execFileMock.mockReturnValue({ stdout: wiqlJson, stderr: '' });
-
-      const result = await listMyAssignedTasks('paulo.rodriguez@fefundinfo.com');
-
-      expect(result).toEqual([
-        { id: 202, title: 'No story points', type: 'Task', state: 'New', areaPath: 'Proj\\Team', storyPoints: undefined },
-      ]);
-    });
-
-    it('defaults to the default ADO email when none is given', async () => {
-      execFileMock.mockReturnValue({ stdout: '[]', stderr: '' });
-      await listMyAssignedTasks();
-      const callArgs = execFileMock.mock.calls[0] as unknown[];
-      const args = callArgs[1] as string[];
-      expect(args[3]).toContain('paulo.rodriguez@fefundinfo.com');
-    });
   });
 
   describe('assertAdoAuthenticated', () => {

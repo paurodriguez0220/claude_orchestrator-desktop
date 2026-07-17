@@ -28,9 +28,7 @@ export const IpcChannels = {
   ReadClipboardImage: 'image:read-clipboard',
   GetAppVersion: 'app:get-version',
   GenerateDsuSummary: 'dsu:generate',
-  AdoListMyTasks: 'ado:list-my-tasks',
   AdoConfig: 'ado:config',
-  AdoCreateWorkItem: 'ado:create-work-item',
   AdoSyncTasks: 'ado:sync-tasks',
 } as const;
 
@@ -115,15 +113,6 @@ export interface TaskNotesGetResponse {
 export interface DsuGenerateResponse {
   markdown: string;
   filePath: string;
-}
-
-export interface AdoWorkItem {
-  id: number;
-  title: string;
-  type: string;
-  state: string;
-  areaPath: string;
-  storyPoints: number | undefined;
 }
 
 export interface AdoCreateWorkItemRequest {
