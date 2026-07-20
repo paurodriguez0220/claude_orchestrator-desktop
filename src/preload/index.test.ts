@@ -231,16 +231,6 @@ describe('preload', () => {
     expect(ipcRendererInvoke).toHaveBeenCalledWith('dsu:generate', '2026-07-08');
   });
 
-  it('listAdoTasks invokes the AdoListMyTasks channel with the email', async () => {
-    await import('./index');
-    const call = exposeInMainWorld.mock.calls[0];
-    if (!call) throw new Error('exposeInMainWorld not called');
-    const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (api.listAdoTasks as any)('x@y.z');
-    expect(ipcRendererInvoke).toHaveBeenCalledWith('ado:list-my-tasks', 'x@y.z');
-  });
-
   it('getAdoConfig invokes the AdoConfig channel', async () => {
     await import('./index');
     const call = exposeInMainWorld.mock.calls[0];
@@ -249,17 +239,6 @@ describe('preload', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await (api.getAdoConfig as any)();
     expect(ipcRendererInvoke).toHaveBeenCalledWith('ado:config');
-  });
-
-  it('createAdoWorkItem invokes the AdoCreateWorkItem channel with the request', async () => {
-    await import('./index');
-    const call = exposeInMainWorld.mock.calls[0];
-    if (!call) throw new Error('exposeInMainWorld not called');
-    const api = call[1] as Record<string, (...a: unknown[]) => unknown>;
-    const request = { type: 'Task', title: 'Fix login' };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (api.createAdoWorkItem as any)(request);
-    expect(ipcRendererInvoke).toHaveBeenCalledWith('ado:create-work-item', request);
   });
 
   it('syncTasksToAdo invokes the AdoSyncTasks channel with the taskId and dryRun flag', async () => {

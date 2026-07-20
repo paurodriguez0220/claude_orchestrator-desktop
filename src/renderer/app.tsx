@@ -11,10 +11,8 @@ import { TabBar } from './components/tab-bar/tab-bar';
 import { Spinner } from './components/spinner/spinner';
 import { DsuSummaryModal } from './components/dsu-summary-modal/dsu-summary-modal';
 import { ArchivedTasksModal } from './components/archived-tasks-modal/archived-tasks-modal';
-import { AdoTasksModal } from './components/ado-tasks-modal/ado-tasks-modal';
-import { CreateAdoWorkItemModal } from './components/create-ado-work-item-modal/create-ado-work-item-modal';
 import type { RepoRecord, TaskRecord, TaskStatus } from '../shared/types';
-import type { AdoWorkItem, AdoCreateWorkItemRequest, AdoCreateWorkItemResult, BranchOption } from '../shared/ipc-channels';
+import type { BranchOption } from '../shared/ipc-channels';
 import type { NewTaskFields } from './components/new-task-modal/new-task-modal';
 import type { NewQuestionFields } from './components/new-question-modal/new-question-modal';
 
@@ -42,13 +40,7 @@ export function App(): JSX.Element {
   const [appVersion, setAppVersion] = useState<string | undefined>();
   const [isDsuModalOpen, setIsDsuModalOpen] = useState(false);
   const [isArchivedModalOpen, setIsArchivedModalOpen] = useState(false);
-  const [isAdoModalOpen, setIsAdoModalOpen] = useState(false);
-  const [isCreateAdoOpen, setIsCreateAdoOpen] = useState(false);
-  const [adoCreateResult, setAdoCreateResult] = useState<AdoCreateWorkItemResult | undefined>();
-  const [adoTasks, setAdoTasks] = useState<AdoWorkItem[]>([]);
-  const [isLoadingAdo, setIsLoadingAdo] = useState(false);
   const [adoOrgUrlBase, setAdoOrgUrlBase] = useState('');
-  const [prefillTask, setPrefillTask] = useState<{ title: string; adoId: string } | undefined>();
   const [dsuSummary, setDsuSummary] = useState<{ markdown: string; filePath: string } | undefined>();
   const [isGeneratingDsu, setIsGeneratingDsu] = useState(false);
   const [closingTaskIds, setClosingTaskIds] = useState<string[]>([]);
@@ -65,6 +57,13 @@ export function App(): JSX.Element {
     void window.claudeOrchestrator.listRepos().then(setRepos);
     void window.claudeOrchestrator.listTasks().then(setTasks);
     void window.claudeOrchestrator.getAppVersion().then(setAppVersion);
+    // The org URL base backs the clickable work-item links in the kept
+    // LinkedAdoItems panel; fetch it once on mount. A failure here just leaves
+    // links unbuilt, so it must not surface as a blocking error.
+    void window.claudeOrchestrator
+      .getAdoConfig()
+      .then((config) => setAdoOrgUrlBase(`https://dev.azure.com/${config.organization}/${config.project}`))
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -350,55 +349,6 @@ export function App(): JSX.Element {
     }
   }
 
-  async function handleOpenAdo(): Promise<void> {
-    setErrorMessage(undefined);
-    setIsAdoModalOpen(true);
-    setIsLoadingAdo(true);
-    try {
-      const [tasksResult, config] = await Promise.all([
-        window.claudeOrchestrator.listAdoTasks(),
-        window.claudeOrchestrator.getAdoConfig(),
-      ]);
-      setAdoTasks(tasksResult);
-      setAdoOrgUrlBase(`https://dev.azure.com/${config.organization}/${config.project}`);
-    } catch (err) {
-      setErrorMessage(toErrorMessage(err));
-    } finally {
-      setIsLoadingAdo(false);
-    }
-  }
-
-  async function handleCreateAdoWorkItem(request: AdoCreateWorkItemRequest): Promise<void> {
-    setErrorMessage(undefined);
-    setIsSubmittingModal(true);
-    try {
-      const result = await window.claudeOrchestrator.createAdoWorkItem(request);
-      setAdoCreateResult(result);
-    } catch (err) {
-      setErrorMessage(toErrorMessage(err));
-    } finally {
-      setIsSubmittingModal(false);
-    }
-  }
-
-  // V1 limitation: creating a worktree from an ADO item always targets
-  // repos[0] — the New Task modal has no repo picker yet, so with multiple
-  // repos there is no way to ask the user which one to use. A repo picker
-  // is a follow-up; until then, this only works meaningfully with a single
-  // managed repo.
-  async function handleCreateWorktreeFromAdoItem(item: AdoWorkItem): Promise<void> {
-    const targetRepoId = repos[0]?.id;
-    if (targetRepoId === undefined) {
-      return;
-    }
-    setErrorMessage(undefined);
-    setPrefillTask({ title: item.title, adoId: String(item.id) });
-    setNewTaskRepoId(targetRepoId);
-    setNewTaskMode('task');
-    setIsAdoModalOpen(false);
-    await loadBranchesForRepo(targetRepoId);
-  }
-
   const activeTasksByRepoId = tasks.reduce<Record<string, TaskRecord[]>>((acc, task) => {
     if (task.repoId !== undefined && task.status !== 'done') {
       (acc[task.repoId] ??= []).push(task);
@@ -466,25 +416,16 @@ export function App(): JSX.Element {
           }
           onOpenTaskInEditorClick={(taskId) => void handleOpenTaskInEditor(taskId)}
           onOpenArchivedClick={() => setIsArchivedModalOpen(true)}
-          onOpenAdoClick={() => void handleOpenAdo()}
-          onNewAdoItemClick={() => {
-            setAdoCreateResult(undefined);
-            setIsCreateAdoOpen(true);
-          }}
         />
         <NewTaskModal
-          key={prefillTask ? `${prefillTask.title}-${prefillTask.adoId}` : 'blank'}
           isOpen={newTaskRepoId !== undefined}
           branches={branches}
           isSubmitting={isSubmittingModal}
           isLoadingBranches={isLoadingBranches}
           mode={newTaskMode}
-          initialTitle={prefillTask?.title}
-          initialAdoId={prefillTask?.adoId}
           onClose={() => {
             setNewTaskRepoId(undefined);
             setBranches([]);
-            setPrefillTask(undefined);
           }}
           onSubmit={(fields) => void handleCreateTask(fields)}
         />
@@ -518,22 +459,6 @@ export function App(): JSX.Element {
           }}
           onUnarchive={(taskId) => void handleUnarchiveTask(taskId)}
           onClose={() => setIsArchivedModalOpen(false)}
-        />
-        <AdoTasksModal
-          isOpen={isAdoModalOpen}
-          tasks={adoTasks}
-          isLoading={isLoadingAdo}
-          orgUrlBase={adoOrgUrlBase}
-          onCreateWorktree={(item) => void handleCreateWorktreeFromAdoItem(item)}
-          onClose={() => setIsAdoModalOpen(false)}
-        />
-        <CreateAdoWorkItemModal
-          key={isCreateAdoOpen ? 'ado-create-open' : 'ado-create-closed'}
-          isOpen={isCreateAdoOpen}
-          isSubmitting={isSubmittingModal}
-          result={adoCreateResult}
-          onSubmit={(req) => void handleCreateAdoWorkItem(req)}
-          onClose={() => setIsCreateAdoOpen(false)}
         />
         <main className="flex flex-1 flex-col overflow-hidden">
           {openTaskIds.length > 0 && (
