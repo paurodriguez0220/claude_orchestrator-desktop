@@ -85,6 +85,12 @@ vi.mock('../services/ado-sync-service', () => ({
   syncTasksToAdo: (...args: unknown[]) => syncTasksToAdo(...args),
 }));
 
+const seedTasksMd = vi.fn(async (..._args: unknown[]) => true);
+
+vi.mock('../services/tasks-md-seeder', () => ({
+  seedTasksMd: (...args: unknown[]) => seedTasksMd(...args),
+}));
+
 import { registerTaskHandlers } from './task-handlers';
 import { IpcChannels } from '../../shared/ipc-channels';
 import { addWorktree, addWorktreeFromRef, addWorktreeForExistingBranch, removeWorktree, fetchRepo, getDefaultBranch } from '../services/git-service';
@@ -117,6 +123,7 @@ describe('task-handlers', () => {
     openInVsCode.mockClear();
     assertAdoAuthenticated.mockClear();
     syncTasksToAdo.mockReset();
+    seedTasksMd.mockReset().mockResolvedValue(true);
     registerTaskHandlers(onPtyData);
   });
 
@@ -600,6 +607,25 @@ describe('task-handlers', () => {
     const result = await handlers.get(IpcChannels.TaskLinkAdo)?.({}, { taskId: 'task-1', adoId: '1234' });
     expect(result).toEqual(['1234']);
     expect(store.tasks[0]?.adoIds).toEqual(['1234']);
+  });
+
+  it('TaskLinkAdo seeds the linked worktree so Sync has a tasks.md to read', async () => {
+    seedTask();
+    await handlers.get(IpcChannels.TaskLinkAdo)?.({}, { taskId: 'task-1', adoId: '1234' });
+    expect(seedTasksMd).toHaveBeenCalledWith('C:\\w', '1234');
+  });
+
+  it('TaskLinkAdo backfills by seeding even when the id is already linked', async () => {
+    seedTask(['1234']);
+    await handlers.get(IpcChannels.TaskLinkAdo)?.({}, { taskId: 'task-1', adoId: '1234' });
+    expect(seedTasksMd).toHaveBeenCalledWith('C:\\w', '1234');
+  });
+
+  it('TaskLinkAdo still returns the updated list when seeding fails', async () => {
+    seedTask();
+    seedTasksMd.mockRejectedValueOnce(new Error('disk full'));
+    const result = await handlers.get(IpcChannels.TaskLinkAdo)?.({}, { taskId: 'task-1', adoId: '1234' });
+    expect(result).toEqual(['1234']);
   });
 
   it('TaskUnlinkAdo removes the id from the store record and the notes frontmatter', async () => {
