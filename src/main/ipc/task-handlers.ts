@@ -16,6 +16,7 @@ import type { TaskRecord } from '../../shared/types';
 import { readStore, writeStore } from '../services/store';
 import { assertAdoAuthenticated } from '../services/ado-service';
 import { syncTasksToAdo } from '../services/ado-sync-service';
+import { seedTasksMd } from '../services/tasks-md-seeder';
 import {
   addWorktree,
   addWorktreeFromRef,
@@ -259,7 +260,23 @@ export function registerTaskHandlers(onPtyData: (taskId: string, data: string) =
     if (adoId === '') {
       throw new Error('ADO id must not be empty');
     }
-    return updateAdoIds(request.taskId, (ids) => (ids.includes(adoId) ? ids : [...ids, adoId]));
+    const next = await updateAdoIds(request.taskId, (ids) => (ids.includes(adoId) ? ids : [...ids, adoId]));
+
+    // Seed the worktree with a tasks.md (and a CLAUDE.md nudge) so the Sync-to-ADO
+    // button has a file to read. Best-effort and idempotent: runs on every link so
+    // re-linking backfills a worktree created before it was ADO-linked, and never
+    // fails the link itself if seeding can't complete.
+    const store = await readStore(getStorePath());
+    const task = store.tasks.find((candidate) => candidate.id === request.taskId);
+    if (task) {
+      try {
+        await seedTasksMd(task.worktreePath, adoId);
+      } catch (err) {
+        console.warn(`Could not seed tasks.md for task ${task.id}:`, err);
+      }
+    }
+
+    return next;
   });
 
   ipcMain.handle(IpcChannels.TaskUnlinkAdo, async (_event, request: TaskLinkAdoRequest): Promise<string[]> => {
