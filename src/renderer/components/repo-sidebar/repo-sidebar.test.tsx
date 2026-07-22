@@ -862,8 +862,6 @@ describe('RepoSidebar', () => {
         onGenerateDsuClick: vi.fn(),
         onArchiveTaskClick: vi.fn(),
         onOpenArchivedClick: vi.fn(),
-        onOpenAdoClick: vi.fn(),
-        onNewAdoItemClick: vi.fn(),
         ...overrides,
       };
     }
