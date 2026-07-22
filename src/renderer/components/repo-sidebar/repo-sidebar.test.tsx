@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RepoSidebar } from './repo-sidebar';
+import type { RepoSidebarProps } from './repo-sidebar';
 import type { RepoRecord, TaskRecord } from '../../../shared/types';
 
 const repo: RepoRecord = { id: 'repo-1', name: 'demo', path: 'C:\\demo', createdAt: '2026-07-08T00:00:00.000Z' };
@@ -833,5 +834,81 @@ describe('RepoSidebar', () => {
     const openRepoButton = screen.getByRole('button', { name: 'Open Existing Repo' });
     expect(openRepoButton).toBeDisabled();
     expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+  });
+
+  describe('folders', () => {
+    const folderRepo: RepoRecord = { ...repo, folders: [{ id: 'folder-1', name: 'Bugs' }] };
+    const ungrouped: TaskRecord = { ...task, id: 'task-u', title: 'Ungrouped task' };
+    const inFolder: TaskRecord = { ...task, id: 'task-f', title: 'Folder task', folderId: 'folder-1' };
+
+    function baseProps(overrides: Partial<RepoSidebarProps> = {}): RepoSidebarProps {
+      return {
+        repos: [folderRepo],
+        activeTasksByRepoId: { 'repo-1': [ungrouped, inFolder] },
+        scratchTasks: [],
+        selectedTaskId: undefined,
+        removingTaskIds: [],
+        isAddingRepo: false,
+        searchQuery: '',
+        onSearchQueryChange: vi.fn(),
+        onSelectTask: vi.fn(),
+        onOpenRepoClick: vi.fn(),
+        onCloneRepoClick: vi.fn(),
+        onNewTaskClick: vi.fn(),
+        onRemoveTaskClick: vi.fn(),
+        onReviewCodeClick: vi.fn(),
+        onNewQuestionClick: vi.fn(),
+        appVersion: undefined,
+        onGenerateDsuClick: vi.fn(),
+        onArchiveTaskClick: vi.fn(),
+        onOpenArchivedClick: vi.fn(),
+        ...overrides,
+      };
+    }
+
+    it('renders a folder with its task count and groups tasks under it, leaving others ungrouped', () => {
+      render(<RepoSidebar {...baseProps()} />);
+      expect(screen.getByRole('button', { name: /Toggle Bugs folder/ })).toHaveTextContent('1');
+      expect(screen.getByRole('button', { name: 'Folder task' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Ungrouped task' })).toBeInTheDocument();
+    });
+
+    it('collapses a folder to hide its tasks when its toggle is clicked', async () => {
+      render(<RepoSidebar {...baseProps()} />);
+      expect(screen.getByRole('button', { name: 'Folder task' })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: /Toggle Bugs folder/ }));
+      expect(screen.queryByRole('button', { name: 'Folder task' })).not.toBeInTheDocument();
+    });
+
+    it('reveals a name input on "New folder" and calls onCreateFolder on submit', async () => {
+      const onCreateFolder = vi.fn();
+      render(<RepoSidebar {...baseProps({ onCreateFolder })} />);
+      await userEvent.click(screen.getByRole('button', { name: 'New folder' }));
+      await userEvent.type(screen.getByRole('textbox', { name: 'Folder name' }), 'Epic 1{Enter}');
+      expect(onCreateFolder).toHaveBeenCalledWith('repo-1', 'Epic 1');
+    });
+
+    it('calls onDeleteFolder with the repo and folder id when a folder\'s delete button is clicked', async () => {
+      const onDeleteFolder = vi.fn();
+      render(<RepoSidebar {...baseProps({ onDeleteFolder })} />);
+      await userEvent.click(screen.getByRole('button', { name: 'Delete folder' }));
+      expect(onDeleteFolder).toHaveBeenCalledWith('repo-1', 'folder-1');
+    });
+
+    it('assigns a task to a folder when it is dragged onto the folder', () => {
+      const onAssignTaskToFolder = vi.fn();
+      render(<RepoSidebar {...baseProps({ onAssignTaskToFolder })} />);
+      fireEvent.dragStart(screen.getByRole('button', { name: 'Ungrouped task' }));
+      fireEvent.drop(screen.getByRole('button', { name: /Toggle Bugs folder/ }));
+      expect(onAssignTaskToFolder).toHaveBeenCalledWith('task-u', 'folder-1');
+    });
+
+    it('un-groups a task when it is dragged onto the ungrouped drop zone', () => {
+      const onAssignTaskToFolder = vi.fn();
+      render(<RepoSidebar {...baseProps({ onAssignTaskToFolder })} />);
+      fireEvent.dragStart(screen.getByRole('button', { name: 'Folder task' }));
+      fireEvent.drop(screen.getByLabelText('Ungrouped tasks'));
+      expect(onAssignTaskToFolder).toHaveBeenCalledWith('task-f', null);
+    });
   });
 });

@@ -7,6 +7,10 @@ export const IpcChannels = {
   RepoBranches: 'repo:branches',
   RepoFetch: 'repo:fetch',
   RepoSetUpdateBase: 'repo:set-update-base',
+  RepoFolderCreate: 'repo:folder:create',
+  RepoFolderRename: 'repo:folder:rename',
+  RepoFolderDelete: 'repo:folder:delete',
+  TaskSetFolder: 'task:set-folder',
   TaskCreate: 'task:create',
   TaskList: 'task:list',
   TaskOpen: 'task:open',
@@ -67,6 +71,27 @@ export interface TaskCreateResult extends TaskRecord {
 export interface RepoSetUpdateBaseRequest {
   repoId: string;
   updateBaseOnCreate: boolean;
+}
+
+export interface RepoFolderCreateRequest {
+  repoId: string;
+  name: string;
+}
+
+export interface RepoFolderRenameRequest {
+  repoId: string;
+  folderId: string;
+  name: string;
+}
+
+export interface RepoFolderDeleteRequest {
+  repoId: string;
+  folderId: string;
+}
+
+export interface TaskSetFolderRequest {
+  taskId: string;
+  folderId?: string;
 }
 
 export interface TaskNotesSetRequest {
