@@ -253,6 +253,46 @@ describe('task-handlers', () => {
     expect(store.tasks).toHaveLength(1);
   });
 
+  it('TaskSetFolder assigns a folderId to the matching task and persists it', async () => {
+    store.tasks.push({
+      id: 'task-1',
+      repoId: 'repo-1',
+      title: 'Fix login bug',
+      branch: 'feature/fix-login-bug',
+      worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
+      status: 'todo',
+      kind: 'worktree',
+      createdAt: '2026-07-08T00:00:00.000Z',
+      updatedAt: '2026-07-08T00:00:00.000Z',
+    });
+    const handler = handlers.get(IpcChannels.TaskSetFolder);
+    await handler?.({}, { taskId: 'task-1', folderId: 'folder-1' });
+    expect(store.tasks.find((task) => task.id === 'task-1')?.folderId).toBe('folder-1');
+  });
+
+  it('TaskSetFolder clears the folderId when folderId is omitted', async () => {
+    store.tasks.push({
+      id: 'task-1',
+      repoId: 'repo-1',
+      title: 'Fix login bug',
+      branch: 'feature/fix-login-bug',
+      worktreePath: 'C:\\demo-worktrees\\fix-login-bug',
+      status: 'todo',
+      kind: 'worktree',
+      folderId: 'folder-1',
+      createdAt: '2026-07-08T00:00:00.000Z',
+      updatedAt: '2026-07-08T00:00:00.000Z',
+    });
+    const handler = handlers.get(IpcChannels.TaskSetFolder);
+    await handler?.({}, { taskId: 'task-1' });
+    expect(store.tasks.find((task) => task.id === 'task-1')?.folderId).toBeUndefined();
+  });
+
+  it('TaskSetFolder rejects an unknown task id', async () => {
+    const handler = handlers.get(IpcChannels.TaskSetFolder);
+    await expect(handler?.({}, { taskId: 'nope', folderId: 'folder-1' })).rejects.toThrow('Unknown task');
+  });
+
   it('TaskOpen resumes an existing task session when none is alive', async () => {
     store.tasks.push({
       id: 'task-1',

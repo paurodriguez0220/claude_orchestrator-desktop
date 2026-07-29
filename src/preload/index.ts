@@ -25,6 +25,10 @@ export interface ClaudeOrchestratorApi {
   listBranches(repoId: string): Promise<BranchOption[]>;
   fetchRepo(repoId: string): Promise<void>;
   setRepoUpdateBase(repoId: string, updateBaseOnCreate: boolean): Promise<void>;
+  createRepoFolder(repoId: string, name: string): Promise<RepoRecord>;
+  renameRepoFolder(repoId: string, folderId: string, name: string): Promise<RepoRecord>;
+  deleteRepoFolder(repoId: string, folderId: string): Promise<RepoRecord>;
+  setTaskFolder(taskId: string, folderId?: string): Promise<void>;
   createTask(request: TaskCreateRequest): Promise<TaskCreateResult>;
   listTasks(): Promise<TaskRecord[]>;
   openTask(taskId: string): Promise<void>;
@@ -58,6 +62,12 @@ const api: ClaudeOrchestratorApi = {
   fetchRepo: (repoId) => ipcRenderer.invoke(IpcChannels.RepoFetch, repoId),
   setRepoUpdateBase: (repoId, updateBaseOnCreate) =>
     ipcRenderer.invoke(IpcChannels.RepoSetUpdateBase, { repoId, updateBaseOnCreate }),
+  createRepoFolder: (repoId, name) => ipcRenderer.invoke(IpcChannels.RepoFolderCreate, { repoId, name }),
+  renameRepoFolder: (repoId, folderId, name) =>
+    ipcRenderer.invoke(IpcChannels.RepoFolderRename, { repoId, folderId, name }),
+  deleteRepoFolder: (repoId, folderId) =>
+    ipcRenderer.invoke(IpcChannels.RepoFolderDelete, { repoId, folderId }),
+  setTaskFolder: (taskId, folderId) => ipcRenderer.invoke(IpcChannels.TaskSetFolder, { taskId, folderId }),
   createTask: (request) => ipcRenderer.invoke(IpcChannels.TaskCreate, request),
   listTasks: () => ipcRenderer.invoke(IpcChannels.TaskList),
   openTask: (taskId) => ipcRenderer.invoke(IpcChannels.TaskOpen, taskId),
